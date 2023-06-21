@@ -55,6 +55,7 @@ import androidx.navigation.NavController
 import at.htlhl.testing.data.PersonList
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -123,14 +124,14 @@ class SearchView : ViewModel() {
             val image = document.getString("image")
             val lastMessage = document.getString("lastMessage")
             val userID = document.getString("userID")
-            val time = document.getLong("time")
-            if (firstname != null && image != null && lastMessage != null && userID != null && time != null) {
+            val timestamp = document.getTimestamp("timestamp")
+            if (firstname != null && image != null && lastMessage != null && userID != null && timestamp != null) {
                 Person(
                     image = image,
                     name = firstname,
                     lastMessage = lastMessage,
                     userID = userID,
-                    time = time
+                    timestamp = timestamp
                 )
             } else {
                 null
@@ -336,7 +337,7 @@ data class Person(
     val name: String,
     val image: String,
     val lastMessage: String,
-    val time: Long,
+    val timestamp: Timestamp,
 ) {
     fun doesMatch(query: String): Boolean {
         val matchingCombinations = listOf(

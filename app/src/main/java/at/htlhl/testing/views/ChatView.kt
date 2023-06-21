@@ -56,27 +56,34 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import at.htlhl.testing.data.Message
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 class ChatView : ViewModel() {
@@ -153,7 +160,7 @@ class ChatView : ViewModel() {
     fun ChatScreen(
         navController: NavController,
         messages: List<Message>,
-        onMessageSent: (Message) -> Unit
+        onMessageSent: (Message) -> Unit,
     ) {
         val coroutineScope = rememberCoroutineScope()
         val lazyListState = rememberLazyListState()
@@ -170,7 +177,7 @@ class ChatView : ViewModel() {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Bottom
                 ) {
-                    MessageList(messages = messages, scrollState = lazyListState)
+                    MessageList(messages = messages, scrollState = lazyListState,coroutineScope = coroutineScope)
 
                 }
             }, bottomBar = {
@@ -178,7 +185,7 @@ class ChatView : ViewModel() {
                     val message = Message(
                         userID = currentUser.toString(),
                         content = messageText,
-                        timestamp = System.currentTimeMillis()
+                        timestamp = Timestamp.now()
                     )
                     onMessageSent(message)
                     coroutineScope.launch {
@@ -187,9 +194,11 @@ class ChatView : ViewModel() {
             })
     }
 
+    @SuppressLint("CoroutineCreationDuringComposition")
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
-    fun MessageList(messages: List<Message>, scrollState: LazyListState) {
+    fun MessageList(messages: List<Message>, scrollState: LazyListState,coroutineScope: CoroutineScope) {
+        coroutineScope.launch { scrollState.animateScrollToItem(messages.size) }
         LazyColumn(Modifier.padding(bottom = 70.dp), state = scrollState) {
             items(messages) { message ->
                 MessageItem(
@@ -210,9 +219,9 @@ class ChatView : ViewModel() {
             else Color.White else if (isSystemInDarkTheme()) Color.Black else Color.LightGray
         val alignment =
             if (message.userID == auth.currentUser?.uid) Arrangement.End else Arrangement.Start
-        val currentTime = LocalTime.now()
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
-        val formattedTime = currentTime.format(formatter)
+        val formattedTime = message.timestamp.toDate().toInstant().atZone(ZoneId.systemDefault())
+            .toLocalTime().format(formatter)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -229,7 +238,6 @@ class ChatView : ViewModel() {
                     )
                     .background(backgroundColor, shape = RoundedCornerShape(24.dp))
                     .padding(8.dp)
-
             ) {
                 Text(
                     text = message.content,
@@ -492,7 +500,7 @@ class ChatView : ViewModel() {
         ChatScreen(
             messages = friendSubCollectionData.plus(subCollectionData).sortedBy { it.timestamp },
             onMessageSent = onMessageSent,
-            navController = navController
+            navController = navController,
         )
     }
 }

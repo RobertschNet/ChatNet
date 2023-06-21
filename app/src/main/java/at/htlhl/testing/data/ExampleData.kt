@@ -2,6 +2,7 @@ package at.htlhl.testing.data
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.google.firebase.Timestamp
 
 
 data class BottomNavItem(
@@ -15,17 +16,17 @@ data class PersonList(
     val userID: String,
     val name: String,
     val image: String,
-    val lastMessage: String,
-    val time: Long,
+    val lastMessage : String,
+    val timestamp: Timestamp,
 ) {
-    constructor() : this("", "", "", "", 0)
+    constructor() : this("", "", "", "", Timestamp.now())
 }
 data class Message(
     val userID: String,
     val content: String,
-    val timestamp: Long,
+    val timestamp: Timestamp,
 ) {
-    constructor() : this("", "", 0)
+    constructor() : this("", "", Timestamp.now())
 }
 
 data class User(

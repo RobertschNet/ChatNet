@@ -54,12 +54,13 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class DropIn : ViewModel() {
     private lateinit var auth: FirebaseAuth
     private val _subCollectionData = MutableStateFlow<List<PersonList>>(emptyList())
     private val subCollectionData: StateFlow<List<PersonList>> get() = _subCollectionData
-
 
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
@@ -141,7 +142,7 @@ class DropIn : ViewModel() {
                             message.name,
                             message.image,
                             message.lastMessage,
-                            message.time,
+                            message.timestamp,
                         ), onNavigateToDestination
                     )
                 }
@@ -152,6 +153,9 @@ class DropIn : ViewModel() {
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun ChatItem(person: PersonList, onNavigateToDestination: (String) -> Unit) {
+        val formatter = DateTimeFormatter.ofPattern("HH:mm")
+        val formattedTime = person.timestamp.toDate().toInstant().atZone(ZoneId.systemDefault())
+            .toLocalTime().format(formatter)
         Row(
             modifier = Modifier
                 .clickable {
@@ -184,7 +188,7 @@ class DropIn : ViewModel() {
                         color = if (isSystemInDarkTheme()) Color.White else Color.Black
                     )
                     Text(
-                        text = person.time.toString(),
+                        text = formattedTime,
                         fontWeight = FontWeight.Light,
                         fontSize = 12.sp,
                         color = if (isSystemInDarkTheme()) Color.White else Color.Black

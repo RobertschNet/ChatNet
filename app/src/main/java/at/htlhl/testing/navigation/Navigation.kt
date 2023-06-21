@@ -2,6 +2,10 @@ package at.htlhl.testing.navigation
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.core.TweenSpec
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.navigation.NavHostController
@@ -23,11 +27,16 @@ import at.htlhl.testing.views.SearchView
 @Composable
 fun Navigation(navController: NavHostController, bottomBarState: MutableState<Boolean>) {
     NavHost(navController = navController, startDestination = "LoginScreen") {
-        composable("LoadingScreen") {
+        composable("LoadingScreen",
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             bottomBarState.value = false
             Loading().LoadingScreen(navController)
         }
-        composable("DropInScreen") {
+        composable("DropInScreen",
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }
+        ) {
             bottomBarState.value = true
             DropIn().DropInScreen(
                 navController = navController,
@@ -36,30 +45,44 @@ fun Navigation(navController: NavHostController, bottomBarState: MutableState<Bo
         composable(
 
             "ChatScreen/{data}",
-            arguments = listOf(navArgument("data") { type = NavType.StringType })
+            arguments = listOf(navArgument("data") { type = NavType.StringType }),
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }
         ) { entry ->
             bottomBarState.value = false
             entry.arguments?.getString("data")
                 ?.let { ChatView().ChatViewScreen(data = it, navController = navController) }
         }
-        composable("RandChatScreen") {
+        composable("RandChatScreen",
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             RandChat().RandChatScreen()
         }
-        composable("SearchViewScreen") {
+        composable("SearchViewScreen",
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             bottomBarState.value = false
             SearchView().SearchViewScreen(navController)
         }
-        composable("ChatMateScreen") {
+        composable("ChatMateScreen",
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             ChatMate().ChatMateScreen()
         }
-        composable("ProfileScreen") {
+        composable("ProfileScreen",
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             Profile().ProfileScreen(navController)
         }
-        composable("LoginScreen") {
+        composable("LoginScreen",
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             bottomBarState.value = false
             LoginView().LoginScreen(navController)
         }
-        composable("RegisterScreen") {
+        composable("RegisterScreen",
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             bottomBarState.value = false
             RegisterView().RegisterScreen(navController)
         }
