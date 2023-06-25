@@ -65,7 +65,7 @@ class DropIn : ViewModel() {
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @Composable
-    fun DropInScreen(navController: NavController, onNavigateToDestination: (String) -> Unit) {
+    fun DropInScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val viewModel = viewModel<DropIn>()
         auth = Firebase.auth
         val subCollectionDataState = remember { mutableStateOf<List<PersonList>>(emptyList()) }
@@ -143,7 +143,7 @@ class DropIn : ViewModel() {
                             message.image,
                             message.lastMessage,
                             message.timestamp,
-                        ), onNavigateToDestination
+                        ), navController, sharedViewModel
                     )
                 }
             }
@@ -152,14 +152,19 @@ class DropIn : ViewModel() {
 
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
-    fun ChatItem(person: PersonList, onNavigateToDestination: (String) -> Unit) {
+    fun ChatItem(
+        person: PersonList,
+        navController: NavController,
+        sharedViewModel: SharedViewModel
+    ) {
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
         val formattedTime = person.timestamp.toDate().toInstant().atZone(ZoneId.systemDefault())
             .toLocalTime().format(formatter)
         Row(
             modifier = Modifier
                 .clickable {
-                    onNavigateToDestination(person.userID)
+                    sharedViewModel.user.value = person
+                    navController.navigate(Screens.ChatScreen.Route)
                 }
                 .fillMaxWidth()
                 .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)

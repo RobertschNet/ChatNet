@@ -2,17 +2,17 @@ package at.htlhl.testing.navigation
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.navArgument
 import at.htlhl.testing.views.ChatMate
 import at.htlhl.testing.views.ChatView
 import at.htlhl.testing.views.DropIn
@@ -22,10 +22,12 @@ import at.htlhl.testing.views.Profile
 import at.htlhl.testing.views.RandChat
 import at.htlhl.testing.views.RegisterView
 import at.htlhl.testing.views.SearchView
+import at.htlhl.testing.views.SharedViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun Navigation(navController: NavHostController, bottomBarState: MutableState<Boolean>) {
+    val sharedViewModel = viewModel<SharedViewModel>()
     NavHost(navController = navController, startDestination = "LoginScreen") {
         composable("LoadingScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
@@ -34,24 +36,42 @@ fun Navigation(navController: NavHostController, bottomBarState: MutableState<Bo
             Loading().LoadingScreen(navController)
         }
         composable("DropInScreen",
-            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
-            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }
+            enterTransition = {
+                slideInHorizontally(
+                    initialOffsetX = { fullWidth -> -fullWidth },
+                    animationSpec = tween(durationMillis = 500)
+                )
+            },
+            exitTransition = {
+                slideOutHorizontally(
+                    targetOffsetX = { fullWidth -> -fullWidth },
+                    animationSpec = tween(durationMillis = 500)
+                )
+            }
         ) {
             bottomBarState.value = true
-            DropIn().DropInScreen(
-                navController = navController,
-                onNavigateToDestination = { data -> navController.navigate("ChatScreen/$data") })
+            DropIn().DropInScreen(navController = navController, sharedViewModel = sharedViewModel)
         }
         composable(
-
-            "ChatScreen/{data}",
-            arguments = listOf(navArgument("data") { type = NavType.StringType }),
-            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
-            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }
-        ) { entry ->
+            "ChatScreen",
+            enterTransition = {
+                slideInHorizontally(
+                    initialOffsetX = { fullWidth -> fullWidth },
+                    animationSpec = tween(durationMillis = 500)
+                )
+            },
+            exitTransition = {
+                slideOutHorizontally(
+                    targetOffsetX = { fullWidth -> fullWidth },
+                    animationSpec = tween(durationMillis = 500)
+                )
+            }
+        ) {
             bottomBarState.value = false
-            entry.arguments?.getString("data")
-                ?.let { ChatView().ChatViewScreen(data = it, navController = navController) }
+            ChatView().ChatViewScreen(
+                navController = navController,
+                sharedViewModel = sharedViewModel
+            )
         }
         composable("RandChatScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },

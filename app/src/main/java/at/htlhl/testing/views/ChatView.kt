@@ -31,11 +31,14 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.Comment
+import androidx.compose.material.icons.outlined.CommentsDisabled
 import androidx.compose.material.icons.outlined.EmojiEmotions
+import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -56,17 +59,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import at.htlhl.testing.data.Message
+import at.htlhl.testing.data.PersonList
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.Timestamp
@@ -76,13 +79,11 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
-import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -161,6 +162,7 @@ class ChatView : ViewModel() {
         navController: NavController,
         messages: List<Message>,
         onMessageSent: (Message) -> Unit,
+        personList: PersonList,
     ) {
         val coroutineScope = rememberCoroutineScope()
         val lazyListState = rememberLazyListState()
@@ -168,7 +170,7 @@ class ChatView : ViewModel() {
         val currentUser = auth.currentUser?.uid
 
         Scaffold(
-            topBar = { MessageTopBar(navController) },
+            topBar = { MessageTopBar(navController, personList) },
             content = {
                 Column(
                     modifier = Modifier
@@ -177,7 +179,11 @@ class ChatView : ViewModel() {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Bottom
                 ) {
-                    MessageList(messages = messages, scrollState = lazyListState,coroutineScope = coroutineScope)
+                    MessageList(
+                        messages = messages,
+                        scrollState = lazyListState,
+                        coroutineScope = coroutineScope
+                    )
 
                 }
             }, bottomBar = {
@@ -197,7 +203,11 @@ class ChatView : ViewModel() {
     @SuppressLint("CoroutineCreationDuringComposition")
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
-    fun MessageList(messages: List<Message>, scrollState: LazyListState,coroutineScope: CoroutineScope) {
+    fun MessageList(
+        messages: List<Message>,
+        scrollState: LazyListState,
+        coroutineScope: CoroutineScope
+    ) {
         coroutineScope.launch { scrollState.animateScrollToItem(messages.size) }
         LazyColumn(Modifier.padding(bottom = 70.dp), state = scrollState) {
             items(messages) { message ->
@@ -211,6 +221,7 @@ class ChatView : ViewModel() {
             }
         }
     }
+
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun MessageItem(message: Message) {
@@ -395,32 +406,51 @@ class ChatView : ViewModel() {
     }
 
     @Composable
-    fun MessageTopBar(navController: NavController) {
+    fun MessageTopBar(navController: NavController, user: PersonList) {
+        var favorite by remember { mutableStateOf(false) }
+        var comment by remember { mutableStateOf(false) }
+        var pin by remember { mutableStateOf(false) }
         TopAppBar(
             backgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
             title = {
+                Text(
+                    text = user.name,
+                    color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                    fontSize = 22.sp,
+                    fontFamily = FontFamily.SansSerif,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    modifier = Modifier
+                        .padding(start = 5.dp)
+                )
             },
             modifier = Modifier
                 .fillMaxWidth(),
             actions = {
-                IconButton(onClick = { /*TODO*/ }) {
+                IconButton(onClick = { favorite = !favorite }) {
                     Icon(
-                        imageVector = Icons.Default.Call,
+                        imageVector = if (favorite) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = null,
+                        modifier = Modifier
+                            .size(30.dp),
                         tint = if (isSystemInDarkTheme()) Color.White else Color.Black
                     )
                 }
-                IconButton(onClick = { /*TODO*/ }) {
+                IconButton(onClick = { pin = !pin }) {
                     Icon(
-                        imageVector = Icons.Default.ThumbUp,
+                        imageVector = if (pin) Icons.Filled.PushPin else Icons.Outlined.PushPin,
                         contentDescription = null,
+                        modifier = Modifier
+                            .size(30.dp),
                         tint = if (isSystemInDarkTheme()) Color.White else Color.Black
                     )
                 }
-                IconButton(onClick = { /*TODO*/ }) {
+                IconButton(onClick = { comment = !comment }) {
                     Icon(
-                        imageVector = Icons.Default.MoreVert,
+                        imageVector = if (comment) Icons.Outlined.CommentsDisabled else Icons.Outlined.Comment,
                         contentDescription = null,
+                        modifier = Modifier
+                            .size(30.dp),
                         tint = if (isSystemInDarkTheme()) Color.White else Color.Black
                     )
                 }
@@ -442,20 +472,10 @@ class ChatView : ViewModel() {
                         contentDescription = null,
                         painter = rememberAsyncImagePainter("https://www.w3schools.com/howto/img_avatar.png"),
                         modifier = Modifier
-                            .padding(start = 5.dp)
                             .clip(CircleShape)
                             .align(CenterVertically)
-                            .size(35.dp),
+                            .size(40.dp),
                         contentScale = ContentScale.Crop,
-                    )
-                    Text(
-                        text = "Mohammed Salad",
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                        fontSize = 16.sp,
-                        maxLines = 1,
-                        modifier = Modifier
-                            .padding(start = 5.dp)
-                            .align(CenterVertically)
                     )
                 }
             },
@@ -466,12 +486,13 @@ class ChatView : ViewModel() {
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("MutableCollectionMutableState")
     @Composable
-    fun ChatViewScreen(data: String, navController: NavController) {
+    fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val viewModel = viewModel<ChatView>()
+        val user = sharedViewModel.user.value
         auth = Firebase.auth
         val docID = auth.currentUser!!.uid
         val selectedMainDocumentIdState = remember { mutableStateOf(docID) }
-        val selectedSubCollectionIdState = remember { mutableStateOf(data) }
+        val selectedSubCollectionIdState = remember { mutableStateOf(user.userID) }
         val selectedMainDocumentId: String by selectedMainDocumentIdState
         val selectedSubCollectionId: String by selectedSubCollectionIdState
         val subCollectionDataState =
@@ -494,13 +515,14 @@ class ChatView : ViewModel() {
         }
         val onMessageSent: (Message) -> Unit = { message ->
             runBlocking {
-                saveMessage(data, message)
+                saveMessage(user.userID, message)
             }
         }
         ChatScreen(
             messages = friendSubCollectionData.plus(subCollectionData).sortedBy { it.timestamp },
             onMessageSent = onMessageSent,
             navController = navController,
+            personList = user
         )
     }
 }
