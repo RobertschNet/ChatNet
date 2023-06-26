@@ -29,10 +29,6 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,44 +39,30 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import at.htlhl.testing.data.PersonList
+import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 class DropIn : ViewModel() {
-    private lateinit var auth: FirebaseAuth
-    private val _subCollectionData = MutableStateFlow<List<PersonList>>(emptyList())
-    private val subCollectionData: StateFlow<List<PersonList>> get() = _subCollectionData
+    private var auth: FirebaseAuth
+
+    init {
+        auth = Firebase.auth
+    }
 
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @Composable
     fun DropInScreen(navController: NavController, sharedViewModel: SharedViewModel) {
-        val viewModel = viewModel<DropIn>()
         auth = Firebase.auth
-        val subCollectionDataState = remember { mutableStateOf<List<PersonList>>(emptyList()) }
-        val subCollectionData: List<PersonList> by subCollectionDataState
-        LaunchedEffect(Unit) {
-            viewModel.subCollectionData.collect { data ->
-                subCollectionDataState.value = data
-            }
-        }
-        val documentId = auth.currentUser!!.uid
-        LaunchedEffect(documentId) {
-            viewModel.fetchSubCollectionData(documentId)
-        }
         val lazyListState = rememberLazyListState()
-
         Scaffold {
             LazyColumn(
                 Modifier
@@ -135,7 +117,7 @@ class DropIn : ViewModel() {
                         color = if (isSystemInDarkTheme()) Color.DarkGray else Color.Transparent
                     )
                 }
-                items(subCollectionData) { message ->
+                items(sharedViewModel.friends.value) { message ->
                     ChatItem(
                         PersonList(
                             message.userID,
@@ -208,25 +190,6 @@ class DropIn : ViewModel() {
                 )
             }
         }
-    }
-
-    private fun fetchSubCollectionData(documentId: String) {
-        val collectionRef = FirebaseFirestore.getInstance().collection("user")
-        val documentRef = collectionRef.document(documentId)
-        val subCollectionRef = documentRef.collection("/friends")
-
-        subCollectionRef.get()
-            .addOnSuccessListener { querySnapshot ->
-                val subCollectionData = querySnapshot.toObjects(PersonList::class.java)
-                _subCollectionData.value = subCollectionData
-            }
-            .addOnFailureListener { exception ->
-                exception.printStackTrace()
-            }
+        Divider(thickness = 0.5f.dp, color = Color.LightGray)
     }
 }
-
-
-
-
-

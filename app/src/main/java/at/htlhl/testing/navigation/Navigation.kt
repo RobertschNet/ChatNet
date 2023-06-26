@@ -16,25 +16,18 @@ import androidx.navigation.compose.composable
 import at.htlhl.testing.views.ChatMate
 import at.htlhl.testing.views.ChatView
 import at.htlhl.testing.views.DropIn
-import at.htlhl.testing.views.Loading
 import at.htlhl.testing.views.LoginView
 import at.htlhl.testing.views.Profile
 import at.htlhl.testing.views.RandChat
 import at.htlhl.testing.views.RegisterView
 import at.htlhl.testing.views.SearchView
-import at.htlhl.testing.views.SharedViewModel
+import at.htlhl.testing.data.SharedViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun Navigation(navController: NavHostController, bottomBarState: MutableState<Boolean>) {
     val sharedViewModel = viewModel<SharedViewModel>()
     NavHost(navController = navController, startDestination = "LoginScreen") {
-        composable("LoadingScreen",
-            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
-            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-            bottomBarState.value = false
-            Loading().LoadingScreen(navController)
-        }
         composable("DropInScreen",
             enterTransition = {
                 slideInHorizontally(
@@ -79,8 +72,18 @@ fun Navigation(navController: NavHostController, bottomBarState: MutableState<Bo
             RandChat().RandChatScreen()
         }
         composable("SearchViewScreen",
-            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
-            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
+            enterTransition = {
+                slideInHorizontally(
+                    initialOffsetX = { fullWidth -> fullWidth },
+                    animationSpec = tween(durationMillis = 500)
+                )
+            },
+            exitTransition = {
+                slideOutHorizontally(
+                    targetOffsetX = { fullWidth -> fullWidth },
+                    animationSpec = tween(durationMillis = 500)
+                )
+            }) {
             bottomBarState.value = false
             SearchView().SearchViewScreen(navController)
         }

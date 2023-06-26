@@ -34,5 +34,19 @@ data class User(
 ) {
     constructor() : this("")
 }
-
+data class Person(
+    val userID: String,
+    val name: String,
+    val image: String,
+    val lastMessage: String,
+    val timestamp: Timestamp,
+) {
+    fun doesMatch(query: String): Boolean {
+        val matchingCombinations = listOf(
+            name,
+            "${name.first()}",
+        )
+        return matchingCombinations.any { it.contains(query, ignoreCase = true) }
+    }
+}
 

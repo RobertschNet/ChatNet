@@ -1,14 +1,15 @@
 package at.htlhl.testing
 
-import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -29,8 +30,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,89 +41,183 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import at.htlhl.testing.data.BottomNavItem
+import at.htlhl.testing.data.PersonList
+import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Navigation
 import at.htlhl.testing.navigation.Screens
 import at.htlhl.testing.ui.theme.TestingTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 @ExperimentalMaterial3Api
 class MainActivity : ComponentActivity() {
-    private lateinit var auth: FirebaseAuth
-
-    @SuppressLint("RememberReturnType")
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         setContent {
+            val navController = rememberNavController()
             TestingTheme {
-                val navController = rememberNavController()
-                val isBottomBarEnabled = remember { mutableStateOf(true) }
-                auth = Firebase.auth
-                val loginStatus = auth.currentUser != null
+                val viewModel: MyViewModel = viewModel()
+                val loadingState = viewModel.loadingState.value
+                val items = viewModel.items.value
+                val sharedViewModel = viewModel<SharedViewModel>()
+                sharedViewModel.friends.value = items
                 LaunchedEffect(key1 = true) {
-                    if (loginStatus) {
-                        println("User is logged in")
-                        navController.navigate(Screens.DropInScreen.Route)
-                    } else {
-                        println("User is not logged in")
-                        navController.navigate(Screens.LoginScreen.Route)
-                    }
+                    viewModel.fetchAuthenticationStatus()
+                    viewModel.fetchItems()
                 }
-                Scaffold(
-                    bottomBar = {
-                        BottomNavigationBar(
-                            isBottomBarEnabled = isBottomBarEnabled,
-                            items = listOf(
-                                BottomNavItem(
-                                    name = "Drop In",
-                                    route = Screens.DropInScreen.Route,
-                                    icon = Icons.Default.Message,
-                                    color = Color(0xFF00B1A9)
-                                ),
-                                BottomNavItem(
-                                    name = "RandChat",
-                                    route = Screens.RandChatScreen.Route,
-                                    icon = Icons.Default.LiveHelp,
-                                    color = Color(0xFFE21515)
-                                ),
-                                BottomNavItem(
-                                    name = "ChatMate",
-                                    route = Screens.ChatMateScreen.Route,
-                                    icon = Icons.Default.Api,
-                                    color = Color(0xFF15B625)
-                                ),
-                                BottomNavItem(
-                                    name = "Profile",
-                                    route = Screens.ProfileScreen.Route,
-                                    icon = Icons.Default.ManageAccounts,
-                                    color = Color(0xFF00A0E8)
-                                ),
-                            ),
-                            navController = navController,
-                            onItemClick = {
-                                if (navController.currentDestination?.route != it.route) {
-                                    navController.navigate(it.route)
-                                }
-                            }
-                        )
+                if (loadingState == LoadingState.Loading) {
+                    LoadingScreen()
+                } else {
+                    NavigationBarLayout(
+                        navController = navController,
+                        viewModel = viewModel,
+                    )
+                }
+                LaunchedEffect(key1 = loadingState) {
+                    when (loadingState) {
+                        LoadingState.Authenticated -> {
+                            println("User is logged in")
+                            navController.navigate(Screens.DropInScreen.Route)
+                        }
 
-                    }) { paddingValues ->
-                    Box(modifier = Modifier.padding(paddingValues)) {
-                        Navigation(
-                            navController = navController,
-                            bottomBarState = isBottomBarEnabled,
-                        )
+                        LoadingState.NotAuthenticated -> {
+                            println("User is not logged in")
+                            navController.navigate(Screens.LoginScreen.Route)
+                        }
+
+                        LoadingState.Error -> {
+                        }
+
+                        else -> Unit
                     }
                 }
+            }
+        }
+    }
+}
+
+enum class LoadingState {
+    Loading,
+    Authenticated,
+    NotAuthenticated,
+    Error
+}
+
+class MyViewModel : ViewModel() {
+    private val _loadingState = mutableStateOf(LoadingState.Loading)
+    val loadingState: State<LoadingState> = _loadingState
+
+    private val _items = mutableStateOf<List<PersonList>>(emptyList())
+    val items: State<List<PersonList>> = _items
+
+    private val auth: FirebaseAuth = Firebase.auth
+
+    fun fetchAuthenticationStatus() {
+        viewModelScope.launch {
+            try {
+                val user = withContext(Dispatchers.IO) {
+                    auth.currentUser
+                }
+                _loadingState.value = if (user != null) {
+                    LoadingState.Authenticated
+                } else {
+                    LoadingState.NotAuthenticated
+                }
+            } catch (e: Exception) {
+                _loadingState.value = LoadingState.Error
 
             }
+        }
+    }
+
+    fun fetchItems() {
+        viewModelScope.launch {
+            try {
+                val collectionRef = FirebaseFirestore.getInstance().collection("user")
+                val documentRef = collectionRef.document(auth.currentUser!!.uid)
+                val subCollectionRef = documentRef.collection("/friends")
+                val items = mutableListOf<PersonList>()
+                for (document in subCollectionRef.get().await()) {
+                    val item = document.toObject(PersonList::class.java)
+                    item.let { items.add(it) }
+                }
+                _items.value = items
+            } catch (e: Exception) {
+                _items.value = emptyList()
+            }
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NavigationBarLayout(
+    navController: NavHostController,
+    viewModel: MyViewModel,
+) {
+
+    val isBottomBarEnabled = remember { mutableStateOf(true) }
+    Scaffold(
+        bottomBar = {
+            BottomNavigationBar(
+                isBottomBarEnabled = isBottomBarEnabled,
+                items = listOf(
+                    BottomNavItem(
+                        name = "Drop In",
+                        route = Screens.DropInScreen.Route,
+                        icon = Icons.Default.Message,
+                        color = Color(0xFF00B1A9)
+                    ),
+                    BottomNavItem(
+                        name = "RandChat",
+                        route = Screens.RandChatScreen.Route,
+                        icon = Icons.Default.LiveHelp,
+                        color = Color(0xFFE21515)
+                    ),
+                    BottomNavItem(
+                        name = "ChatMate",
+                        route = Screens.ChatMateScreen.Route,
+                        icon = Icons.Default.Api,
+                        color = Color(0xFF15B625)
+                    ),
+                    BottomNavItem(
+                        name = "Profile",
+                        route = Screens.ProfileScreen.Route,
+                        icon = Icons.Default.ManageAccounts,
+                        color = Color(0xFF00A0E8)
+                    ),
+                ),
+                navController = navController,
+                onItemClick = {
+                    if (navController.currentDestination?.route != it.route) {
+                        navController.navigate(it.route)
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Box(modifier = Modifier.padding(paddingValues)) {
+            Navigation(
+                navController = navController,
+                bottomBarState = isBottomBarEnabled,
+            )
         }
     }
 }
@@ -186,5 +283,14 @@ fun BottomNavigationBar(
     }
 }
 
-
-
+@Composable
+fun LoadingScreen() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(if (isSystemInDarkTheme()) Color.Black else Color.White),
+        contentAlignment = Center
+    ) {
+        Text(text = "Loading...")
+    }
+}
