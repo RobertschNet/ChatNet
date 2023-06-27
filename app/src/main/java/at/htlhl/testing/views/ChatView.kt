@@ -7,6 +7,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +28,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.AlertDialog
+import androidx.compose.material.Button
 import androidx.compose.material.Scaffold
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
@@ -58,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -78,6 +82,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -91,20 +96,36 @@ import java.time.format.DateTimeFormatter
 class ChatView : ViewModel() {
     private lateinit var auth: FirebaseAuth
     private val db = FirebaseFirestore.getInstance()
-    private val _subCollectionData = MutableStateFlow<List<Message>>(emptyList())
-    private val subCollectionData: StateFlow<List<Message>> get() = _subCollectionData
+    private val _messageData = MutableStateFlow<List<Message>>(emptyList())
+    private val messageData: StateFlow<List<Message>> get() = _messageData
 
-    private val _friendSubCollectionData = MutableStateFlow<List<Message>>(emptyList())
-    private val friendSubCollectionData: StateFlow<List<Message>> get() = _friendSubCollectionData
-    private suspend fun saveMessage(data: String?, message: Message) {
-        db.collection("user/${auth.currentUser!!.uid}/friends/${data}/chat")
+    private suspend fun saveMessages(friendID: String?, message: Message) {
+        db.collection("user/${auth.currentUser!!.uid}/friends/${friendID}/chat")
             .add(message)
             .await()
+
+        db.collection("user/${friendID}/friends/${auth.currentUser!!.uid}/chat")
+            .add(message)
+            .await()
+
+        val collectionRefFriend = db.collection("user/${friendID}/friends/")
+        val updatedData = mapOf("lastMessage" to message.content, "timestamp" to message.timestamp)
+        collectionRefFriend.document(auth.currentUser!!.uid).set(updatedData, SetOptions.merge())
+            .addOnSuccessListener {}
+            .addOnFailureListener {}
+
+        val collectionUser = db.collection("user/${auth.currentUser!!.uid}/friends/")
+        val updatedDataUser =
+            mapOf("lastMessage" to message.content, "timestamp" to message.timestamp)
+        if (friendID != null) {
+            collectionUser.document(friendID).set(updatedDataUser, SetOptions.merge())
+                .addOnSuccessListener {}
+                .addOnFailureListener {}
+        }
     }
 
-    private var subCollectionDataListener: ListenerRegistration? = null
-    private var friendSubCollectionDataListener: ListenerRegistration? = null
-    private fun startListeningForSubCollectionData(
+    private var messageDataListener: ListenerRegistration? = null
+    private fun startListeningForMessages(
         mainDocumentId: String,
         subCollectionId: String,
     ) {
@@ -113,46 +134,75 @@ class ChatView : ViewModel() {
         val subCollectionRef = documentRef.collection("/friends")
         val nestedSubCollectionRef =
             subCollectionRef.document(subCollectionId).collection("/chat").orderBy("timestamp")
-        subCollectionDataListener?.remove()
-        subCollectionDataListener =
+        messageDataListener?.remove()
+        messageDataListener =
             nestedSubCollectionRef.addSnapshotListener { querySnapshot, exception ->
                 if (exception != null) {
                     return@addSnapshotListener
                 }
                 querySnapshot?.let { snapshot ->
                     val subCollectionData = snapshot.toObjects(Message::class.java)
-                    _subCollectionData.value = subCollectionData
+                    _messageData.value = subCollectionData
                 }
             }
     }
 
-    private fun startListeningForFriendSubCollectionData(
-        mainDocumentId: String,
-        subCollectionId: String
+    private fun deleteMessageForFriend(
+        mainDocumentID: String,
+        subCollectionID: String,
+        messageId: Timestamp,
     ) {
         val collectionRef = FirebaseFirestore.getInstance().collection("user")
-        val documentRef = collectionRef.document(mainDocumentId)
+        val documentRef = collectionRef.document(subCollectionID)
         val subCollectionRef = documentRef.collection("/friends")
-        val nestedSubCollectionRef =
-            subCollectionRef.document(subCollectionId).collection("/chat").orderBy("timestamp")
-        friendSubCollectionDataListener?.remove()
-        friendSubCollectionDataListener =
-            nestedSubCollectionRef.addSnapshotListener { querySnapshot, exception ->
-                if (exception != null) {
-                    return@addSnapshotListener
+        subCollectionRef.document(mainDocumentID).collection("/chat")
+            .whereEqualTo("timestamp", messageId)
+            .get()
+            .addOnSuccessListener { querySnapshot ->
+                for (document in querySnapshot) {
+                    document.reference.delete()
+                        .addOnSuccessListener {
+                        }
+                        .addOnFailureListener { exception ->
+                            exception.printStackTrace()
+                        }
                 }
-                querySnapshot?.let { snapshot ->
-                    val subCollectionData = snapshot.toObjects(Message::class.java)
-                    _friendSubCollectionData.value = subCollectionData
+            }
+            .addOnFailureListener { exception ->
+                exception.printStackTrace()
+            }
+    }
+
+    private fun deleteMessageForUser(
+        mainDocumentID: String,
+        subCollectionID: String,
+        messageId: Timestamp,
+    ) {
+        val collectionRef = FirebaseFirestore.getInstance().collection("user")
+        val documentRef = collectionRef.document(mainDocumentID)
+        val subCollectionRef = documentRef.collection("/friends")
+        subCollectionRef.document(subCollectionID).collection("/chat")
+            .whereEqualTo("timestamp", messageId)
+            .get()
+            .addOnSuccessListener { querySnapshot ->
+                for (document in querySnapshot) {
+                    document.reference.delete()
+                        .addOnSuccessListener {
+                        }
+                        .addOnFailureListener { exception ->
+                            exception.printStackTrace()
+                        }
                 }
+            }
+            .addOnFailureListener { exception ->
+                exception.printStackTrace()
             }
     }
 
 
     override fun onCleared() {
         super.onCleared()
-        subCollectionDataListener?.remove()
-        friendSubCollectionDataListener?.remove()
+        messageDataListener?.remove()
     }
 
 
@@ -164,12 +214,13 @@ class ChatView : ViewModel() {
         messages: List<Message>,
         onMessageSent: (Message) -> Unit,
         personList: PersonList,
+        mainDocumentID: String,
+        subCollectionID: String,
     ) {
         val coroutineScope = rememberCoroutineScope()
         val lazyListState = rememberLazyListState()
         auth = Firebase.auth
         val currentUser = auth.currentUser?.uid
-
         Scaffold(
             topBar = { MessageTopBar(navController, personList) },
             content = {
@@ -183,7 +234,9 @@ class ChatView : ViewModel() {
                     MessageList(
                         messages = messages,
                         scrollState = lazyListState,
-                        coroutineScope = coroutineScope
+                        coroutineScope = coroutineScope,
+                        subCollectionID = subCollectionID,
+                        mainDocumentID = mainDocumentID,
                     )
 
                 }
@@ -195,8 +248,6 @@ class ChatView : ViewModel() {
                         timestamp = Timestamp.now()
                     )
                     onMessageSent(message)
-                    coroutineScope.launch {
-                    }
                 }
             })
     }
@@ -207,7 +258,9 @@ class ChatView : ViewModel() {
     fun MessageList(
         messages: List<Message>,
         scrollState: LazyListState,
-        coroutineScope: CoroutineScope
+        coroutineScope: CoroutineScope,
+        subCollectionID: String,
+        mainDocumentID: String,
     ) {
         coroutineScope.launch { scrollState.animateScrollToItem(messages.size) }
         LazyColumn(Modifier.padding(bottom = 70.dp), state = scrollState) {
@@ -217,7 +270,7 @@ class ChatView : ViewModel() {
                         message.userID,
                         message.content,
                         message.timestamp
-                    )
+                    ), subCollectionID, mainDocumentID
                 )
             }
         }
@@ -225,7 +278,7 @@ class ChatView : ViewModel() {
 
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
-    fun MessageItem(message: Message) {
+    fun MessageItem(message: Message, subCollectionID: String, mainDocumentID: String) {
         val backgroundColor =
             if (message.userID == auth.currentUser?.uid) if (isSystemInDarkTheme()) Color.DarkGray
             else Color.White else if (isSystemInDarkTheme()) Color.Black else Color.LightGray
@@ -234,46 +287,93 @@ class ChatView : ViewModel() {
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
         val formattedTime = message.timestamp.toDate().toInstant().atZone(ZoneId.systemDefault())
             .toLocalTime().format(formatter)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            horizontalArrangement = alignment,
-            verticalAlignment = CenterVertically
-        ) {
-            Box(
+        var openDialog by remember { mutableStateOf(false) }
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(
                 modifier = Modifier
-                    .border(
-                        1.dp,
-                        if (isSystemInDarkTheme()) Color.White else Color.Black,
-                        RoundedCornerShape(24.dp)
+                    .fillMaxWidth(),
+                horizontalArrangement = alignment,
+                verticalAlignment = CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    openDialog = true
+                                }
+                            )
+                        }
+                        .border(
+                            1.dp,
+                            if (isSystemInDarkTheme()) Color.White else Color.Black,
+                            RoundedCornerShape(24.dp)
+                        )
+                        .background(backgroundColor, shape = RoundedCornerShape(24.dp))
+                        .padding(8.dp)
+                ) {
+
+                    Text(
+                        text = message.content,
+                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                        modifier = Modifier.padding(8.dp),
+                        textAlign = TextAlign.Start
                     )
-                    .background(backgroundColor, shape = RoundedCornerShape(24.dp))
-                    .padding(8.dp)
+                }
+            }
+            if (openDialog) {
+                AlertDialog(
+                    onDismissRequest = { openDialog = false },
+                    title = { Text(text = "Delete Message") },
+                    text = { Text(text = "Are you sure you want to delete this message?") },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                deleteMessageForUser(
+                                    mainDocumentID= mainDocumentID,
+                                    subCollectionID = subCollectionID,
+                                    message.timestamp
+                                )
+                                openDialog = false
+                            }
+                        ) {
+                            Text(text = "Delete for me")
+                        }
+                    },
+                    dismissButton = {
+                        Button(onClick = {
+                            deleteMessageForUser(
+                                mainDocumentID  = mainDocumentID,
+                                subCollectionID = subCollectionID,
+                                message.timestamp
+                            )
+                            deleteMessageForFriend(
+                                mainDocumentID= mainDocumentID,
+                                subCollectionID = subCollectionID,
+                                message.timestamp
+                            )
+                            openDialog = false
+                        }) {
+                            Text(text = "Delete for both")
+                        }
+                    }
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = alignment,
+                verticalAlignment = CenterVertically
             ) {
                 Text(
-                    text = message.content,
+                    text = formattedTime,
+                    fontSize = 14.sp,
                     color = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                    modifier = Modifier.padding(8.dp),
-                    textAlign = TextAlign.Start
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier.padding(bottom = 20.dp)
                 )
             }
         }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-            horizontalArrangement = alignment,
-            verticalAlignment = CenterVertically
-        ) {
-            Text(
-                text = formattedTime,
-                modifier = Modifier.padding(2.dp),
-                fontSize = 14.sp,
-                color = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                textAlign = TextAlign.Start
-            )
-        }
-
     }
 
 
@@ -349,7 +449,9 @@ class ChatView : ViewModel() {
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Icon(
-                            modifier = Modifier.size(30.dp),
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clickable(onClick = {}),
                             imageVector = Icons.Outlined.EmojiEmotions,
                             contentDescription = null,
                             tint = if (isSystemInDarkTheme()) Color.White else Color.Black,
@@ -489,41 +591,35 @@ class ChatView : ViewModel() {
     @Composable
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val viewModel = viewModel<ChatView>()
-        val user = sharedViewModel.user.value
         auth = Firebase.auth
+        val user = sharedViewModel.user.value
         val docID = auth.currentUser!!.uid
         val selectedMainDocumentIdState = remember { mutableStateOf(docID) }
         val selectedSubCollectionIdState = remember { mutableStateOf(user.userID) }
         val selectedMainDocumentId: String by selectedMainDocumentIdState
         val selectedSubCollectionId: String by selectedSubCollectionIdState
-        val subCollectionDataState =
-            viewModel.subCollectionData.collectAsState(initial = emptyList())
-        val subCollectionData: List<Message> = subCollectionDataState.value
-        val friendSubCollectionDataState =
-            viewModel.friendSubCollectionData.collectAsState(initial = emptyList())
-        val friendSubCollectionData: List<Message> = friendSubCollectionDataState.value
+        val messageDataState = viewModel.messageData.collectAsState(initial = emptyList())
+        val messageData: List<Message> = messageDataState.value
         LaunchedEffect(selectedMainDocumentId, selectedSubCollectionId) {
-            viewModel.startListeningForSubCollectionData(
+            viewModel.startListeningForMessages(
                 selectedMainDocumentId,
                 selectedSubCollectionId
             )
         }
-        LaunchedEffect(selectedMainDocumentId, selectedSubCollectionId) {
-            viewModel.startListeningForFriendSubCollectionData(
-                selectedSubCollectionId,
-                selectedMainDocumentId
-            )
-        }
         val onMessageSent: (Message) -> Unit = { message ->
             runBlocking {
-                saveMessage(user.userID, message)
+                saveMessages(user.userID, message)
             }
         }
         ChatScreen(
-            messages = friendSubCollectionData.plus(subCollectionData).sortedBy { it.timestamp },
+            messages = messageData.sortedBy { it.timestamp },
             onMessageSent = onMessageSent,
             navController = navController,
-            personList = user
-        )
+            personList = user,
+            subCollectionID = selectedSubCollectionId,
+            mainDocumentID = selectedMainDocumentId,
+            )
     }
 }
+
+

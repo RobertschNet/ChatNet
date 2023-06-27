@@ -16,11 +16,12 @@ data class PersonList(
     val userID: String,
     val name: String,
     val image: String,
-    val lastMessage : String,
+    val lastMessage: String,
     val timestamp: Timestamp,
 ) {
     constructor() : this("", "", "", "", Timestamp.now())
 }
+
 data class Message(
     val userID: String,
     val content: String,
@@ -34,6 +35,7 @@ data class User(
 ) {
     constructor() : this("")
 }
+
 data class Person(
     val userID: String,
     val name: String,

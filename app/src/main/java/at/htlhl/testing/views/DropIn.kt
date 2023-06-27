@@ -29,6 +29,8 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import at.htlhl.testing.data.PersonList
 import at.htlhl.testing.data.SharedViewModel
@@ -46,23 +49,60 @@ import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 class DropIn : ViewModel() {
     private var auth: FirebaseAuth
+    private val _friendListData = MutableStateFlow<List<PersonList>>(emptyList())
+    private val friendListData: StateFlow<List<PersonList>> get() = _friendListData
+
 
     init {
         auth = Firebase.auth
+    }
+
+    private var friendListDataListener: ListenerRegistration? = null
+    private fun startListeningForSubCollectionData() {
+        val collectionRef = FirebaseFirestore.getInstance().collection("user")
+        val documentRef = collectionRef.document(auth.currentUser!!.uid)
+        val subCollectionRef = documentRef.collection("/friends").orderBy("timestamp")
+
+        friendListDataListener?.remove()
+        friendListDataListener =
+            subCollectionRef.addSnapshotListener { querySnapshot, exception ->
+                if (exception != null) {
+                    return@addSnapshotListener
+                }
+                querySnapshot?.let { snapshot ->
+                    val subCollectionData = snapshot.toObjects(PersonList::class.java)
+                    _friendListData.value = subCollectionData
+                }
+            }
+    }
+    override fun onCleared() {
+        super.onCleared()
+        friendListDataListener?.remove()
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @Composable
     fun DropInScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+        val viewModel = viewModel<DropIn>()
         auth = Firebase.auth
         val lazyListState = rememberLazyListState()
+        val friendListDataState =
+            viewModel.friendListData.collectAsState(initial = emptyList())
+        val friendListData: List<PersonList> = friendListDataState.value
+        LaunchedEffect(key1 = Unit) {
+            viewModel.startListeningForSubCollectionData()
+        }
         Scaffold {
             LazyColumn(
                 Modifier
@@ -117,7 +157,7 @@ class DropIn : ViewModel() {
                         color = if (isSystemInDarkTheme()) Color.DarkGray else Color.Transparent
                     )
                 }
-                items(sharedViewModel.friends.value) { message ->
+                items(friendListData) { message ->
                     ChatItem(
                         PersonList(
                             message.userID,
@@ -190,6 +230,6 @@ class DropIn : ViewModel() {
                 )
             }
         }
-        Divider(thickness = 0.5f.dp, color = Color.LightGray)
+        Divider(thickness = 0.25f.dp, color = Color.LightGray)
     }
 }
