@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import at.htlhl.testing.data.Friend
 import at.htlhl.testing.data.PersonList
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Screens
@@ -71,7 +72,8 @@ class DropIn : ViewModel() {
     private fun startListeningForSubCollectionData() {
         val collectionRef = FirebaseFirestore.getInstance().collection("user")
         val documentRef = collectionRef.document(auth.currentUser!!.uid)
-        val subCollectionRef = documentRef.collection("/friends").orderBy("timestamp")
+        val subCollectionRef = documentRef.collection("/friends")
+            .whereEqualTo("status", "accepted")
 
         friendListDataListener?.remove()
         friendListDataListener =
@@ -79,12 +81,26 @@ class DropIn : ViewModel() {
                 if (exception != null) {
                     return@addSnapshotListener
                 }
+                val personListData = mutableListOf<PersonList>()
+
                 querySnapshot?.let { snapshot ->
-                    val subCollectionData = snapshot.toObjects(PersonList::class.java)
-                    _friendListData.value = subCollectionData
+                    val subCollectionData = snapshot.toObjects(Friend::class.java)
+
+                    for (friend in subCollectionData) {
+                        FirebaseFirestore.getInstance().collection("user")
+                            .document(friend.userID)
+                            .get()
+                            .addOnSuccessListener { documentSnapshot ->
+                                val data = documentSnapshot.toObject(PersonList::class.java)
+                                data?.let { personListData.add(it) }
+
+                                _friendListData.value = personListData
+                            }
+                    }
                 }
             }
     }
+
     override fun onCleared() {
         super.onCleared()
         friendListDataListener?.remove()

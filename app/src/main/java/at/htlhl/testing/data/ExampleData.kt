@@ -21,9 +21,15 @@ data class PersonList(
 ) {
     constructor() : this("", "", "", "", Timestamp.now())
 }
+data class Friend(
+    val userID: String,
+    val status: String,
+) {
+    constructor() : this("", "")
+}
 
 data class Message(
-    val userID: String,
+    val sender: String,
     val content: String,
     val timestamp: Timestamp,
 ) {

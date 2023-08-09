@@ -289,7 +289,8 @@ class SearchView : ViewModel() {
                                         .clickable {
                                             getDocument { data ->
                                                 if (data != null) {
-                                                    saveFriend(person = person, user = data)
+                                                    saveFriend(person = person)
+                                                    saveChatRoom(person = person)
                                                 }
                                             }
                                             saveSubscribed(person)
@@ -325,18 +326,40 @@ class SearchView : ViewModel() {
     private fun saveSubscribed(person: Person) {
         val collectionRef =
             FirebaseFirestore.getInstance().collection("user/${auth.currentUser!!.uid}/friends")
-        val documentRef = collectionRef.document(person.userID)
-        documentRef.set(person)
+        val documentRef = collectionRef.document()
+        val fieldUpdates = hashMapOf<String, Any>(
+            "status" to "accepted",
+            "userID" to person.userID,
+        )
+        documentRef.set(fieldUpdates)
             .addOnSuccessListener {}
             .addOnFailureListener { exception -> exception.printStackTrace() }
+
     }
 
-    private fun saveFriend(person: Person, user: PersonList) {
+    private fun saveFriend(person: Person) {
         val collectionRef =
             FirebaseFirestore.getInstance().collection("user/${person.userID}/friends")
-        val documentRef = collectionRef.document(auth.currentUser!!.uid)
-        documentRef.set(user)
+        val documentRef = collectionRef.document()
+        val fieldUpdates = hashMapOf<String, Any>(
+            "status" to "pending",
+            "userID" to auth.currentUser!!.uid,
+        )
+        documentRef.set(fieldUpdates)
             .addOnSuccessListener {}
             .addOnFailureListener { exception -> exception.printStackTrace() }
+
+    }
+
+    private fun saveChatRoom(person: Person) {
+        val collectionRef = FirebaseFirestore.getInstance().collection("chats")
+        val documentRef = collectionRef.document()
+        val fieldUpdates = hashMapOf<String, Any>(
+            "participants" to auth.currentUser!!.uid + person.userID,
+        )
+        documentRef.set(fieldUpdates)
+            .addOnSuccessListener {}
+            .addOnFailureListener { exception -> exception.printStackTrace() }
+
     }
 }

@@ -82,7 +82,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.firestore.SetOptions
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -97,107 +96,82 @@ class ChatView : ViewModel() {
     private lateinit var auth: FirebaseAuth
     private val db = FirebaseFirestore.getInstance()
     private val _messageData = MutableStateFlow<List<Message>>(emptyList())
+    private val _documentId = MutableStateFlow("")
     private val messageData: StateFlow<List<Message>> get() = _messageData
+    private val documentId: StateFlow<String> get() = _documentId
 
-    private suspend fun saveMessages(friendID: String?, message: Message) {
-        db.collection("user/${auth.currentUser!!.uid}/friends/${friendID}/chat")
+    private suspend fun saveMessages(documentId: String?, message: Message) {
+        db.collection("chats/${documentId}/messages")
             .add(message)
             .await()
-
-        db.collection("user/${friendID}/friends/${auth.currentUser!!.uid}/chat")
-            .add(message)
-            .await()
-
-        val collectionRefFriend = db.collection("user/${friendID}/friends/")
-        val updatedData = mapOf("lastMessage" to message.content, "timestamp" to message.timestamp)
-        collectionRefFriend.document(auth.currentUser!!.uid).set(updatedData, SetOptions.merge())
-            .addOnSuccessListener {}
-            .addOnFailureListener {}
-
-        val collectionUser = db.collection("user/${auth.currentUser!!.uid}/friends/")
-        val updatedDataUser =
-            mapOf("lastMessage" to message.content, "timestamp" to message.timestamp)
-        if (friendID != null) {
-            collectionUser.document(friendID).set(updatedDataUser, SetOptions.merge())
-                .addOnSuccessListener {}
-                .addOnFailureListener {}
-        }
     }
 
     private var messageDataListener: ListenerRegistration? = null
-    private fun startListeningForMessages(
-        mainDocumentId: String,
-        subCollectionId: String,
+    private suspend fun startListeningForMessages(
+        documentId: String,
+        docId: String,
     ) {
-        val collectionRef = FirebaseFirestore.getInstance().collection("user")
-        val documentRef = collectionRef.document(mainDocumentId)
-        val subCollectionRef = documentRef.collection("/friends")
-        val nestedSubCollectionRef =
-            subCollectionRef.document(subCollectionId).collection("/chat").orderBy("timestamp")
-        messageDataListener?.remove()
-        messageDataListener =
-            nestedSubCollectionRef.addSnapshotListener { querySnapshot, exception ->
-                if (exception != null) {
-                    return@addSnapshotListener
-                }
-                querySnapshot?.let { snapshot ->
-                    val subCollectionData = snapshot.toObjects(Message::class.java)
-                    _messageData.value = subCollectionData
+        val collectionRef = FirebaseFirestore.getInstance().collection("chats")
+        try {
+            val querySnapshot = collectionRef
+                .whereIn("participants", listOf(documentId, docId))
+                .get()
+                .await()
+
+            for (document in querySnapshot.documents) {
+                val data = document.data
+                data?.let {
+                    println(querySnapshot.documents.firstOrNull()?.id)
+                    val documentRef = querySnapshot.documents.firstOrNull()?.id?.let { it1 ->
+                        collectionRef.document(
+                            it1
+                        )
+                    }
+                    val subCollectionRef = documentRef?.collection("/messages")?.orderBy("timestamp")
+                    messageDataListener?.remove()
+                    if (subCollectionRef != null) {
+                        messageDataListener =
+                            subCollectionRef.addSnapshotListener { querySnapshot, exception ->
+                                if (exception != null) {
+                                    return@addSnapshotListener
+                                }
+                                querySnapshot?.let { snapshot ->
+                                    val subCollectionData = snapshot.toObjects(Message::class.java)
+                                    _messageData.value = subCollectionData
+                                    _documentId.value = document.id
+                                }
+                            }
+                    }
                 }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
-    private fun deleteMessageForFriend(
-        mainDocumentID: String,
-        subCollectionID: String,
-        messageId: Timestamp,
-    ) {
-        val collectionRef = FirebaseFirestore.getInstance().collection("user")
-        val documentRef = collectionRef.document(subCollectionID)
-        val subCollectionRef = documentRef.collection("/friends")
-        subCollectionRef.document(mainDocumentID).collection("/chat")
-            .whereEqualTo("timestamp", messageId)
-            .get()
-            .addOnSuccessListener { querySnapshot ->
-                for (document in querySnapshot) {
-                    document.reference.delete()
-                        .addOnSuccessListener {
-                        }
-                        .addOnFailureListener { exception ->
-                            exception.printStackTrace()
-                        }
+        private fun deleteMessageForUser(
+            documentId: String,
+            messageId: Timestamp,
+        ) {
+            val collectionRef = FirebaseFirestore.getInstance().collection("chats")
+            val documentRef = collectionRef.document(documentId)
+             documentRef.collection("/messages")
+                .whereEqualTo("timestamp", messageId)
+                .get()
+                .addOnSuccessListener { querySnapshot ->
+                    for (document in querySnapshot) {
+                        document.reference.delete()
+                            .addOnSuccessListener {
+                            }
+                            .addOnFailureListener { exception ->
+                                exception.printStackTrace()
+                            }
+                    }
                 }
-            }
-            .addOnFailureListener { exception ->
-                exception.printStackTrace()
-            }
-    }
-
-    private fun deleteMessageForUser(
-        mainDocumentID: String,
-        subCollectionID: String,
-        messageId: Timestamp,
-    ) {
-        val collectionRef = FirebaseFirestore.getInstance().collection("user")
-        val documentRef = collectionRef.document(mainDocumentID)
-        val subCollectionRef = documentRef.collection("/friends")
-        subCollectionRef.document(subCollectionID).collection("/chat")
-            .whereEqualTo("timestamp", messageId)
-            .get()
-            .addOnSuccessListener { querySnapshot ->
-                for (document in querySnapshot) {
-                    document.reference.delete()
-                        .addOnSuccessListener {
-                        }
-                        .addOnFailureListener { exception ->
-                            exception.printStackTrace()
-                        }
+                .addOnFailureListener { exception ->
+                    exception.printStackTrace()
                 }
-            }
-            .addOnFailureListener { exception ->
-                exception.printStackTrace()
-            }
-    }
+        }
 
 
     override fun onCleared() {
@@ -214,13 +188,13 @@ class ChatView : ViewModel() {
         messages: List<Message>,
         onMessageSent: (Message) -> Unit,
         personList: PersonList,
-        mainDocumentID: String,
-        subCollectionID: String,
+        documentId: String,
     ) {
         val coroutineScope = rememberCoroutineScope()
         val lazyListState = rememberLazyListState()
         auth = Firebase.auth
         val currentUser = auth.currentUser?.uid
+        println(messages)
         Scaffold(
             topBar = { MessageTopBar(navController, personList) },
             content = {
@@ -235,15 +209,14 @@ class ChatView : ViewModel() {
                         messages = messages,
                         scrollState = lazyListState,
                         coroutineScope = coroutineScope,
-                        subCollectionID = subCollectionID,
-                        mainDocumentID = mainDocumentID,
+                        documentId = documentId
                     )
 
                 }
             }, bottomBar = {
                 InputField { messageText ->
                     val message = Message(
-                        userID = currentUser.toString(),
+                        sender = currentUser.toString(),
                         content = messageText,
                         timestamp = Timestamp.now()
                     )
@@ -259,18 +232,17 @@ class ChatView : ViewModel() {
         messages: List<Message>,
         scrollState: LazyListState,
         coroutineScope: CoroutineScope,
-        subCollectionID: String,
-        mainDocumentID: String,
+        documentId: String,
     ) {
         coroutineScope.launch { scrollState.animateScrollToItem(messages.size) }
         LazyColumn(Modifier.padding(bottom = 70.dp), state = scrollState) {
             items(messages) { message ->
                 MessageItem(
                     Message(
-                        message.userID,
+                        message.sender,
                         message.content,
                         message.timestamp
-                    ), subCollectionID, mainDocumentID
+                    ), documentId
                 )
             }
         }
@@ -278,12 +250,12 @@ class ChatView : ViewModel() {
 
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
-    fun MessageItem(message: Message, subCollectionID: String, mainDocumentID: String) {
+    fun MessageItem(message: Message, documentId: String) {
         val backgroundColor =
-            if (message.userID == auth.currentUser?.uid) if (isSystemInDarkTheme()) Color.DarkGray
+            if (message.sender == auth.currentUser?.uid) if (isSystemInDarkTheme()) Color.DarkGray
             else Color.White else if (isSystemInDarkTheme()) Color.Black else Color.LightGray
         val alignment =
-            if (message.userID == auth.currentUser?.uid) Arrangement.End else Arrangement.Start
+            if (message.sender == auth.currentUser?.uid) Arrangement.End else Arrangement.Start
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
         val formattedTime = message.timestamp.toDate().toInstant().atZone(ZoneId.systemDefault())
             .toLocalTime().format(formatter)
@@ -300,7 +272,9 @@ class ChatView : ViewModel() {
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onLongPress = {
-                                    openDialog = true
+                                    if (message.sender == auth.currentUser?.uid){
+                                        openDialog = true
+                                    }
                                 }
                             )
                         }
@@ -330,8 +304,7 @@ class ChatView : ViewModel() {
                         Button(
                             onClick = {
                                 deleteMessageForUser(
-                                    mainDocumentID= mainDocumentID,
-                                    subCollectionID = subCollectionID,
+                                    documentId,
                                     message.timestamp
                                 )
                                 openDialog = false
@@ -341,20 +314,12 @@ class ChatView : ViewModel() {
                         }
                     },
                     dismissButton = {
-                        Button(onClick = {
-                            deleteMessageForUser(
-                                mainDocumentID  = mainDocumentID,
-                                subCollectionID = subCollectionID,
-                                message.timestamp
-                            )
-                            deleteMessageForFriend(
-                                mainDocumentID= mainDocumentID,
-                                subCollectionID = subCollectionID,
-                                message.timestamp
-                            )
-                            openDialog = false
-                        }) {
-                            Text(text = "Delete for both")
+                        Button(
+                            onClick = {
+                                openDialog = false
+                            }
+                        ) {
+                            Text(text = "Cancel")
                         }
                     }
                 )
@@ -587,38 +552,40 @@ class ChatView : ViewModel() {
 
 
     @RequiresApi(Build.VERSION_CODES.O)
-    @SuppressLint("MutableCollectionMutableState")
+    @SuppressLint("MutableCollectionMutableState", "CoroutineCreationDuringComposition")
     @Composable
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val viewModel = viewModel<ChatView>()
         auth = Firebase.auth
         val user = sharedViewModel.user.value
-        val docID = auth.currentUser!!.uid
-        val selectedMainDocumentIdState = remember { mutableStateOf(docID) }
-        val selectedSubCollectionIdState = remember { mutableStateOf(user.userID) }
-        val selectedMainDocumentId: String by selectedMainDocumentIdState
-        val selectedSubCollectionId: String by selectedSubCollectionIdState
+        val docId = auth.currentUser!!.uid
+        val selectedMainDocumentIdState = remember { mutableStateOf(docId + user.userID) }
+        val selectedSubDocumentIdState = remember { mutableStateOf(user.userID+docId) }
+        val documentId: String by selectedMainDocumentIdState
+        val docID: String by selectedSubDocumentIdState
         val messageDataState = viewModel.messageData.collectAsState(initial = emptyList())
         val messageData: List<Message> = messageDataState.value
-        LaunchedEffect(selectedMainDocumentId, selectedSubCollectionId) {
+        val documentIdState = viewModel.documentId.collectAsState(initial = "")
+        val documentationId: String = documentIdState.value
+
+        LaunchedEffect(documentId, docID) {
             viewModel.startListeningForMessages(
-                selectedMainDocumentId,
-                selectedSubCollectionId
+                documentId,
+                docID,
             )
         }
         val onMessageSent: (Message) -> Unit = { message ->
             runBlocking {
-                saveMessages(user.userID, message)
+                saveMessages(documentationId, message)
             }
         }
         ChatScreen(
-            messages = messageData.sortedBy { it.timestamp },
+            messages = messageData,
             onMessageSent = onMessageSent,
             navController = navController,
             personList = user,
-            subCollectionID = selectedSubCollectionId,
-            mainDocumentID = selectedMainDocumentId,
-            )
+            documentId = documentationId,
+        )
     }
 }
 
