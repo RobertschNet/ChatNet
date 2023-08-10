@@ -80,105 +80,15 @@ import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.tasks.await
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 class ChatView : ViewModel() {
     private lateinit var auth: FirebaseAuth
-    private val db = FirebaseFirestore.getInstance()
-    private val _messageData = MutableStateFlow<List<Message>>(emptyList())
-    private val _documentId = MutableStateFlow("")
-    private val messageData: StateFlow<List<Message>> get() = _messageData
-    private val documentId: StateFlow<String> get() = _documentId
-
-    private suspend fun saveMessages(documentId: String?, message: Message) {
-        db.collection("chats/${documentId}/messages")
-            .add(message)
-            .await()
-    }
-
-    private var messageDataListener: ListenerRegistration? = null
-    private suspend fun startListeningForMessages(
-        documentId: String,
-        docId: String,
-    ) {
-        val collectionRef = FirebaseFirestore.getInstance().collection("chats")
-        try {
-            val querySnapshot = collectionRef
-                .whereIn("participants", listOf(documentId, docId))
-                .get()
-                .await()
-
-            for (document in querySnapshot.documents) {
-                val data = document.data
-                data?.let {
-                    println(querySnapshot.documents.firstOrNull()?.id)
-                    val documentRef = querySnapshot.documents.firstOrNull()?.id?.let { it1 ->
-                        collectionRef.document(
-                            it1
-                        )
-                    }
-                    val subCollectionRef = documentRef?.collection("/messages")?.orderBy("timestamp")
-                    messageDataListener?.remove()
-                    if (subCollectionRef != null) {
-                        messageDataListener =
-                            subCollectionRef.addSnapshotListener { querySnapshot, exception ->
-                                if (exception != null) {
-                                    return@addSnapshotListener
-                                }
-                                querySnapshot?.let { snapshot ->
-                                    val subCollectionData = snapshot.toObjects(Message::class.java)
-                                    _messageData.value = subCollectionData
-                                    _documentId.value = document.id
-                                }
-                            }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-        private fun deleteMessageForUser(
-            documentId: String,
-            messageId: Timestamp,
-        ) {
-            val collectionRef = FirebaseFirestore.getInstance().collection("chats")
-            val documentRef = collectionRef.document(documentId)
-             documentRef.collection("/messages")
-                .whereEqualTo("timestamp", messageId)
-                .get()
-                .addOnSuccessListener { querySnapshot ->
-                    for (document in querySnapshot) {
-                        document.reference.delete()
-                            .addOnSuccessListener {
-                            }
-                            .addOnFailureListener { exception ->
-                                exception.printStackTrace()
-                            }
-                    }
-                }
-                .addOnFailureListener { exception ->
-                    exception.printStackTrace()
-                }
-        }
-
-
-    override fun onCleared() {
-        super.onCleared()
-        messageDataListener?.remove()
-    }
-
 
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
@@ -189,12 +99,12 @@ class ChatView : ViewModel() {
         onMessageSent: (Message) -> Unit,
         personList: PersonList,
         documentId: String,
+        viewModel: SharedViewModel
     ) {
         val coroutineScope = rememberCoroutineScope()
         val lazyListState = rememberLazyListState()
         auth = Firebase.auth
         val currentUser = auth.currentUser?.uid
-        println(messages)
         Scaffold(
             topBar = { MessageTopBar(navController, personList) },
             content = {
@@ -206,6 +116,7 @@ class ChatView : ViewModel() {
                     verticalArrangement = Arrangement.Bottom
                 ) {
                     MessageList(
+                        viewModel = viewModel,
                         messages = messages,
                         scrollState = lazyListState,
                         coroutineScope = coroutineScope,
@@ -229,6 +140,7 @@ class ChatView : ViewModel() {
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun MessageList(
+        viewModel: SharedViewModel,
         messages: List<Message>,
         scrollState: LazyListState,
         coroutineScope: CoroutineScope,
@@ -238,6 +150,7 @@ class ChatView : ViewModel() {
         LazyColumn(Modifier.padding(bottom = 70.dp), state = scrollState) {
             items(messages) { message ->
                 MessageItem(
+                    viewModel = viewModel,
                     Message(
                         message.sender,
                         message.content,
@@ -250,7 +163,7 @@ class ChatView : ViewModel() {
 
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
-    fun MessageItem(message: Message, documentId: String) {
+    fun MessageItem(viewModel: SharedViewModel, message: Message, documentId: String) {
         val backgroundColor =
             if (message.sender == auth.currentUser?.uid) if (isSystemInDarkTheme()) Color.DarkGray
             else Color.White else if (isSystemInDarkTheme()) Color.Black else Color.LightGray
@@ -272,7 +185,7 @@ class ChatView : ViewModel() {
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onLongPress = {
-                                    if (message.sender == auth.currentUser?.uid){
+                                    if (message.sender == auth.currentUser?.uid) {
                                         openDialog = true
                                     }
                                 }
@@ -303,7 +216,7 @@ class ChatView : ViewModel() {
                     confirmButton = {
                         Button(
                             onClick = {
-                                deleteMessageForUser(
+                                viewModel.deleteMessageForUser(
                                     documentId,
                                     message.timestamp
                                 )
@@ -555,12 +468,12 @@ class ChatView : ViewModel() {
     @SuppressLint("MutableCollectionMutableState", "CoroutineCreationDuringComposition")
     @Composable
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
-        val viewModel = viewModel<ChatView>()
+        val viewModel: SharedViewModel = viewModel()
         auth = Firebase.auth
         val user = sharedViewModel.user.value
         val docId = auth.currentUser!!.uid
         val selectedMainDocumentIdState = remember { mutableStateOf(docId + user.userID) }
-        val selectedSubDocumentIdState = remember { mutableStateOf(user.userID+docId) }
+        val selectedSubDocumentIdState = remember { mutableStateOf(user.userID + docId) }
         val documentId: String by selectedMainDocumentIdState
         val docID: String by selectedSubDocumentIdState
         val messageDataState = viewModel.messageData.collectAsState(initial = emptyList())
@@ -576,10 +489,12 @@ class ChatView : ViewModel() {
         }
         val onMessageSent: (Message) -> Unit = { message ->
             runBlocking {
-                saveMessages(documentationId, message)
+                viewModel.saveMessages(documentationId, message)
+                viewModel.saveLastMessage(user.userID, message)
             }
         }
         ChatScreen(
+            viewModel = viewModel,
             messages = messageData,
             onMessageSent = onMessageSent,
             navController = navController,

@@ -47,95 +47,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import at.htlhl.testing.data.Person
-import at.htlhl.testing.data.PersonList
+import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.tasks.await
 
 class SearchView : ViewModel() {
-
-    private val db = FirebaseFirestore.getInstance()
-    private lateinit var auth: FirebaseAuth
-
-    private val _searchText = MutableStateFlow("")
-    private val searchText = _searchText.asStateFlow()
-
-    private val _isSearching = MutableStateFlow(false)
-    private val isSearching = _isSearching.asStateFlow()
-
-    private val _person = MutableStateFlow<List<Person>>(emptyList())
-
-    @OptIn(FlowPreview::class)
-    val person = searchText
-        .debounce(500L)
-        .onEach { _isSearching.update { true } }
-        .combine(_person) { text, person ->
-            if (text.isBlank()) {
-                person
-            } else {
-                val initialMessages = retrieveMessages()
-                _person.value = initialMessages.toMutableList()
-                person.filter { it.doesMatch(text) }
-            }
-        }
-        .onEach { _isSearching.update { false } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _person.value)
-
-    private fun onSearchTextChanged(text: String) {
-        _searchText.value = text
-    }
-
-    private suspend fun retrieveMessages(): List<Person> {
-        val snapshot =
-            db.collection("user")
-                .orderBy("name")
-                .startAt(searchText.value)
-                .endAt(searchText.value + '\uf8ff')
-                .get()
-                .await()
-        return snapshot.documents.mapNotNull { document ->
-            val firstname = document.getString("name")
-            val image = document.getString("image")
-            val lastMessage = document.getString("lastMessage")
-            val userID = document.getString("userID")
-            val timestamp = document.getTimestamp("timestamp")
-            if (firstname != null && image != null && lastMessage != null && userID != null && timestamp != null) {
-                Person(
-                    image = image,
-                    name = firstname,
-                    lastMessage = lastMessage,
-                    userID = userID,
-                    timestamp = timestamp
-                )
-            } else {
-                null
-            }
-        }
-    }
-
 
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun SearchViewScreen(navController: NavController) {
-        val viewModel: SearchView = viewModel()
+        val viewModel: SharedViewModel = viewModel()
         val persons by viewModel.person.collectAsState()
         val searchText by viewModel.searchText.collectAsState()
         val isSearching by viewModel.isSearching.collectAsState()
@@ -143,15 +68,14 @@ class SearchView : ViewModel() {
             backgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
             modifier = Modifier.fillMaxSize(),
             topBar = { TopBarSearchView(navController, persons) },
-            content = { ContentSearchView(persons, isSearching, searchText) })
+            content = { ContentSearchView(viewModel, persons, isSearching, searchText) })
     }
 
     @Composable
     fun TopBarSearchView(navController: NavController, persons: List<Person>) {
-        val viewModel = viewModel<SearchView>()
+        val viewModel: SharedViewModel = viewModel()
         val searchText by viewModel.searchText.collectAsState()
         var search by rememberSaveable { mutableStateOf(true) }
-        auth = Firebase.auth
         Row(modifier = Modifier.padding(start = 8.dp, top = 8.dp, end = 20.dp)) {
             Icon(imageVector = Icons.Default.ArrowBack,
                 contentDescription = null,
@@ -220,7 +144,12 @@ class SearchView : ViewModel() {
     }
 
     @Composable
-    fun ContentSearchView(persons: List<Person>, isSearching: Boolean, searchText: String) {
+    fun ContentSearchView(
+        viewModel: SharedViewModel,
+        persons: List<Person>,
+        isSearching: Boolean,
+        searchText: String
+    ) {
         if (isSearching) {
             Box(modifier = Modifier.fillMaxSize()) {
                 CircularProgressIndicator(
@@ -287,13 +216,13 @@ class SearchView : ViewModel() {
                                         .padding(start = 10.dp)
                                         .size(20.dp)
                                         .clickable {
-                                            getDocument { data ->
+                                            viewModel.getDocument { data ->
                                                 if (data != null) {
-                                                    saveFriend(person = person)
-                                                    saveChatRoom(person = person)
+                                                    viewModel.saveFriend(person = person)
+                                                    viewModel.saveChatRoom(person = person)
                                                 }
                                             }
-                                            saveSubscribed(person)
+                                            viewModel.saveSubscribed(person)
 
                                         },
                                     contentDescription = null,
@@ -304,62 +233,5 @@ class SearchView : ViewModel() {
                 }
             }
         }
-    }
-
-    private fun getDocument(onSuccess: (PersonList?) -> Unit) {
-        val documentRef = db.collection("user").document(auth.currentUser!!.uid)
-        documentRef.get()
-            .addOnSuccessListener { documentSnapshot ->
-                if (documentSnapshot.exists()) {
-                    val personList = documentSnapshot.toObject(PersonList::class.java)
-                    println(personList)
-                    onSuccess(personList)
-                } else {
-                    onSuccess(null)
-                }
-            }
-            .addOnFailureListener {
-                onSuccess(null)
-            }
-    }
-
-    private fun saveSubscribed(person: Person) {
-        val collectionRef =
-            FirebaseFirestore.getInstance().collection("user/${auth.currentUser!!.uid}/friends")
-        val documentRef = collectionRef.document()
-        val fieldUpdates = hashMapOf<String, Any>(
-            "status" to "accepted",
-            "userID" to person.userID,
-        )
-        documentRef.set(fieldUpdates)
-            .addOnSuccessListener {}
-            .addOnFailureListener { exception -> exception.printStackTrace() }
-
-    }
-
-    private fun saveFriend(person: Person) {
-        val collectionRef =
-            FirebaseFirestore.getInstance().collection("user/${person.userID}/friends")
-        val documentRef = collectionRef.document()
-        val fieldUpdates = hashMapOf<String, Any>(
-            "status" to "pending",
-            "userID" to auth.currentUser!!.uid,
-        )
-        documentRef.set(fieldUpdates)
-            .addOnSuccessListener {}
-            .addOnFailureListener { exception -> exception.printStackTrace() }
-
-    }
-
-    private fun saveChatRoom(person: Person) {
-        val collectionRef = FirebaseFirestore.getInstance().collection("chats")
-        val documentRef = collectionRef.document()
-        val fieldUpdates = hashMapOf<String, Any>(
-            "participants" to auth.currentUser!!.uid + person.userID,
-        )
-        documentRef.set(fieldUpdates)
-            .addOnSuccessListener {}
-            .addOnFailureListener { exception -> exception.printStackTrace() }
-
     }
 }

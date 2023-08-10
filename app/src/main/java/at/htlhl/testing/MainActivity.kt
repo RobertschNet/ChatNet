@@ -30,7 +30,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment.Companion.Center
@@ -41,27 +40,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import at.htlhl.testing.data.BottomNavItem
-import at.htlhl.testing.data.PersonList
+import at.htlhl.testing.data.LoadingState
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Navigation
 import at.htlhl.testing.navigation.Screens
 import at.htlhl.testing.ui.theme.TestingTheme
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 
 @ExperimentalMaterial3Api
 class MainActivity : ComponentActivity() {
@@ -72,14 +61,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             val navController = rememberNavController()
             TestingTheme {
-                val viewModel: MyViewModel = viewModel()
+                val viewModel: SharedViewModel = viewModel()
                 val loadingState = viewModel.loadingState.value
-                val items = viewModel.items.value
-                val sharedViewModel = viewModel<SharedViewModel>()
-                sharedViewModel.friends.value = items
+
                 LaunchedEffect(key1 = true) {
                     viewModel.fetchAuthenticationStatus()
-                    viewModel.fetchItems()
                 }
                 if (loadingState == LoadingState.Loading) {
                     LoadingScreen()
@@ -112,107 +98,48 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-enum class LoadingState {
-    Loading,
-    Authenticated,
-    NotAuthenticated,
-    Error
-}
-
-class MyViewModel : ViewModel() {
-    private val _loadingState = mutableStateOf(LoadingState.Loading)
-    val loadingState: State<LoadingState> = _loadingState
-
-    private val _items = mutableStateOf<List<PersonList>>(emptyList())
-    val items: State<List<PersonList>> = _items
-
-    private val auth: FirebaseAuth = Firebase.auth
-
-    fun fetchAuthenticationStatus() {
-        viewModelScope.launch {
-            try {
-                val user = withContext(Dispatchers.IO) {
-                    auth.currentUser
-                }
-                _loadingState.value = if (user != null) {
-                    LoadingState.Authenticated
-                } else {
-                    LoadingState.NotAuthenticated
-                }
-            } catch (e: Exception) {
-                _loadingState.value = LoadingState.Error
-
-            }
-        }
-    }
-
-    fun fetchItems() {
-        viewModelScope.launch {
-            try {
-                val collectionRef = FirebaseFirestore.getInstance().collection("user")
-                val documentRef = collectionRef.document(auth.currentUser!!.uid)
-                val subCollectionRef = documentRef.collection("/friends")
-                val items = mutableListOf<PersonList>()
-                for (document in subCollectionRef.get().await()) {
-                    val item = document.toObject(PersonList::class.java)
-                    item.let { items.add(it) }
-                }
-                _items.value = items
-            } catch (e: Exception) {
-                _items.value = emptyList()
-            }
-        }
-    }
-}
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NavigationBarLayout(
     navController: NavHostController,
-    viewModel: MyViewModel,
+    viewModel: SharedViewModel,
 ) {
 
     val isBottomBarEnabled = remember { mutableStateOf(true) }
-    Scaffold(
-        bottomBar = {
-            BottomNavigationBar(
-                isBottomBarEnabled = isBottomBarEnabled,
-                items = listOf(
-                    BottomNavItem(
-                        name = "Drop In",
-                        route = Screens.DropInScreen.Route,
-                        icon = Icons.Default.Message,
-                        color = Color(0xFF00B1A9)
-                    ),
-                    BottomNavItem(
-                        name = "RandChat",
-                        route = Screens.RandChatScreen.Route,
-                        icon = Icons.Default.LiveHelp,
-                        color = Color(0xFFE21515)
-                    ),
-                    BottomNavItem(
-                        name = "ChatMate",
-                        route = Screens.ChatMateScreen.Route,
-                        icon = Icons.Default.Api,
-                        color = Color(0xFF15B625)
-                    ),
-                    BottomNavItem(
-                        name = "Profile",
-                        route = Screens.ProfileScreen.Route,
-                        icon = Icons.Default.ManageAccounts,
-                        color = Color(0xFF00A0E8)
-                    ),
-                ),
-                navController = navController,
-                onItemClick = {
-                    if (navController.currentDestination?.route != it.route) {
-                        navController.navigate(it.route)
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
+    Scaffold(bottomBar = {
+        BottomNavigationBar(isBottomBarEnabled = isBottomBarEnabled, items = listOf(
+            BottomNavItem(
+                name = "Drop In",
+                route = Screens.DropInScreen.Route,
+                icon = Icons.Default.Message,
+                color = Color(0xFF00B1A9)
+            ),
+            BottomNavItem(
+                name = "RandChat",
+                route = Screens.RandChatScreen.Route,
+                icon = Icons.Default.LiveHelp,
+                color = Color(0xFFE21515)
+            ),
+            BottomNavItem(
+                name = "ChatMate",
+                route = Screens.ChatMateScreen.Route,
+                icon = Icons.Default.Api,
+                color = Color(0xFF15B625)
+            ),
+            BottomNavItem(
+                name = "Profile",
+                route = Screens.ProfileScreen.Route,
+                icon = Icons.Default.ManageAccounts,
+                color = Color(0xFF00A0E8)
+            ),
+        ), navController = navController, onItemClick = {
+            if (navController.currentDestination?.route != it.route) {
+                navController.navigate(it.route)
+            }
+        })
+    }) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
             Navigation(
                 navController = navController,
@@ -248,8 +175,7 @@ fun BottomNavigationBar(
                                 Icon(
                                     imageVector = item.icon,
                                     contentDescription = item.name,
-                                    modifier = Modifier
-                                        .size(35.dp),
+                                    modifier = Modifier.size(35.dp),
                                     tint = item.color
                                 )
                                 Text(
@@ -263,17 +189,15 @@ fun BottomNavigationBar(
                                     imageVector = item.icon,
                                     tint = if (isSystemInDarkTheme()) Color.White else Color.Black,
                                     contentDescription = item.name,
-                                    modifier = Modifier
-                                        .size(30.dp)
+                                    modifier = Modifier.size(30.dp)
                                 )
                             }
                         }
                     },
                     selected = selected,
-                    colors = NavigationBarItemDefaults
-                        .colors(
-                            indicatorColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
-                        ),
+                    colors = NavigationBarItemDefaults.colors(
+                        indicatorColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
+                    ),
                     onClick = {
                         onItemClick(item)
                     },

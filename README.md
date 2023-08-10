@@ -17,8 +17,8 @@ Provider = Password
 ### 3.Ottonaut
 ID = rGMopeZW64hERwgm5IYjnqRKtgA3
 E-Mail = davidgebauer2@gmail.com
-Password = 123456
-Provider = Password
+Password = -
+Provider = Goggle
 
 ### 4.Small
 ID = dDwhnagjraScasd7Jk08v12H6kB3

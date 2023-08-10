@@ -13,6 +13,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.views.ChatMate
 import at.htlhl.testing.views.ChatView
 import at.htlhl.testing.views.DropIn
@@ -21,7 +22,6 @@ import at.htlhl.testing.views.Profile
 import at.htlhl.testing.views.RandChat
 import at.htlhl.testing.views.RegisterView
 import at.htlhl.testing.views.SearchView
-import at.htlhl.testing.data.SharedViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable

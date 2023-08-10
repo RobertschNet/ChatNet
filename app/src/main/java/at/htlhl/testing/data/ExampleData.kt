@@ -5,6 +5,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.google.firebase.Timestamp
 
 
+enum class LoadingState {
+    Loading,
+    Authenticated,
+    NotAuthenticated,
+    Error
+}
+
 data class BottomNavItem(
     val name: String,
     val route: String,
@@ -16,16 +23,17 @@ data class PersonList(
     val userID: String,
     val name: String,
     val image: String,
-    val lastMessage: String,
-    val timestamp: Timestamp,
 ) {
-    constructor() : this("", "", "", "", Timestamp.now())
+    constructor() : this("", "", "")
 }
+
 data class Friend(
     val userID: String,
     val status: String,
+    val lastMessage: String,
+    val lastMessageTimestamp: Timestamp,
 ) {
-    constructor() : this("", "")
+    constructor() : this("", "", "", Timestamp.now())
 }
 
 data class Message(

@@ -30,7 +30,6 @@ import at.htlhl.testing.data.PersonList
 import at.htlhl.testing.navigation.Screens
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -101,15 +100,16 @@ class Profile {
                 ),
                 placeholder = { Text(text = "Image", color = Color.Cyan) },
             )
-            Button(colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Color.Cyan,
-                containerColor = Color.Black
-            ),
+            Button(
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = Color.Cyan,
+                    containerColor = Color.Black
+                ),
                 onClick = {
                     image = ""
                     currentUser?.let {
                         PersonList(
-                            it, name, image, lastMessage, Timestamp.now()
+                            it, name, image
                         )
                     }?.let { saveSubscribed(it) }
                 }, modifier = Modifier.fillMaxWidth()

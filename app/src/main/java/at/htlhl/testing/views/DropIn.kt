@@ -48,76 +48,24 @@ import at.htlhl.testing.data.PersonList
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 class DropIn : ViewModel() {
-    private var auth: FirebaseAuth
-    private val _friendListData = MutableStateFlow<List<PersonList>>(emptyList())
-    private val friendListData: StateFlow<List<PersonList>> get() = _friendListData
-
-
-    init {
-        auth = Firebase.auth
-    }
-
-    private var friendListDataListener: ListenerRegistration? = null
-    private fun startListeningForSubCollectionData() {
-        val collectionRef = FirebaseFirestore.getInstance().collection("user")
-        val documentRef = collectionRef.document(auth.currentUser!!.uid)
-        val subCollectionRef = documentRef.collection("/friends")
-            .whereEqualTo("status", "accepted")
-
-        friendListDataListener?.remove()
-        friendListDataListener =
-            subCollectionRef.addSnapshotListener { querySnapshot, exception ->
-                if (exception != null) {
-                    return@addSnapshotListener
-                }
-                val personListData = mutableListOf<PersonList>()
-
-                querySnapshot?.let { snapshot ->
-                    val subCollectionData = snapshot.toObjects(Friend::class.java)
-
-                    for (friend in subCollectionData) {
-                        FirebaseFirestore.getInstance().collection("user")
-                            .document(friend.userID)
-                            .get()
-                            .addOnSuccessListener { documentSnapshot ->
-                                val data = documentSnapshot.toObject(PersonList::class.java)
-                                data?.let { personListData.add(it) }
-
-                                _friendListData.value = personListData
-                            }
-                    }
-                }
-            }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        friendListDataListener?.remove()
-    }
-
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @Composable
     fun DropInScreen(navController: NavController, sharedViewModel: SharedViewModel) {
-        val viewModel = viewModel<DropIn>()
-        auth = Firebase.auth
+        val viewModel: SharedViewModel = viewModel()
         val lazyListState = rememberLazyListState()
         val friendListDataState =
             viewModel.friendListData.collectAsState(initial = emptyList())
         val friendListData: List<PersonList> = friendListDataState.value
+        val friendList2DataState =
+            viewModel.friendStatusInformationData.collectAsState(initial = emptyList())
+        val friendList2Data: List<Friend> = friendList2DataState.value
         LaunchedEffect(key1 = Unit) {
-            viewModel.startListeningForSubCollectionData()
+            viewModel.startListeningForFriends()
         }
         Scaffold {
             LazyColumn(
@@ -179,9 +127,10 @@ class DropIn : ViewModel() {
                             message.userID,
                             message.name,
                             message.image,
-                            message.lastMessage,
-                            message.timestamp,
-                        ), navController, sharedViewModel
+                        ),
+                        navController,
+                        friendList2Data[friendListData.indexOf(message)],
+                        sharedViewModel
                     )
                 }
             }
@@ -193,11 +142,13 @@ class DropIn : ViewModel() {
     fun ChatItem(
         person: PersonList,
         navController: NavController,
+        friend: Friend,
         sharedViewModel: SharedViewModel
     ) {
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
-        val formattedTime = person.timestamp.toDate().toInstant().atZone(ZoneId.systemDefault())
-            .toLocalTime().format(formatter)
+        val formattedTime =
+            friend.lastMessageTimestamp.toDate().toInstant().atZone(ZoneId.systemDefault())
+                .toLocalTime().format(formatter)
         Row(
             modifier = Modifier
                 .clickable {
@@ -239,7 +190,7 @@ class DropIn : ViewModel() {
                 }
                 Text(
                     modifier = Modifier.padding(start = 10.dp),
-                    text = person.lastMessage,
+                    text = friend.lastMessage,
                     maxLines = 1,
                     fontSize = 15.sp,
                     color = Color.LightGray
