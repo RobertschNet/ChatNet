@@ -22,9 +22,10 @@ data class BottomNavItem(
 data class PersonList(
     val userID: String,
     val name: String,
+    val status: String,
     val image: String,
 ) {
-    constructor() : this("", "", "")
+    constructor() : this("", "", "","")
 }
 
 data class Friend(
@@ -54,8 +55,7 @@ data class Person(
     val userID: String,
     val name: String,
     val image: String,
-    val lastMessage: String,
-    val timestamp: Timestamp,
+    val status: String,
 ) {
     fun doesMatch(query: String): Boolean {
         val matchingCombinations = listOf(

@@ -1,7 +1,9 @@
 package at.htlhl.testing.views
 
 import android.annotation.SuppressLint
+import android.content.ContentValues.TAG
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,13 +22,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Scaffold
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PersonAddAlt1
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,32 +44,36 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import at.htlhl.testing.data.Friend
+import at.htlhl.testing.data.Message
 import at.htlhl.testing.data.PersonList
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 class DropIn : ViewModel() {
+
+
+    @OptIn(ExperimentalMaterial3Api::class)
     @RequiresApi(Build.VERSION_CODES.O)
-    @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
+    @SuppressLint(
+        "UnusedMaterialScaffoldPaddingParameter",
+        "UnusedMaterial3ScaffoldPaddingParameter"
+    )
     @Composable
     fun DropInScreen(navController: NavController, sharedViewModel: SharedViewModel) {
-        val viewModel: SharedViewModel = viewModel()
         val lazyListState = rememberLazyListState()
-        val friendListDataState =
-            viewModel.friendListData.collectAsState(initial = emptyList())
+        val user= sharedViewModel.auth.currentUser?.uid
+
+        val friendListDataState = sharedViewModel.friendListData.collectAsState()
         val friendListData: List<PersonList> = friendListDataState.value
-        val friendList2DataState =
-            viewModel.friendStatusInformationData.collectAsState(initial = emptyList())
-        val friendList2Data: List<Friend> = friendList2DataState.value
-        LaunchedEffect(key1 = Unit) {
-            viewModel.startListeningForFriends()
-        }
+        val messageListDataState = sharedViewModel.messageData1.collectAsState()
+        val messageData: List<Message> = messageListDataState.value
+        println("S$friendListData")
+        println("M$messageData")
+        Log.d(TAG, "Ausgabe: $friendListData")
         Scaffold {
             LazyColumn(
                 Modifier
@@ -126,77 +133,76 @@ class DropIn : ViewModel() {
                         PersonList(
                             message.userID,
                             message.name,
+                            message.status,
                             message.image,
                         ),
                         navController,
-                        friendList2Data[friendListData.indexOf(message)],
                         sharedViewModel
                     )
                 }
+
+
+
             }
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    @Composable
-    fun ChatItem(
-        person: PersonList,
-        navController: NavController,
-        friend: Friend,
-        sharedViewModel: SharedViewModel
-    ) {
-        val formatter = DateTimeFormatter.ofPattern("HH:mm")
-        val formattedTime =
-            friend.lastMessageTimestamp.toDate().toInstant().atZone(ZoneId.systemDefault())
-                .toLocalTime().format(formatter)
-        Row(
-            modifier = Modifier
-                .clickable {
-                    sharedViewModel.user.value = person
-                    navController.navigate(Screens.ChatScreen.Route)
-                }
-                .fillMaxWidth()
-                .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
-                .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp),
+        @RequiresApi(Build.VERSION_CODES.O)
+        @Composable
+        fun ChatItem(
+            person: PersonList,
+            navController: NavController,
+            sharedViewModel: SharedViewModel
         ) {
-            Image(
-                contentDescription = null,
-                painter = rememberAsyncImagePainter(person.image),
+
+            Row(
                 modifier = Modifier
-                    .clip(CircleShape)
-                    .size(50.dp),
-                contentScale = ContentScale.Crop,
-                alignment = Alignment.Center
-            )
-            Column(Modifier.padding(horizontal = 8.dp)) {
-                Row(
+                    .clickable {
+                        sharedViewModel.user.value = person
+                        navController.navigate(Screens.ChatScreen.Route)
+                    }
+                    .fillMaxWidth()
+                    .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
+                    .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp),
+            ) {
+                Image(
+                    contentDescription = null,
+                    painter = rememberAsyncImagePainter(person.image),
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+                        .clip(CircleShape)
+                        .size(50.dp),
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.Center
+                )
+                Column(Modifier.padding(horizontal = 8.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = person.name,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 17.sp,
+                            color = if (isSystemInDarkTheme()) Color.White else Color.Black
+                        )
+                        Text(
+                            text = "1984-09-11",
+                            fontWeight = FontWeight.Light,
+                            fontSize = 12.sp,
+                            color = if (isSystemInDarkTheme()) Color.White else Color.Black
+                        )
+                    }
                     Text(
-                        text = person.name,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 17.sp,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black
-                    )
-                    Text(
-                        text = formattedTime,
-                        fontWeight = FontWeight.Light,
-                        fontSize = 12.sp,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black
+                        modifier = Modifier.padding(start = 10.dp),
+                        text = person.status,
+                        maxLines = 1,
+                        fontSize = 15.sp,
+                        color = Color.LightGray
                     )
                 }
-                Text(
-                    modifier = Modifier.padding(start = 10.dp),
-                    text = friend.lastMessage,
-                    maxLines = 1,
-                    fontSize = 15.sp,
-                    color = Color.LightGray
-                )
             }
+            Divider(thickness = 0.25f.dp, color = Color.LightGray)
         }
-        Divider(thickness = 0.25f.dp, color = Color.LightGray)
-    }
 }

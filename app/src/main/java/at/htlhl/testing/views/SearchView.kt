@@ -22,14 +22,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PersonAddAlt
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -76,7 +77,7 @@ class SearchView : ViewModel() {
         val viewModel: SharedViewModel = viewModel()
         val searchText by viewModel.searchText.collectAsState()
         var search by rememberSaveable { mutableStateOf(true) }
-        Row(modifier = Modifier.padding(start = 8.dp, top = 8.dp, end = 20.dp)) {
+        Row(modifier = Modifier.padding(start = 8.dp, top = 8.dp, end = 20.dp, bottom = 10.dp)) {
             Icon(imageVector = Icons.Default.ArrowBack,
                 contentDescription = null,
                 tint = if (isSystemInDarkTheme()) Color.White else Color.DarkGray,
@@ -130,7 +131,7 @@ class SearchView : ViewModel() {
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = if (isSystemInDarkTheme()) Color.DarkGray else Color.Gray,
-                modifier = Modifier.padding(start = 102.dp, top = 14.5f.dp)
+                modifier = Modifier.padding(start = 102.dp, top = 15f.dp)
             )
         } else {
             Icon(imageVector = Icons.Default.Close,
@@ -150,6 +151,7 @@ class SearchView : ViewModel() {
         isSearching: Boolean,
         searchText: String
     ) {
+        Divider(thickness = 0.25f.dp, color = Color.LightGray)
         if (isSearching) {
             Box(modifier = Modifier.fillMaxSize()) {
                 CircularProgressIndicator(
@@ -164,7 +166,7 @@ class SearchView : ViewModel() {
                 fontWeight = FontWeight.Bold,
                 color = if (isSystemInDarkTheme()) Color.White else Color.Black,
                 modifier = Modifier
-                    .padding(start = 20.dp, top = 20.dp)
+                    .padding(start = 20.dp, top = 10.dp)
             )
         }
         persons.forEach {
@@ -188,10 +190,10 @@ class SearchView : ViewModel() {
                                 contentScale = ContentScale.Crop,
                                 alignment = Alignment.Center
                             )
-                            Column(Modifier.padding(horizontal = 8.dp)) {
+
+                            Column(Modifier.padding(horizontal = 8.dp), verticalArrangement = Arrangement.Center) {
                                 Row(
                                     modifier = Modifier
-                                        .fillMaxWidth()
                                         .padding(start = 10.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
@@ -204,30 +206,32 @@ class SearchView : ViewModel() {
                                 }
                                 Text(
                                     modifier = Modifier.padding(start = 10.dp),
-                                    text = person.lastMessage,
+                                    text = person.status,
                                     maxLines = 1,
                                     fontSize = 15.sp,
                                     color = Color.LightGray
                                 )
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    tint = Color.Green,
-                                    modifier = Modifier
-                                        .padding(start = 10.dp)
-                                        .size(20.dp)
-                                        .clickable {
-                                            viewModel.getDocument { data ->
-                                                if (data != null) {
-                                                    viewModel.saveFriend(person = person)
-                                                    viewModel.saveChatRoom(person = person)
-                                                }
-                                            }
-                                            viewModel.saveSubscribed(person)
 
-                                        },
-                                    contentDescription = null,
-                                )
                             }
+                            Icon(
+                                imageVector = Icons.Default.PersonAddAlt,
+                                tint = Color.White,
+                                modifier = Modifier
+                                    .align(Alignment.CenterVertically)
+                                    .padding(start = 80.dp, end = 10.dp)
+                                    .size(35.dp)
+                                    .clickable {
+                                        viewModel.getDocument { data ->
+                                            if (data != null) {
+                                                viewModel.saveFriend(person = person)
+                                                viewModel.saveChatRoom(person = person)
+                                            }
+                                        }
+                                        viewModel.saveSubscribed(person)
+
+                                    },
+                                contentDescription = null,
+                            )
                         }
                     }
                 }

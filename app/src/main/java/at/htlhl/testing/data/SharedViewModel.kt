@@ -1,9 +1,12 @@
 package at.htlhl.testing.data
 
+import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavController
+import at.htlhl.testing.navigation.Screens
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
@@ -12,6 +15,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,15 +29,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
+
 class SharedViewModel : ViewModel() {
     //General
-    val user = mutableStateOf(PersonList("", "", ""))
-    private val auth: FirebaseAuth = Firebase.auth
-
-    override fun onCleared() {
-        super.onCleared()
-        friendListDataListener?.remove()
-    }
+    val user = mutableStateOf(PersonList("", "", "", ""))
+    val auth: FirebaseAuth = Firebase.auth
+    private val _shit = mutableStateOf(LoadingState.Loading)
 
     // LoadingScreen
     private val _loadingState = mutableStateOf(LoadingState.Loading)
@@ -61,12 +62,13 @@ class SharedViewModel : ViewModel() {
     private val _friendListData = MutableStateFlow<List<PersonList>>(emptyList())
     val friendListData: StateFlow<List<PersonList>> get() = _friendListData
 
-    private val _friendStatusInformationData = MutableStateFlow<List<Friend>>(emptyList())
-    val friendStatusInformationData: StateFlow<List<Friend>> get() = _friendStatusInformationData
 
     private var friendListDataListener: ListenerRegistration? = null
+    private val TAG = "MyAppTag"
 
-    fun startListeningForFriends() {
+    fun startListeningForFriends(navController: NavController, completion: () -> Unit) {
+        _shit.value = LoadingState.Loading
+        Log.d(TAG, "startListeningForFriends: Start")
         val collectionRef = FirebaseFirestore.getInstance().collection("user")
         val documentRef = collectionRef.document(auth.currentUser!!.uid)
         val subCollectionRef = documentRef.collection("/friends").whereEqualTo("status", "accepted")
@@ -74,25 +76,52 @@ class SharedViewModel : ViewModel() {
         friendListDataListener?.remove()
         friendListDataListener = subCollectionRef.addSnapshotListener { querySnapshot, exception ->
             if (exception != null) {
+                Log.e(TAG, "Error in addSnapshotListener: ${exception.message}")
                 return@addSnapshotListener
             }
+            Log.d(TAG, "Snapshot listener triggered")
             val personListData = mutableListOf<PersonList>()
 
             querySnapshot?.let { snapshot ->
                 val subCollectionData = snapshot.toObjects(Friend::class.java)
-                _friendStatusInformationData.value = subCollectionData
+
+                var completedCount = 0
+                val totalFriends = subCollectionData.size
 
                 for (friend in subCollectionData) {
+                    Log.d(TAG, "Processing friend: $friend")
                     FirebaseFirestore.getInstance().collection("user").document(friend.userID).get()
                         .addOnSuccessListener { documentSnapshot ->
+                            Log.d(TAG, "Got document snapshot: $documentSnapshot")
                             val data = documentSnapshot.toObject(PersonList::class.java)
                             data?.let { personListData.add(it) }
 
-                            _friendListData.value = personListData
+                            completedCount++
+                            if (completedCount == totalFriends) {
+                                Log.d(TAG, "personenData: $personListData")
+                                // Update _friendListData value directly
+                                _friendListData.value = personListData
+                                completion() // Call the completion listener only when all data is available
+                                startListeningForMessagesForPairs(
+                                    personListData,
+                                    auth.currentUser!!.uid
+                                ) {
+                                    navController.navigate(
+                                        Screens.DropInScreen.Route
+                                    )
+                                }
+                                _shit.value = LoadingState.Authenticated
+                            }
                         }
                 }
+                Log.d(TAG, "friendListDataListener finished")
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        friendListDataListener?.remove()
     }
 
     // ChatMessages
@@ -102,7 +131,12 @@ class SharedViewModel : ViewModel() {
     private val _messageData = MutableStateFlow<List<Message>>(emptyList())
     val messageData: StateFlow<List<Message>> get() = _messageData
 
+    private val _messageData1 = MutableStateFlow<List<Message>>(emptyList())
+    val messageData1: StateFlow<List<Message>> get() = _messageData1
+
     private var messageDataListener: ListenerRegistration? = null
+    private var messageDataListener1: ListenerRegistration? = null
+
 
     suspend fun startListeningForMessages(
         documentId: String,
@@ -116,7 +150,6 @@ class SharedViewModel : ViewModel() {
             for (document in querySnapshot.documents) {
                 val data = document.data
                 data?.let {
-                    println(querySnapshot.documents.firstOrNull()?.id)
                     val documentRef = querySnapshot.documents.firstOrNull()?.id?.let { it1 ->
                         collectionRef.document(
                             it1
@@ -144,6 +177,64 @@ class SharedViewModel : ViewModel() {
             e.printStackTrace()
         }
     }
+
+    private fun startListeningForMessagesForPairs(
+        documentIds: List<PersonList>,
+        docIds: String,
+        onComplete: () -> Unit
+    ) {
+        val collectionRef = FirebaseFirestore.getInstance().collection("chats")
+
+        val channel =
+            Channel<Unit>(documentIds.size) // Create a channel with the number of documents
+
+        viewModelScope.launch {
+            for (i in documentIds.indices) {
+                val documentId = documentIds[i].userID + docIds
+                val docId = docIds + documentIds[i].userID
+
+                try {
+                    val querySnapshot = collectionRef
+                        .whereIn("participants", listOf(documentId, docId))
+                        .get().await()
+
+                    for (document in querySnapshot.documents) {
+                        val data = document.data
+                        data?.let {
+                            val documentRef = document.id
+                            val subCollectionRef =
+                                collectionRef.document(documentRef).collection("/messages")
+                                    .orderBy("timestamp")
+                            messageDataListener1?.remove()
+                            messageDataListener1 =
+                                subCollectionRef.addSnapshotListener { querySnapshot, exception ->
+                                    if (exception != null) {
+                                        return@addSnapshotListener
+                                    }
+                                    querySnapshot?.let { subSnapshot ->
+                                        val subCollectionData =
+                                            subSnapshot.toObjects(Message::class.java)
+                                        _messageData1.value = subCollectionData
+                                    }
+                                }
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                channel.send(Unit) // Signal that fetching for this document is done
+            }
+            channel.close() // Close the channel when all documents are processed
+        }
+
+        viewModelScope.launch {
+            repeat(documentIds.size) {
+                channel.receive() // Wait for each document to finish fetching
+            }
+            onComplete.invoke() // All documents are fetched, call onComplete
+        }
+    }
+
 
     fun deleteMessageForUser(
         documentId: String,
@@ -195,16 +286,14 @@ class SharedViewModel : ViewModel() {
         return snapshot.documents.mapNotNull { document ->
             val firstname = document.getString("name")
             val image = document.getString("image")
-            val lastMessage = document.getString("lastMessage")
+            val status = document.getString("status")
             val userID = document.getString("userID")
-            val timestamp = document.getTimestamp("timestamp")
-            if (firstname != null && image != null && lastMessage != null && userID != null && timestamp != null) {
+            if (firstname != null && image != null && status != null && userID != null) {
                 Person(
                     image = image,
                     name = firstname,
-                    lastMessage = lastMessage,
+                    status = status,
                     userID = userID,
-                    timestamp = timestamp
                 )
             } else {
                 null
