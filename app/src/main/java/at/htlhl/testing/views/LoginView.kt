@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily.Companion.Cursive
 import androidx.compose.ui.text.font.FontFamily.Companion.SansSerif
@@ -53,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.htlhl.testing.R
+import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Screens
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -70,7 +72,7 @@ class LoginView {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun LoginScreen(navController: NavController) {
+    fun LoginScreen(navController: NavController,sharedViewModel: SharedViewModel) {
         val authentication = FirebaseAuth.getInstance()
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
@@ -110,7 +112,8 @@ class LoginView {
                     scope,
                     context,
                     googleSignInOptions,
-                    signInLauncher
+                    signInLauncher,
+                    sharedViewModel
                 )
             },
             bottomBar = { BottomScreen(navController) })
@@ -160,7 +163,8 @@ class LoginView {
         scope: CoroutineScope,
         context: Context,
         googleSignInOptions: GoogleSignInOptions,
-        signInLauncher: ActivityResultLauncher<Intent>
+        signInLauncher: ActivityResultLauncher<Intent>,
+        sharedViewModel: SharedViewModel
     ) {
         var email by rememberSaveable { mutableStateOf("") }
         var password by rememberSaveable { mutableStateOf("") }

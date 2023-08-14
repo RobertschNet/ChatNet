@@ -67,7 +67,6 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(key1 = true) {
                     viewModel.fetchAuthenticationStatus()
                     viewModel.startListeningForFriends(navController) {}
-
                 }
                 if (loadingState == LoadingState.Loading) {
                     LoadingScreen()

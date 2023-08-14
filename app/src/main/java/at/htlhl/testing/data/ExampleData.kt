@@ -31,10 +31,8 @@ data class PersonList(
 data class Friend(
     val userID: String,
     val status: String,
-    val lastMessage: String,
-    val lastMessageTimestamp: Timestamp,
 ) {
-    constructor() : this("", "", "", Timestamp.now())
+    constructor() : this("", "")
 }
 
 data class Message(
@@ -43,6 +41,14 @@ data class Message(
     val timestamp: Timestamp,
 ) {
     constructor() : this("", "", Timestamp.now())
+}
+
+data class Chat(
+    val participants: List<String>,
+    val chatRoomID: String,
+    val messages: List<Message>,
+) {
+    constructor() : this(arrayListOf(),"",  listOf())
 }
 
 data class User(

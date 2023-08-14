@@ -101,7 +101,7 @@ fun Navigation(navController: NavHostController, bottomBarState: MutableState<Bo
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             bottomBarState.value = false
-            LoginView().LoginScreen(navController)
+            LoginView().LoginScreen(navController, sharedViewModel)
         }
         composable("RegisterScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },

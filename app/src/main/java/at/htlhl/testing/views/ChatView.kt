@@ -47,7 +47,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -70,8 +69,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import at.htlhl.testing.data.Chat
 import at.htlhl.testing.data.Message
 import at.htlhl.testing.data.PersonList
 import at.htlhl.testing.data.SharedViewModel
@@ -98,8 +97,8 @@ class ChatView : ViewModel() {
         messages: List<Message>,
         onMessageSent: (Message) -> Unit,
         personList: PersonList,
+        viewModel: SharedViewModel,
         documentId: String,
-        viewModel: SharedViewModel
     ) {
         val coroutineScope = rememberCoroutineScope()
         val lazyListState = rememberLazyListState()
@@ -144,7 +143,7 @@ class ChatView : ViewModel() {
         messages: List<Message>,
         scrollState: LazyListState,
         coroutineScope: CoroutineScope,
-        documentId: String,
+        documentId: String
     ) {
         coroutineScope.launch { scrollState.animateScrollToItem(messages.size) }
         LazyColumn(Modifier.padding(bottom = 70.dp), state = scrollState) {
@@ -155,7 +154,7 @@ class ChatView : ViewModel() {
                         message.sender,
                         message.content,
                         message.timestamp
-                    ), documentId
+                    ),documentId
                 )
             }
         }
@@ -468,39 +467,40 @@ class ChatView : ViewModel() {
     @SuppressLint("MutableCollectionMutableState", "CoroutineCreationDuringComposition")
     @Composable
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
-        val viewModel: SharedViewModel = viewModel()
         auth = Firebase.auth
         val user = sharedViewModel.user.value
-        val docId = auth.currentUser!!.uid
-        val selectedMainDocumentIdState = remember { mutableStateOf(docId + user.userID) }
-        val selectedSubDocumentIdState = remember { mutableStateOf(user.userID + docId) }
-        val documentId: String by selectedMainDocumentIdState
-        val docID: String by selectedSubDocumentIdState
-        val messageDataState = viewModel.messageData.collectAsState(initial = emptyList())
-        val messageData: List<Message> = messageDataState.value
-        val documentIdState = viewModel.documentId.collectAsState(initial = "")
-        val documentationId: String = documentIdState.value
+        val documentIdState = sharedViewModel.documentId1.collectAsState(initial = emptyList())
+        val documentationId: List<Chat> = documentIdState.value
 
-        LaunchedEffect(documentId, docID) {
-            viewModel.startListeningForMessages(
-                documentId,
-                docID,
-            )
+        val filteredChats = documentationId.filter { chat ->
+            chat.participants.contains(user.userID) && chat.participants.contains(auth.currentUser?.uid.toString())
         }
+
+        val doc = filteredChats.firstOrNull()?.chatRoomID ?: ""
+
+        val messageList: List<Message> = filteredChats.flatMap { chat ->
+            chat.messages.map { message ->
+                Message(message.sender, message.content, message.timestamp)
+            }
+        }
+        println("ChatViewScreen: $documentationId")
+
         val onMessageSent: (Message) -> Unit = { message ->
             runBlocking {
-                viewModel.saveMessages(documentationId, message)
-                viewModel.saveLastMessage(user.userID, message)
+                sharedViewModel.saveMessages(doc, message)
+
+                //sharedViewModel.saveLastMessage(user.userID, message)
             }
         }
         ChatScreen(
-            viewModel = viewModel,
-            messages = messageData,
+            viewModel = sharedViewModel,
+            messages = messageList,
             onMessageSent = onMessageSent,
             navController = navController,
             personList = user,
-            documentId = documentationId,
+            documentId = doc,
         )
+
     }
 }
 
