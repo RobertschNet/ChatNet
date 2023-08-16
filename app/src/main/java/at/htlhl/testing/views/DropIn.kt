@@ -1,9 +1,7 @@
 package at.htlhl.testing.views
 
 import android.annotation.SuppressLint
-import android.content.ContentValues.TAG
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -45,14 +43,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import at.htlhl.testing.data.Chat
-import at.htlhl.testing.data.Message
 import at.htlhl.testing.data.PersonList
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.runBlocking
+import java.text.SimpleDateFormat
+import java.util.Locale
+
 
 class DropIn : ViewModel() {
 
@@ -67,14 +64,25 @@ class DropIn : ViewModel() {
         val lazyListState = rememberLazyListState()
         val friendListDataState = sharedViewModel.friendListData.collectAsState()
         val friendListData: List<PersonList> = friendListDataState.value
-        val messageListDataState = sharedViewModel.messageData1.collectAsState()
-        val messageData: List<Message> = messageListDataState.value
-        val messageChatRoomDataState = sharedViewModel.documentId1.collectAsState()
+        val messageChatRoomDataState = sharedViewModel.chatData.collectAsState()
         val messageChatRoomData: List<Chat> = messageChatRoomDataState.value
         println("S$friendListData")
-        println("M$messageData")
         println("I$messageChatRoomData")
-        Log.d(TAG, "Ausgabe: $friendListData")
+        val updatedPersonList = friendListData.map { person ->
+            val matchingChat = messageChatRoomData.find { chat ->
+                chat.participants.contains(person.userID)
+            }
+            val updatedStatus = matchingChat?.messages?.lastOrNull()?.content ?: person.status
+            val updatedTimestamp =
+                matchingChat?.messages?.lastOrNull()?.timestamp ?: person.timestamp
+
+            if (matchingChat?.messages?.lastOrNull()?.sender != person.userID) {
+                person.copy(status = "Me: $updatedStatus", timestamp = updatedTimestamp)
+            } else {
+                person.copy(status = updatedStatus, timestamp = updatedTimestamp)
+            }
+        }
+        val sortedPersonList = updatedPersonList.sortedByDescending { it.timestamp }
         Scaffold {
             LazyColumn(
                 Modifier
@@ -129,20 +137,13 @@ class DropIn : ViewModel() {
                         color = if (isSystemInDarkTheme()) Color.DarkGray else Color.Transparent
                     )
                 }
-                items(friendListData) { message ->
+                items(sortedPersonList) { message ->
                     ChatItem(
-                        PersonList(
-                            message.userID,
-                            message.name,
-                            message.status,
-                            message.image,
-                        ),
+                        message,
                         navController,
                         sharedViewModel
                     )
                 }
-
-
             }
         }
     }
@@ -154,7 +155,8 @@ class DropIn : ViewModel() {
         navController: NavController,
         sharedViewModel: SharedViewModel
     ) {
-
+        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val formattedTime: String = formatter.format(person.timestamp.toDate())
         Row(
             modifier = Modifier
                 .clickable {
@@ -188,7 +190,7 @@ class DropIn : ViewModel() {
                         color = if (isSystemInDarkTheme()) Color.White else Color.Black
                     )
                     Text(
-                        text = "1984-09-11",
+                        text = formattedTime,
                         fontWeight = FontWeight.Light,
                         fontSize = 12.sp,
                         color = if (isSystemInDarkTheme()) Color.White else Color.Black

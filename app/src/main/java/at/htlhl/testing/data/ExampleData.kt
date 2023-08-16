@@ -22,10 +22,11 @@ data class BottomNavItem(
 data class PersonList(
     val userID: String,
     val name: String,
-    val status: String,
     val image: String,
+    val status: String,
+    val timestamp: Timestamp,
 ) {
-    constructor() : this("", "", "","")
+    constructor() : this("", "", "","", Timestamp.now())
 }
 
 data class Friend(

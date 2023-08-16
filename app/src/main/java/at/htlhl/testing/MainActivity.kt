@@ -63,19 +63,14 @@ class MainActivity : ComponentActivity() {
             TestingTheme {
                 val viewModel: SharedViewModel = viewModel()
                 val loadingState = viewModel.loadingState.value
-
                 LaunchedEffect(key1 = true) {
                     viewModel.fetchAuthenticationStatus()
                     viewModel.startListeningForFriends(navController) {}
                 }
-                if (loadingState == LoadingState.Loading) {
-                    LoadingScreen()
-                } else {
-                    NavigationBarLayout(
-                        navController = navController,
-                        viewModel = viewModel,
-                    )
-                }
+                NavigationBarLayout(
+                    navController = navController,
+                    viewModel = viewModel,
+                )
                 LaunchedEffect(key1 = loadingState) {
                     when (loadingState) {
                         LoadingState.Authenticated -> {
@@ -144,6 +139,7 @@ fun NavigationBarLayout(
             Navigation(
                 navController = navController,
                 bottomBarState = isBottomBarEnabled,
+                sharedViewModel = viewModel
             )
         }
     }

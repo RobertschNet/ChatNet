@@ -42,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily.Companion.Cursive
 import androidx.compose.ui.text.font.FontFamily.Companion.SansSerif
@@ -68,7 +67,6 @@ import kotlinx.coroutines.launch
 
 class LoginView {
     private lateinit var auth: FirebaseAuth
-
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
@@ -94,7 +92,7 @@ class LoginView {
                         .addOnCompleteListener { signInTask ->
                             if (signInTask.isSuccessful) {
                                 println("Sign-in successful")
-                                navController.navigate(Screens.DropInScreen.Route)
+                                sharedViewModel.startListeningForFriends(navController) {}
                             } else {
                                 println("Sign-in failed")
                             }
@@ -215,7 +213,7 @@ class LoginView {
                                     if (task.isSuccessful) {
                                         Log.d(ContentValues.TAG, "createUserWithEmail:success")
                                         if (!isUserEmailVerified()) {
-                                            navController.navigate(Screens.DropInScreen.Route)
+                                            sharedViewModel.startListeningForFriends(navController) {}
                                         }else{
                                             Toast.makeText(
                                                 activity,

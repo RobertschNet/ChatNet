@@ -9,7 +9,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,6 +16,7 @@ import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.views.ChatMate
 import at.htlhl.testing.views.ChatView
 import at.htlhl.testing.views.DropIn
+import at.htlhl.testing.views.Loading
 import at.htlhl.testing.views.LoginView
 import at.htlhl.testing.views.Profile
 import at.htlhl.testing.views.RandChat
@@ -25,9 +25,12 @@ import at.htlhl.testing.views.SearchView
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun Navigation(navController: NavHostController, bottomBarState: MutableState<Boolean>) {
-    val sharedViewModel = viewModel<SharedViewModel>()
-    NavHost(navController = navController, startDestination = "LoginScreen") {
+fun Navigation(
+    navController: NavHostController,
+    bottomBarState: MutableState<Boolean>,
+    sharedViewModel: SharedViewModel
+) {
+    NavHost(navController = navController, startDestination = "LoadingScreen") {
         composable("DropInScreen",
             enterTransition = {
                 slideInHorizontally(
@@ -109,5 +112,12 @@ fun Navigation(navController: NavHostController, bottomBarState: MutableState<Bo
             bottomBarState.value = false
             RegisterView().RegisterScreen(navController)
         }
+        composable("LoadingScreen",
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
+            bottomBarState.value = false
+            Loading().LoadingScreen(navController)
+        }
+
     }
 }

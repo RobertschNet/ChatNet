@@ -469,7 +469,7 @@ class ChatView : ViewModel() {
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         auth = Firebase.auth
         val user = sharedViewModel.user.value
-        val documentIdState = sharedViewModel.documentId1.collectAsState(initial = emptyList())
+        val documentIdState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val documentationId: List<Chat> = documentIdState.value
 
         val filteredChats = documentationId.filter { chat ->

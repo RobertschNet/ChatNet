@@ -21,25 +21,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import at.htlhl.testing.navigation.Screens
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
 
 class Loading {
-    private lateinit var auth: FirebaseAuth
-
-
     @Composable
     fun LoadingScreen(navController: NavController) {
         LoadingAnimation()
-        auth = Firebase.auth
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            navController.navigate(Screens.DropInScreen.Route)
-        } else {
-            navController.navigate(Screens.LoginScreen.Route)
-        }
     }
 
     @Composable
@@ -59,9 +45,7 @@ class Loading {
         ),
         animationDuration: Int = 360
     ) {
-
-        val infiniteTransition = rememberInfiniteTransition()
-
+        val infiniteTransition = rememberInfiniteTransition(label = "")
         val rotateAnimation by infiniteTransition.animateFloat(
             initialValue = 0f,
             targetValue = 360f,
@@ -70,7 +54,7 @@ class Loading {
                     durationMillis = animationDuration,
                     easing = LinearEasing
                 )
-            )
+            ), label = ""
         )
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             CircularProgressIndicator(
