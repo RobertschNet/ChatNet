@@ -11,6 +11,10 @@ enum class LoadingState {
     NotAuthenticated,
     Error
 }
+data class BottomSheetItem(
+    val title: String,
+    val icon: ImageVector
+)
 
 data class BottomNavItem(
     val name: String,
@@ -26,7 +30,7 @@ data class PersonList(
     val status: String,
     val timestamp: Timestamp,
 ) {
-    constructor() : this("", "", "","", Timestamp.now())
+    constructor() : this("", "", "", "", Timestamp.now())
 }
 
 data class Friend(
@@ -49,7 +53,7 @@ data class Chat(
     val chatRoomID: String,
     val messages: List<Message>,
 ) {
-    constructor() : this(arrayListOf(),"",  listOf())
+    constructor() : this(arrayListOf(), "", listOf())
 }
 
 data class User(
@@ -62,7 +66,6 @@ data class Person(
     val userID: String,
     val name: String,
     val image: String,
-    val status: String,
 ) {
     fun doesMatch(query: String): Boolean {
         val matchingCombinations = listOf(

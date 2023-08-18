@@ -92,7 +92,7 @@ class LoginView {
                         .addOnCompleteListener { signInTask ->
                             if (signInTask.isSuccessful) {
                                 println("Sign-in successful")
-                                sharedViewModel.startListeningForFriends(navController) {}
+                                sharedViewModel.startListeningForFriends(navController)
                             } else {
                                 println("Sign-in failed")
                             }
@@ -213,7 +213,7 @@ class LoginView {
                                     if (task.isSuccessful) {
                                         Log.d(ContentValues.TAG, "createUserWithEmail:success")
                                         if (!isUserEmailVerified()) {
-                                            sharedViewModel.startListeningForFriends(navController) {}
+                                            sharedViewModel.startListeningForFriends(navController)
                                         }else{
                                             Toast.makeText(
                                                 activity,

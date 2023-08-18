@@ -61,7 +61,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily.Companion.Cursive
 import androidx.compose.ui.text.font.FontWeight
@@ -69,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
+import at.htlhl.testing.data.BottomSheetItem
 import at.htlhl.testing.data.Chat
 import at.htlhl.testing.data.PersonList
 import at.htlhl.testing.data.SharedViewModel
@@ -101,7 +101,7 @@ class DropIn : ViewModel() {
             val updatedTimestamp =
                 matchingChat?.messages?.lastOrNull()?.timestamp ?: person.timestamp
 
-            if (matchingChat?.messages?.lastOrNull()?.sender != person.userID) {
+            if (matchingChat?.messages?.lastOrNull()?.sender != person.userID && updatedStatus != "") {
                 person.copy(status = "Me: $updatedStatus", timestamp = updatedTimestamp)
             } else {
                 person.copy(status = updatedStatus, timestamp = updatedTimestamp)
@@ -112,8 +112,7 @@ class DropIn : ViewModel() {
             BottomSheetItem(title = "Delete", icon = Icons.Default.Delete),
             BottomSheetItem(title = "Mute Messages", icon = Icons.Default.VolumeMute),
             BottomSheetItem(title = "Pin Chat", icon = Icons.Default.PushPin),
-
-            )
+        )
         val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(
             bottomSheetState = BottomSheetState(BottomSheetValue.Collapsed)
         )
@@ -164,7 +163,11 @@ class DropIn : ViewModel() {
                             )
                         }
                         Spacer(modifier = Modifier.padding(6.dp))
-                        Divider(thickness = 0.25f.dp, color = Color.LightGray, modifier = Modifier.padding(bottom = 2.dp))
+                        Divider(
+                            thickness = 0.25f.dp,
+                            color = Color.LightGray,
+                            modifier = Modifier.padding(bottom = 2.dp)
+                        )
                         LazyColumn(userScrollEnabled = false) {
 
                             items(bottomSheetItems.size, itemContent = {
@@ -174,6 +177,10 @@ class DropIn : ViewModel() {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
+                                            if (bottomSheetItems[it].title == "Delete") {
+                                                sharedViewModel.deleteFriendFromFriendList()
+                                                sharedViewModel.deleteChatRoom()
+                                            }
                                         },
                                 ) {
                                     Icon(
@@ -185,7 +192,11 @@ class DropIn : ViewModel() {
                                     Text(
                                         text = bottomSheetItems[it].title,
                                         color = Color.White,
-                                        modifier = Modifier.padding(start = 12.dp, top = 14.dp, bottom = 14.dp),
+                                        modifier = Modifier.padding(
+                                            start = 12.dp,
+                                            top = 14.dp,
+                                            bottom = 14.dp
+                                        ),
                                     )
                                 }
 
@@ -198,7 +209,7 @@ class DropIn : ViewModel() {
                         .background(
                             color = Color(0xFF252525),
                         )
-                        .padding(start=16.dp, end=16.dp, top=16.dp),
+                        .padding(start = 16.dp, end = 16.dp, top = 16.dp),
                 )
             },
             sheetPeekHeight = 0.dp,
@@ -296,9 +307,6 @@ class DropIn : ViewModel() {
         }
     }
 }
-
-
-data class BottomSheetItem(val title: String, val icon: ImageVector)
 
 
 @RequiresApi(Build.VERSION_CODES.O)

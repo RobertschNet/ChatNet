@@ -9,7 +9,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -190,35 +189,19 @@ class SearchView : ViewModel() {
                                 contentScale = ContentScale.Crop,
                                 alignment = Alignment.Center
                             )
-
-                            Column(Modifier.padding(horizontal = 8.dp), verticalArrangement = Arrangement.Center) {
-                                Row(
-                                    modifier = Modifier
-                                        .padding(start = 10.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = person.name,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 17.sp,
-                                        color = if (isSystemInDarkTheme()) Color.White else Color.Black
-                                    )
-                                }
-                                Text(
-                                    modifier = Modifier.padding(start = 10.dp),
-                                    text = person.status,
-                                    maxLines = 1,
-                                    fontSize = 15.sp,
-                                    color = Color.LightGray
-                                )
-
-                            }
+                            Text(
+                                text = person.name,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 22.sp,
+                                color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                                modifier = Modifier.align(Alignment.CenterVertically).padding(start = 10.dp)
+                            )
                             Icon(
                                 imageVector = Icons.Default.PersonAddAlt,
                                 tint = Color.White,
                                 modifier = Modifier
                                     .align(Alignment.CenterVertically)
-                                    .padding(start = 80.dp, end = 10.dp)
+                                    .padding(start = 10.dp)
                                     .size(35.dp)
                                     .clickable {
                                         viewModel.getDocument { data ->

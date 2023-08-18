@@ -30,10 +30,10 @@ import kotlinx.coroutines.withContext
 
 
 class SharedViewModel : ViewModel() {
-    //General
+    // General
     val user = mutableStateOf(PersonList("", "", "", "", Timestamp.now()))
     private val auth: FirebaseAuth = Firebase.auth
-    val bottomBarState= mutableStateOf(true)
+    val bottomBarState = mutableStateOf(true)
 
     // LoadingScreen
     private val _loadingState = mutableStateOf(LoadingState.Loading)
@@ -63,7 +63,7 @@ class SharedViewModel : ViewModel() {
 
 
     private var friendListDataListener: ListenerRegistration? = null
-    fun startListeningForFriends(navController: NavController, completion: () -> Unit) {
+    fun startListeningForFriends(navController: NavController) {
         if (auth.currentUser == null) {
             return
         }
@@ -85,18 +85,16 @@ class SharedViewModel : ViewModel() {
                         .addOnSuccessListener { documentSnapshot ->
                             val data = documentSnapshot.toObject(PersonList::class.java)
                             data?.let { personListData.add(it) }
-
                             completedCount++
                             if (completedCount == totalFriends) {
-                                // Update _friendListData value directly
                                 _friendListData.value = personListData
-                                completion() // Call the completion listener only when all data is available
                                 viewModelScope.launch {
                                     startListeningForMessagesForPairs(
-                                        personListData,
-                                        auth.currentUser!!.uid
+                                        personListData, auth.currentUser!!.uid
                                     ) {
-                                        navController.navigate(Screens.DropInScreen.Route)
+                                        if (navController.currentDestination?.route != Screens.DropInScreen.Route){
+                                            navController.navigate(Screens.DropInScreen.Route)
+                                        }
                                     }
                                 }
                             }
@@ -105,6 +103,28 @@ class SharedViewModel : ViewModel() {
             }
         }
     }
+
+
+    fun deleteFriendFromFriendList() {
+        val userId = auth.currentUser!!.uid
+        val collectionRef = FirebaseFirestore.getInstance().collection("user")
+        val userDocumentRef = collectionRef.document(userId)
+        val friendSubCollectionRef = userDocumentRef.collection("friends")
+
+        friendSubCollectionRef.document(user.value.userID).delete().addOnSuccessListener {
+            println("Friend deleted successfully.")
+            val friendDocumentRef = collectionRef.document(user.value.userID)
+            val userSubCollectionRef = friendDocumentRef.collection("friends")
+            userSubCollectionRef.document(userId).delete().addOnSuccessListener {
+                println("Friend deleted successfully.")
+            }.addOnFailureListener { exception ->
+                exception.printStackTrace()
+            }
+        }.addOnFailureListener { exception ->
+            exception.printStackTrace()
+        }
+    }
+
 
     override fun onCleared() {
         super.onCleared()
@@ -116,6 +136,7 @@ class SharedViewModel : ViewModel() {
     val chatData: StateFlow<List<Chat>> get() = _chatData
 
 
+    @Suppress("UNCHECKED_CAST")
     private suspend fun startListeningForMessagesForPairs(
         documentIds: List<PersonList>,
         docIds: String,
@@ -126,13 +147,12 @@ class SharedViewModel : ViewModel() {
 
         for (i in documentIds.indices) {
             try {
-                val querySnapshotDocumentId = collectionRef
-                    .whereArrayContains("participants", documentIds[i].userID)
-                    .get().await()
+                val querySnapshotDocumentId =
+                    collectionRef.whereArrayContains("participants", documentIds[i].userID).get()
+                        .await()
 
-                val querySnapshotDocId = collectionRef
-                    .whereArrayContains("participants", docIds)
-                    .get().await()
+                val querySnapshotDocId =
+                    collectionRef.whereArrayContains("participants", docIds).get().await()
 
                 val documentsWithBothParticipants = mutableListOf<DocumentSnapshot>()
 
@@ -198,6 +218,21 @@ class SharedViewModel : ViewModel() {
             }
     }
 
+    fun deleteChatRoom() {
+        for (chat in chatData.value) {
+            if (chat.participants.contains(user.value.userID) && chat.participants.contains(auth.currentUser!!.uid)) {
+                val collectionRef = FirebaseFirestore.getInstance().collection("chats")
+                val documentRef = collectionRef.document(chat.chatRoomID)
+                documentRef.delete().addOnSuccessListener {
+                    println("ChatRoom deleted successfully.")
+                }.addOnFailureListener { exception ->
+                    exception.printStackTrace()
+                }
+            }
+        }
+
+    }
+
     suspend fun saveMessages(documentId: String?, message: Message) {
         FirebaseFirestore.getInstance().collection("chats/${documentId}/messages").add(message)
             .await()
@@ -219,13 +254,11 @@ class SharedViewModel : ViewModel() {
         return snapshot.documents.mapNotNull { document ->
             val firstname = document.getString("name")
             val image = document.getString("image")
-            val status = document.getString("status")
             val userID = document.getString("userID")
-            if (firstname != null && image != null && status != null && userID != null) {
+            if (firstname != null && image != null && userID != null) {
                 Person(
                     image = image,
                     name = firstname,
-                    status = status,
                     userID = userID,
                 )
             } else {
@@ -263,7 +296,7 @@ class SharedViewModel : ViewModel() {
             FirebaseFirestore.getInstance().collection("user/${person.userID}/friends")
         val documentRef = collectionRef.document(auth.currentUser!!.uid)
         val fieldUpdates = hashMapOf<String, Any>(
-            "status" to "pending",
+            "status" to "accepted", // Used to be "pending" for Testing now as "accepted"
             "userID" to auth.currentUser!!.uid,
         )
         documentRef.set(fieldUpdates).addOnSuccessListener {}
