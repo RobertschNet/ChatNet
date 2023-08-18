@@ -467,6 +467,7 @@ class ChatView : ViewModel() {
     @SuppressLint("MutableCollectionMutableState", "CoroutineCreationDuringComposition")
     @Composable
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+        sharedViewModel.bottomBarState.value = false
         auth = Firebase.auth
         val user = sharedViewModel.user.value
         val documentIdState = sharedViewModel.chatData.collectAsState(initial = emptyList())

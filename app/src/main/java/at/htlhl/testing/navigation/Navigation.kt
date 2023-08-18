@@ -27,7 +27,6 @@ import at.htlhl.testing.views.SearchView
 @Composable
 fun Navigation(
     navController: NavHostController,
-    bottomBarState: MutableState<Boolean>,
     sharedViewModel: SharedViewModel
 ) {
     NavHost(navController = navController, startDestination = "LoadingScreen") {
@@ -45,7 +44,6 @@ fun Navigation(
                 )
             }
         ) {
-            bottomBarState.value = true
             DropIn().DropInScreen(navController = navController, sharedViewModel = sharedViewModel)
         }
         composable(
@@ -63,7 +61,6 @@ fun Navigation(
                 )
             }
         ) {
-            bottomBarState.value = false
             ChatView().ChatViewScreen(
                 navController = navController,
                 sharedViewModel = sharedViewModel
@@ -87,7 +84,6 @@ fun Navigation(
                     animationSpec = tween(durationMillis = 500)
                 )
             }) {
-            bottomBarState.value = false
             SearchView().SearchViewScreen(navController)
         }
         composable("ChatMateScreen",
@@ -103,19 +99,16 @@ fun Navigation(
         composable("LoginScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-            bottomBarState.value = false
             LoginView().LoginScreen(navController, sharedViewModel)
         }
         composable("RegisterScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-            bottomBarState.value = false
             RegisterView().RegisterScreen(navController)
         }
         composable("LoadingScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-            bottomBarState.value = false
             Loading().LoadingScreen(navController)
         }
 

@@ -3,38 +3,65 @@ package at.htlhl.testing.views
 import android.annotation.SuppressLint
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.BottomSheetScaffold
+import androidx.compose.material.BottomSheetState
+import androidx.compose.material.BottomSheetValue
+import androidx.compose.material.DismissDirection
+import androidx.compose.material.DismissValue
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.SwipeToDismiss
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.VolumeMute
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PersonAddAlt1
+import androidx.compose.material.rememberBottomSheetScaffoldState
+import androidx.compose.material.rememberDismissState
 import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily.Companion.Cursive
 import androidx.compose.ui.text.font.FontWeight
@@ -47,20 +74,18 @@ import at.htlhl.testing.data.PersonList
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 
 class DropIn : ViewModel() {
-
-
-    @OptIn(ExperimentalMaterial3Api::class)
+    @OptIn(ExperimentalMaterialApi::class)
     @RequiresApi(Build.VERSION_CODES.O)
-    @SuppressLint(
-        "UnusedMaterial3ScaffoldPaddingParameter"
-    )
+    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @Composable
     fun DropInScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+        sharedViewModel.bottomBarState.value = true
         val lazyListState = rememberLazyListState()
         val friendListDataState = sharedViewModel.friendListData.collectAsState()
         val friendListData: List<PersonList> = friendListDataState.value
@@ -83,128 +108,317 @@ class DropIn : ViewModel() {
             }
         }
         val sortedPersonList = updatedPersonList.sortedByDescending { it.timestamp }
-        Scaffold {
+        val bottomSheetItems = listOf(
+            BottomSheetItem(title = "Delete", icon = Icons.Default.Delete),
+            BottomSheetItem(title = "Mute Messages", icon = Icons.Default.VolumeMute),
+            BottomSheetItem(title = "Pin Chat", icon = Icons.Default.PushPin),
+
+            )
+        val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(
+            bottomSheetState = BottomSheetState(BottomSheetValue.Collapsed)
+        )
+        var test by remember { mutableStateOf(false) }
+        val coroutineScope = rememberCoroutineScope()
+
+        BottomSheetScaffold(
+            scaffoldState = bottomSheetScaffoldState,
+            sheetShape = RoundedCornerShape(topEnd = 30.dp),
+            sheetGesturesEnabled = true,
+            drawerGesturesEnabled = false,
+            sheetContent = {
+                Column(
+                    content = {
+                        Canvas(
+                            modifier = Modifier
+                                .width(50.dp)
+                                .height(10.dp)
+                                .align(Alignment.CenterHorizontally)
+                        ) {
+                            drawRoundRect(
+                                color = Color.LightGray,
+                                size = size.copy(height = 2.dp.toPx()),
+                                cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx()),
+                                style = Stroke(2.dp.toPx())
+                            )
+                        }
+                        Spacer(modifier = Modifier.padding(6.dp))
+                        Row {
+                            Image(
+                                contentDescription = null,
+                                painter = rememberAsyncImagePainter(sharedViewModel.user.value.image),
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .size(40.dp),
+                                contentScale = ContentScale.Crop,
+                                alignment = Alignment.Center
+                            )
+                            Text(
+                                text = sharedViewModel.user.value.name,
+                                modifier = Modifier
+                                    .padding(start = 16.dp)
+                                    .align(Alignment.CenterVertically)
+                                    .weight(1f),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                                color = Color.White
+                            )
+                        }
+                        Spacer(modifier = Modifier.padding(6.dp))
+                        Divider(thickness = 0.25f.dp, color = Color.LightGray, modifier = Modifier.padding(bottom = 2.dp))
+                        LazyColumn(userScrollEnabled = false) {
+
+                            items(bottomSheetItems.size, itemContent = {
+                                Row(
+                                    horizontalArrangement = Arrangement.Start,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                        },
+                                ) {
+                                    Icon(
+                                        bottomSheetItems[it].icon,
+                                        bottomSheetItems[it].title,
+                                        tint = Color.White,
+                                        modifier = Modifier.padding(top = 14.dp, bottom = 14.dp)
+                                    )
+                                    Text(
+                                        text = bottomSheetItems[it].title,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(start = 12.dp, top = 14.dp, bottom = 14.dp),
+                                    )
+                                }
+
+                            })
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(250.dp)
+                        .background(
+                            color = Color(0xFF252525),
+                        )
+                        .padding(start=16.dp, end=16.dp, top=16.dp),
+                )
+            },
+            sheetPeekHeight = 0.dp,
+            topBar = {
+                TopAppBar(
+                    backgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
+                    modifier = Modifier
+                        .height(70.dp)
+                        .fillMaxWidth(),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(
+                                alpha = if (bottomSheetScaffoldState.bottomSheetState.isAnimationRunning ||
+                                    bottomSheetScaffoldState.bottomSheetState.isExpanded
+                                ) 0.5f else 1f
+                            )
+                    ) {
+                        Text(
+                            text = "ChatNet",
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .padding(start = 20.dp),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 36.sp,
+                            fontFamily = Cursive
+                        )
+                        Icon(imageVector = Icons.Outlined.PersonAddAlt1,
+                            contentDescription = "AddFriend",
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 20.dp, top = 5.dp)
+                                .size(30.dp)
+                                .clickable {
+                                    navController.navigate(Screens.SearchViewScreen.Route)
+                                })
+                        Icon(
+                            imageVector = Icons.Outlined.Notifications,
+                            contentDescription = "Notifications",
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 80.dp, top = 5.dp)
+                                .size(30.dp)
+                        )
+                    }
+                }
+                Divider(
+                    thickness = 1.dp,
+                    color = if (isSystemInDarkTheme()) Color.DarkGray else Color.Transparent
+                )
+            },
+        ) {
             LazyColumn(
                 Modifier
                     .fillMaxSize()
-                    .background(if (isSystemInDarkTheme()) Color.Black else Color.White),
-                lazyListState
-            ) {
-                item {
-                    TopAppBar(
-                        Modifier
-                            .height(70.dp)
-                            .fillMaxWidth(),
-                        backgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "ChatNet",
-                                modifier = Modifier
-                                    .align(Alignment.CenterStart)
-                                    .padding(start = 20.dp),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 36.sp,
-                                fontFamily = Cursive
-                            )
-                            Icon(
-                                imageVector = Icons.Outlined.PersonAddAlt1,
-                                contentDescription = "AddFriend",
-                                modifier = Modifier
-                                    .align(Alignment.CenterEnd)
-                                    .padding(end = 20.dp, top = 5.dp)
-                                    .size(30.dp)
-                                    .clickable {
-                                        navController.navigate(Screens.SearchViewScreen.Route)
-                                    }
-                            )
-                            Icon(
-                                imageVector = Icons.Outlined.Notifications,
-                                contentDescription = "Notifications",
-                                modifier = Modifier
-                                    .align(Alignment.CenterEnd)
-                                    .padding(end = 80.dp, top = 5.dp)
-                                    .size(30.dp)
-                            )
+                    .background(if (isSystemInDarkTheme()) Color.Black else Color.White)
+                    .graphicsLayer(
+                        alpha = if (bottomSheetScaffoldState.bottomSheetState.isAnimationRunning ||
+                            bottomSheetScaffoldState.bottomSheetState.isExpanded
+                        ) 0.5f else 1f
+                    )
+                    .clickable(enabled = test) {
+                        if (test) {
+                            coroutineScope.launch {
+                                bottomSheetScaffoldState.bottomSheetState.collapse()
+                                test = !test
+                            }
                         }
-                    }
-                    Divider(
-                        thickness = 1.dp,
-                        color = if (isSystemInDarkTheme()) Color.DarkGray else Color.Transparent
-                    )
-                }
+                    },
+                state = lazyListState
+            ) {
                 items(sortedPersonList) { message ->
-                    ChatItem(
-                        message,
-                        navController,
-                        sharedViewModel
+                    SwipeToDeleteItem(
+                        message = message,
+                        sharedViewModel = sharedViewModel,
+                        onDelete = {
+                        },
+                        navController = navController,
+                        onItemClicked = {
+                            test = !test
+                            coroutineScope.launch {
+                                if (bottomSheetScaffoldState.bottomSheetState.isCollapsed) {
+                                    bottomSheetScaffoldState.bottomSheetState.expand()
+                                } else {
+                                    bottomSheetScaffoldState.bottomSheetState.collapse()
+                                }
+                            }
+                        },
+                        bottomSheetState = test
                     )
                 }
+
             }
+        }
+    }
+}
+
+
+data class BottomSheetItem(val title: String, val icon: ImageVector)
+
+
+@RequiresApi(Build.VERSION_CODES.O)
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+fun SwipeToDeleteItem(
+    message: PersonList,
+    sharedViewModel: SharedViewModel,
+    onDelete: () -> Unit,
+    navController: NavController,
+    onItemClicked: () -> Unit,
+    bottomSheetState: Boolean
+) {
+    val dismissState = rememberDismissState()
+    val originalPosition = rememberUpdatedState(dismissState.currentValue)
+
+    SwipeToDismiss(state = dismissState,
+        directions = setOf(DismissDirection.StartToEnd),
+        background = {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = Color.White,
+                    modifier = Modifier.padding(start = 16.dp)
+                )
+            }
+        }) {
+        ChatItem(
+            message,
+            navController = navController,
+            bottomSheetState = bottomSheetState,
+            sharedViewModel = sharedViewModel
+        ) { onItemClicked() }
+    }
+    LaunchedEffect(dismissState) {
+        if (dismissState.isDismissed(DismissDirection.StartToEnd)) {
+            onDelete()
+        }
+        if (dismissState.currentValue != DismissValue.Default && dismissState.currentValue != originalPosition.value) {
+            dismissState.reset()
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun ChatItem(
+    person: PersonList,
+    bottomSheetState: Boolean,
+    navController: NavController,
+    sharedViewModel: SharedViewModel,
+    onItemClicked: () -> Unit
+) {
+    val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+    val formattedTime: String = formatter.format(person.timestamp.toDate())
+    Row(
+        modifier = Modifier
+            .combinedClickable(
+                onClick = {
+                    if (bottomSheetState) {
+                        onItemClicked()
+                    } else {
+                        sharedViewModel.user.value = person
+                        navController.navigate(Screens.ChatScreen.Route)
+                    }
+
+                },
+                onLongClick = {
+                    sharedViewModel.user.value = person
+                    onItemClicked()
+                },
+            )
+            .fillMaxWidth()
+            .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
+            .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
+    ) {
+        Image(
+            contentDescription = null,
+            painter = rememberAsyncImagePainter(person.image),
+            modifier = Modifier
+                .clip(CircleShape)
+                .size(50.dp),
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.Center
+        )
+        Column(Modifier.padding(horizontal = 8.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = person.name,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 17.sp,
+                    color = if (isSystemInDarkTheme()) Color.White else Color.Black
+                )
+                Text(
+                    text = formattedTime,
+                    fontWeight = FontWeight.Light,
+                    fontSize = 12.sp,
+                    color = if (isSystemInDarkTheme()) Color.White else Color.Black
+                )
+            }
+            Text(
+                modifier = Modifier.padding(start = 10.dp),
+                text = person.status,
+                maxLines = 1,
+                fontSize = 15.sp,
+                color = Color.LightGray
+            )
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    @Composable
-    fun ChatItem(
-        person: PersonList,
-        navController: NavController,
-        sharedViewModel: SharedViewModel
-    ) {
-        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
-        val formattedTime: String = formatter.format(person.timestamp.toDate())
-        Row(
-            modifier = Modifier
-                .clickable {
-                    sharedViewModel.user.value = person
-                    navController.navigate(Screens.ChatScreen.Route)
-                }
-                .fillMaxWidth()
-                .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
-                .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp),
-        ) {
-            Image(
-                contentDescription = null,
-                painter = rememberAsyncImagePainter(person.image),
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .size(50.dp),
-                contentScale = ContentScale.Crop,
-                alignment = Alignment.Center
-            )
-            Column(Modifier.padding(horizontal = 8.dp)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = person.name,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 17.sp,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black
-                    )
-                    Text(
-                        text = formattedTime,
-                        fontWeight = FontWeight.Light,
-                        fontSize = 12.sp,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black
-                    )
-                }
-                Text(
-                    modifier = Modifier.padding(start = 10.dp),
-                    text = person.status,
-                    maxLines = 1,
-                    fontSize = 15.sp,
-                    color = Color.LightGray
-                )
-            }
-        }
-        Divider(thickness = 0.25f.dp, color = Color.LightGray)
-    }
+    Divider(thickness = 0.25f.dp, color = Color.LightGray)
 }
+

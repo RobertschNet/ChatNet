@@ -101,10 +101,8 @@ fun NavigationBarLayout(
     navController: NavHostController,
     viewModel: SharedViewModel,
 ) {
-
-    val isBottomBarEnabled = remember { mutableStateOf(true) }
     Scaffold(bottomBar = {
-        BottomNavigationBar(isBottomBarEnabled = isBottomBarEnabled, items = listOf(
+        BottomNavigationBar(isBottomBarEnabled = viewModel.bottomBarState, items = listOf(
             BottomNavItem(
                 name = "Drop In",
                 route = Screens.DropInScreen.Route,
@@ -138,7 +136,6 @@ fun NavigationBarLayout(
         Box(modifier = Modifier.padding(paddingValues)) {
             Navigation(
                 navController = navController,
-                bottomBarState = isBottomBarEnabled,
                 sharedViewModel = viewModel
             )
         }

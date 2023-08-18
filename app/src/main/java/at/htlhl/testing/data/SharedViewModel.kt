@@ -33,6 +33,7 @@ class SharedViewModel : ViewModel() {
     //General
     val user = mutableStateOf(PersonList("", "", "", "", Timestamp.now()))
     private val auth: FirebaseAuth = Firebase.auth
+    val bottomBarState= mutableStateOf(true)
 
     // LoadingScreen
     private val _loadingState = mutableStateOf(LoadingState.Loading)
