@@ -1,5 +1,6 @@
 package at.htlhl.testing
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -37,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -49,6 +51,7 @@ import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Navigation
 import at.htlhl.testing.navigation.Screens
 import at.htlhl.testing.ui.theme.TestingTheme
+import at.htlhl.testing.views.LocationUpdateService
 
 @ExperimentalMaterial3Api
 class MainActivity : ComponentActivity() {
@@ -65,6 +68,8 @@ class MainActivity : ComponentActivity() {
                     viewModel.fetchAuthenticationStatus()
                     viewModel.startListeningForFriends(navController)
                 }
+                val serviceIntent = Intent(this, LocationUpdateService::class.java)
+                ContextCompat.startForegroundService(this, serviceIntent)
                 NavigationBarLayout(
                     navController = navController,
                     viewModel = viewModel,

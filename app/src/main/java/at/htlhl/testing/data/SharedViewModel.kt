@@ -31,7 +31,7 @@ import kotlinx.coroutines.withContext
 
 class SharedViewModel : ViewModel() {
     // General
-    val user = mutableStateOf(PersonList("", "", "", "", Timestamp.now()))
+    val user = mutableStateOf(PersonList("", "", "", arrayListOf(), "", Timestamp.now()))
     private val auth: FirebaseAuth = Firebase.auth
     val bottomBarState = mutableStateOf(true)
 
@@ -92,7 +92,7 @@ class SharedViewModel : ViewModel() {
                                     startListeningForMessagesForPairs(
                                         personListData, auth.currentUser!!.uid
                                     ) {
-                                        if (navController.currentDestination?.route != Screens.DropInScreen.Route){
+                                        if (navController.currentDestination?.route != Screens.DropInScreen.Route) {
                                             navController.navigate(Screens.DropInScreen.Route)
                                         }
                                     }
@@ -236,8 +236,8 @@ class SharedViewModel : ViewModel() {
     suspend fun saveMessages(documentId: String?, message: Message) {
         FirebaseFirestore.getInstance().collection("chats/${documentId}/messages").add(message)
             .await()
-
     }
+
 
     // SearchView (Create Friend Element)
     private val _searchText = MutableStateFlow("")
