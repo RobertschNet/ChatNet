@@ -1,6 +1,10 @@
 package at.htlhl.testing.views
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
@@ -66,6 +70,7 @@ import androidx.compose.ui.text.font.FontFamily.Companion.Cursive
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat.registerReceiver
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import at.htlhl.testing.data.BottomSheetItem
