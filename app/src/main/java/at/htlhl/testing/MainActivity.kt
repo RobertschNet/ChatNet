@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Api
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.LiveHelp
 import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Message
@@ -70,6 +71,7 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(key1 = true) {
                     viewModel.fetchAuthenticationStatus()
                     viewModel.startListeningForFriends(navController)
+                    viewModel.startListeningForMessagesForPairs(viewModel.auth.currentUser!!.uid,{}, {})
                 }
                 NavigationBarLayout(
                     navController = navController,
@@ -133,6 +135,12 @@ class MainActivity : ComponentActivity() {
     ) {
         Scaffold(bottomBar = {
             BottomNavigationBar(isBottomBarEnabled = viewModel.bottomBarState, items = listOf(
+                BottomNavItem(
+                    name = "Chats",
+                    route = Screens.Chats.Route,
+                    icon = Icons.Default.Group,
+                    color = Color(0xFF00A0E8)
+                ),
                 BottomNavItem(
                     name = "Drop In",
                     route = Screens.DropInScreen.Route,

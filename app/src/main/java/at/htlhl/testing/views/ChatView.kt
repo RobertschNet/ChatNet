@@ -2,6 +2,7 @@ package at.htlhl.testing.views
 
 import android.annotation.SuppressLint
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -464,7 +465,7 @@ class ChatView : ViewModel() {
 
 
     @RequiresApi(Build.VERSION_CODES.O)
-    @SuppressLint("MutableCollectionMutableState", "CoroutineCreationDuringComposition")
+    @SuppressLint("MutableCollectionMutableState")
     @Composable
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         sharedViewModel.bottomBarState.value = false
@@ -472,10 +473,12 @@ class ChatView : ViewModel() {
         val user = sharedViewModel.user.value
         val documentIdState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val documentationId: List<Chat> = documentIdState.value
+        Log.println(Log.INFO, "ChatView", documentationId.toString())
         val filteredChats = documentationId.filter { chat ->
             chat.participants.contains(user.userID) && chat.participants.contains(auth.currentUser?.uid.toString())
         }
         val doc = filteredChats.firstOrNull()?.chatRoomID ?: ""
+        Log.println(Log.INFO, "ChatView", doc)
         val messageList: List<Message> = filteredChats.flatMap { chat ->
             chat.messages.map { message ->
                 Message(message.sender, message.content, message.timestamp)

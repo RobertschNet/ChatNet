@@ -12,9 +12,11 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import at.htlhl.testing.data.Chat
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.views.ChatMate
 import at.htlhl.testing.views.ChatView
+import at.htlhl.testing.views.Chats
 import at.htlhl.testing.views.DropIn
 import at.htlhl.testing.views.LoadingView
 import at.htlhl.testing.views.LoginView
@@ -30,6 +32,22 @@ fun Navigation(
     sharedViewModel: SharedViewModel
 ) {
     NavHost(navController = navController, startDestination = "LoadingScreen") {
+        composable("ChatsScreen",
+            enterTransition = {
+                slideInHorizontally(
+                    initialOffsetX = { fullWidth -> -fullWidth },
+                    animationSpec = tween(durationMillis = 500)
+                )
+            },
+            exitTransition = {
+                slideOutHorizontally(
+                    targetOffsetX = { fullWidth -> -fullWidth },
+                    animationSpec = tween(durationMillis = 500)
+                )
+            }
+        ) {
+            Chats().ChatsScreen(navController, sharedViewModel)
+        }
         composable("DropInScreen",
             enterTransition = {
                 slideInHorizontally(

@@ -5,7 +5,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
-import at.htlhl.testing.navigation.Screens
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
@@ -91,22 +90,13 @@ class SharedViewModel : ViewModel() {
                             completedCount++
                             if (completedCount == totalFriends) {
                                 _friendListData.value = personListData
-                                viewModelScope.launch {
-                                    startListeningForMessagesForPairs(
-                                        personListData, auth.currentUser!!.uid
-                                    ) {
-                                        if (navController.currentDestination?.route != Screens.DropInScreen.Route) {
-                                            navController.navigate(Screens.DropInScreen.Route)
-                                        }
-                                    }
-                                }
+                                navController.navigate("ChatsScreen")
                             }
                         }
                 }
             }
         }
     }
-
 
     fun deleteFriendFromFriendList() {
         val userId = auth.currentUser!!.uid
@@ -139,44 +129,41 @@ class SharedViewModel : ViewModel() {
     val chatData: StateFlow<List<Chat>> get() = _chatData
 
 
-    @Suppress("UNCHECKED_CAST")
-    private suspend fun startListeningForMessagesForPairs(
-        documentIds: List<PersonList>,
+    @Suppress("UNCHECKED_CAST", "LABEL_NAME_CLASH")
+    fun startListeningForMessagesForPairs(
         docIds: String,
         onComplete: () -> Unit,
+        onError: (Exception) -> Unit
     ) {
         val collectionRef = FirebaseFirestore.getInstance().collection("chats")
         val chatDataSet = mutableSetOf<Chat>()
-
-        for (i in documentIds.indices) {
-            try {
-                val querySnapshotDocumentId =
-                    collectionRef.whereArrayContains("participants", documentIds[i].userID).get()
-                        .await()
-
-                val querySnapshotDocId =
-                    collectionRef.whereArrayContains("participants", docIds).get().await()
+        collectionRef.whereArrayContains("participants", docIds)
+            .addSnapshotListener { querySnapshot, error ->
+                if (error != null) {
+                    onError.invoke(error)
+                    return@addSnapshotListener
+                }
 
                 val documentsWithBothParticipants = mutableListOf<DocumentSnapshot>()
 
-                for (document in querySnapshotDocumentId.documents) {
-                    if (querySnapshotDocId.documents.any { it.id == document.id }) {
-                        documentsWithBothParticipants.add(document)
+                if (querySnapshot != null) {
+                    for (document in querySnapshot.documents) {
+                        if (querySnapshot.documents.any { it.id == document.id }) {
+                            documentsWithBothParticipants.add(document)
+                        }
                     }
                 }
-
                 for (document in documentsWithBothParticipants) {
                     val data = document.data
                     data?.let {
                         val subCollectionRef =
                             collectionRef.document(document.id).collection("/messages")
                                 .orderBy("timestamp")
-
                         subCollectionRef.addSnapshotListener { subQuerySnapshot, exception ->
                             if (exception != null) {
+                                onError.invoke(exception)
                                 return@addSnapshotListener
                             }
-
                             subQuerySnapshot?.let { subSnapshot ->
                                 val subCollectionData = subSnapshot.toObjects(Message::class.java)
                                 val chat = Chat(
@@ -195,12 +182,10 @@ class SharedViewModel : ViewModel() {
                         }
                     }
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
+                onComplete.invoke()
             }
-        }
-        onComplete.invoke()
     }
+
 
     fun deleteMessageForUser(
         documentId: String,

@@ -1,5 +1,6 @@
 package at.htlhl.testing.views
 
+
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
@@ -32,10 +33,10 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.VolumeMute
-import androidx.compose.material.icons.outlined.GpsNotFixed
-import androidx.compose.material.icons.outlined.GpsOff
+import androidx.compose.material.icons.outlined.PersonAddAlt1
 import androidx.compose.material.rememberBottomSheetScaffoldState
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
@@ -59,7 +60,6 @@ import androidx.compose.ui.text.font.FontFamily.Companion.Cursive
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import at.htlhl.testing.data.BottomSheetItem
 import at.htlhl.testing.data.Chat
@@ -72,21 +72,36 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 
-class DropIn : ViewModel() {
+class Chats {
     @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalMaterialApi::class)
     @Composable
-    fun DropInScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+    fun ChatsScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         sharedViewModel.bottomBarState.value = true
         val lazyListState = rememberLazyListState()
         var test by remember { mutableStateOf(false) }
         val coroutineScope = rememberCoroutineScope()
-        val documentIdState = sharedViewModel.chatData.collectAsState(initial = emptyList())
-        val documentationId: List<Chat> = documentIdState.value
+        val friendListDataState = sharedViewModel.friendListData.collectAsState()
+        val friendListData: List<PersonList> = friendListDataState.value
+        val messageChatRoomDataState = sharedViewModel.chatData.collectAsState()
+        val messageChatRoomData: List<Chat> = messageChatRoomDataState.value
+        println("Friends: $friendListData")
+        println("Chats: $messageChatRoomData")
+        val updatedPersonList = friendListData.map { person ->
+            val matchingChat = messageChatRoomData.find { chat ->
+                chat.participants.contains(person.userID)
+            }
+            val updatedStatus = matchingChat?.messages?.lastOrNull()?.content ?: person.status
+            val updatedTimestamp =
+                matchingChat?.messages?.lastOrNull()?.timestamp ?: person.timestamp
 
-        val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
-            localUser.userID != sharedViewModel.auth.currentUser?.uid
+            if (matchingChat?.messages?.lastOrNull()?.sender != person.userID && updatedStatus != "") {
+                person.copy(status = "Me: $updatedStatus", timestamp = updatedTimestamp)
+            } else {
+                person.copy(status = updatedStatus, timestamp = updatedTimestamp)
+            }
         }
+        val sortedPersonList = updatedPersonList.sortedByDescending { it.timestamp }
         val bottomSheetItems = listOf(
             BottomSheetItem(title = "Delete", icon = Icons.Default.Delete),
             BottomSheetItem(title = "Mute Messages", icon = Icons.Default.VolumeMute),
@@ -212,17 +227,25 @@ class DropIn : ViewModel() {
                             fontSize = 36.sp,
                             fontFamily = Cursive
                         )
+                        Icon(imageVector = Icons.Outlined.PersonAddAlt1,
+                            contentDescription = "AddFriend",
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 20.dp, top = 5.dp)
+                                .size(30.dp)
+                                .clickable {
+                                    navController.navigate(Screens.SearchViewScreen.Route)
+                                })
                         IconButton(
                             onClick = {
-                                sharedViewModel.gpsState.value = !sharedViewModel.gpsState.value
                             },
                             modifier = Modifier
                                 .align(Alignment.CenterEnd)
-                                .padding(end = 10.dp, top = 5.dp)
+                                .padding(end = 60.dp, top = 5.dp)
                         ) {
                             Icon(
-                                imageVector = if (!sharedViewModel.gpsState.value) Icons.Outlined.GpsNotFixed else Icons.Outlined.GpsOff,
-                                contentDescription = "GPS",
+                                imageVector = Icons.Default.NotificationsActive,
+                                contentDescription = "Notifications",
                                 modifier = Modifier.size(30.dp)
                             )
                         }
@@ -253,34 +276,23 @@ class DropIn : ViewModel() {
                     },
                 state = lazyListState
             ) {
-                if (!sharedViewModel.gpsState.value) {
-                    item {
-                        Text(
-                            text = "Users in your area",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp)
-                        )
-                    }
-                    items(localChatUsers) { message ->
-                        ChatItem2(
-                            person = message,
-                            documentationId = documentationId,
-                            sharedViewModel = sharedViewModel,
-                            navController = navController,
-                            onItemClicked = {
-                                test = !test
-                                coroutineScope.launch {
-                                    if (bottomSheetScaffoldState.bottomSheetState.isCollapsed) {
-                                        bottomSheetScaffoldState.bottomSheetState.expand()
-                                    } else {
-                                        bottomSheetScaffoldState.bottomSheetState.collapse()
-                                    }
+                items(sortedPersonList) { message ->
+                    ChatItem(
+                        person = message,
+                        sharedViewModel = sharedViewModel,
+                        navController = navController,
+                        onItemClicked = {
+                            test = !test
+                            coroutineScope.launch {
+                                if (bottomSheetScaffoldState.bottomSheetState.isCollapsed) {
+                                    bottomSheetScaffoldState.bottomSheetState.expand()
+                                } else {
+                                    bottomSheetScaffoldState.bottomSheetState.collapse()
                                 }
-                            },
-                            bottomSheetState = test
-                        )
-                    }
+                            }
+                        },
+                        bottomSheetState = test
+                    )
                 }
             }
         }
@@ -290,17 +302,17 @@ class DropIn : ViewModel() {
 @OptIn(ExperimentalFoundationApi::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun ChatItem2(
+fun ChatItem(
     person: PersonList,
     bottomSheetState: Boolean,
     navController: NavController,
     sharedViewModel: SharedViewModel,
-    documentationId: List<Chat>,
     onItemClicked: () -> Unit
 ) {
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
     val formattedTime: String = formatter.format(person.timestamp.toDate())
     Divider(thickness = 0.25f.dp, color = Color.LightGray)
+
     Row(
         modifier = Modifier
             .combinedClickable(
@@ -309,10 +321,7 @@ fun ChatItem2(
                         onItemClicked()
                     } else {
                         sharedViewModel.user.value = person
-                        val filteredChats = documentationId.filter { chat ->
-                            chat.participants.contains(person.userID) && chat.participants.contains(sharedViewModel.auth.currentUser?.uid)
-                        }
-                        if (person.local&&filteredChats.isEmpty()) {
+                        if (person.local) {
                             sharedViewModel.saveChatRoom(person.userID)
                         }
                         navController.navigate(Screens.ChatScreen.Route)
@@ -368,4 +377,3 @@ fun ChatItem2(
     }
     Divider(thickness = 0.25f.dp, color = Color.LightGray)
 }
-
