@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 
-class Loading {
+class LoadingView {
     @Composable
     fun LoadingScreen(navController: NavController) {
         LoadingAnimation()
@@ -57,7 +57,12 @@ class Loading {
                 )
             ), label = ""
         )
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
             CircularProgressIndicator(
                 modifier = Modifier
                     .size(size = indicatorSize)

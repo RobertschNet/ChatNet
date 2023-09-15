@@ -110,7 +110,7 @@ class Profile {
                     image = ""
                     currentUser?.let {
                         PersonList(
-                            it, name, lastMessage, arrayListOf(),image, Timestamp.now()
+                            it, name, lastMessage,image, Timestamp.now(), false
                         )
                     }?.let { saveSubscribed(it) }
                 }, modifier = Modifier.fillMaxWidth()

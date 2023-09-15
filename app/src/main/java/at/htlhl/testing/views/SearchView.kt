@@ -194,7 +194,9 @@ class SearchView : ViewModel() {
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 22.sp,
                                 color = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                                modifier = Modifier.align(Alignment.CenterVertically).padding(start = 10.dp)
+                                modifier = Modifier
+                                    .align(Alignment.CenterVertically)
+                                    .padding(start = 10.dp)
                             )
                             Icon(
                                 imageVector = Icons.Default.PersonAddAlt,
@@ -207,7 +209,7 @@ class SearchView : ViewModel() {
                                         viewModel.getDocument { data ->
                                             if (data != null) {
                                                 viewModel.saveFriend(person = person)
-                                                viewModel.saveChatRoom(person = person)
+                                                viewModel.saveChatRoom(person = person.userID)
                                             }
                                         }
                                         viewModel.saveSubscribed(person)

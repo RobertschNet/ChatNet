@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -15,7 +16,7 @@ import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.views.ChatMate
 import at.htlhl.testing.views.ChatView
 import at.htlhl.testing.views.DropIn
-import at.htlhl.testing.views.Loading
+import at.htlhl.testing.views.LoadingView
 import at.htlhl.testing.views.LoginView
 import at.htlhl.testing.views.Profile
 import at.htlhl.testing.views.RandChat
@@ -108,7 +109,7 @@ fun Navigation(
         composable("LoadingScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-            Loading().LoadingScreen(navController)
+            LoadingView().LoadingScreen(navController)
         }
 
     }

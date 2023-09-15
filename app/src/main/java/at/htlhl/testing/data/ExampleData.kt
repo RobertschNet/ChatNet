@@ -27,11 +27,11 @@ data class PersonList(
     val userID: String,
     val name: String,
     val image: String,
-    val location:ArrayList<Double>,
     val status: String,
     val timestamp: Timestamp,
+    val local: Boolean,
 ) {
-    constructor() : this("", "", "", arrayListOf(), "", Timestamp.now())
+    constructor() : this("", "", "","", Timestamp.now(), false)
 }
 
 data class Friend(

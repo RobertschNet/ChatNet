@@ -1,4 +1,4 @@
-package at.htlhl.testing.views
+package at.htlhl.testing.service
 
 import android.Manifest
 import android.app.Notification
@@ -9,11 +9,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
+import android.os.Binder
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.MutableLiveData
+import at.htlhl.testing.data.PersonList
 import com.firebase.geofire.GeoFireUtils
 import com.firebase.geofire.GeoLocation
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -23,9 +26,9 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.ktx.Firebase
@@ -37,8 +40,8 @@ class LocationUpdateService : Service() {
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationCallback: LocationCallback
     val auth: FirebaseAuth = Firebase.auth
-
     private var lastKnownLocation: Location? = null
+    val locationLiveData = MutableLiveData<List<PersonList>>()
 
     override fun onCreate() {
         super.onCreate()
@@ -93,8 +96,18 @@ class LocationUpdateService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        println(intent.toString())
+        if (intent?.action == "STOP_LOCATION_SERVICE") {
+            println("Stopping the location service.")
+            removeLocationUpdates()
+            stopSelf()
+            super.onDestroy()
+            return START_NOT_STICKY
+        }
         handler.postDelayed(locationRunnable, locationScanInterval)
+
         return START_STICKY
+
     }
 
     override fun onDestroy() {
@@ -133,11 +146,15 @@ class LocationUpdateService : Service() {
     }
 
     companion object {
-        private const val MIN_DISTANCE_THRESHOLD = 10.0
+        private const val MIN_DISTANCE_THRESHOLD = 1.0
     }
 
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
+    override fun onBind(intent: Intent?): IBinder {
+        return YourBinder()
+    }
+
+    inner class YourBinder : Binder() {
+        fun getService(): LocationUpdateService = this@LocationUpdateService
     }
 
     fun sendLocation(documentId: MutableMap<String, Any>, auth: FirebaseAuth) {
@@ -152,7 +169,7 @@ class LocationUpdateService : Service() {
 
     fun robert(latitude: Double, longitude: Double) {
         val center = GeoLocation(latitude, longitude)
-        val radiusInM = 50.0 * 1000.0
+        val radiusInM = 5.0 * 100.0
         val bounds = GeoFireUtils.getGeoHashQueryBounds(center, radiusInM)
         val tasks: MutableList<Task<QuerySnapshot>> = ArrayList()
         for (b in bounds) {
@@ -164,7 +181,7 @@ class LocationUpdateService : Service() {
         }
         Tasks.whenAllComplete(tasks)
             .addOnCompleteListener {
-                val matchingDocs: MutableList<DocumentSnapshot> = ArrayList()
+                val matchingDocs: MutableList<Map<String, Any>> = ArrayList()
                 for (task in tasks) {
                     val snap = task.result
                     for (doc in snap!!.documents) {
@@ -172,13 +189,28 @@ class LocationUpdateService : Service() {
                         val lng = doc.getDouble("lng")!!
                         val docLocation = GeoLocation(lat, lng)
                         val distanceInM = GeoFireUtils.getDistanceBetween(docLocation, center)
+                        println(distanceInM)
                         if (distanceInM <= radiusInM) {
-                            matchingDocs.add(doc)
-                            println(matchingDocs)
+                            doc.data?.let { it1 -> matchingDocs.add(it1) }
                         }
                     }
-                }
+                    val personList = matchingDocs.map { dataMap ->
+                        val lat = dataMap["lat"] as Double
+                        val lng = dataMap["lng"] as Double
+                        val docLocation = GeoLocation(lat, lng)
+                        val distanceInM = GeoFireUtils.getDistanceBetween(docLocation, center)
 
+                        PersonList(
+                            userID = dataMap["userID"].toString(),
+                            name = dataMap["name"].toString(),
+                            image = dataMap["image"].toString(),
+                            status = "User is ${distanceInM.toInt()} meters away",
+                            timestamp = Timestamp.now(),
+                            local = true
+                        )
+                    }
+                    locationLiveData.postValue(personList)
+                }
             }
     }
 }

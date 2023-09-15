@@ -472,25 +472,18 @@ class ChatView : ViewModel() {
         val user = sharedViewModel.user.value
         val documentIdState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val documentationId: List<Chat> = documentIdState.value
-
         val filteredChats = documentationId.filter { chat ->
             chat.participants.contains(user.userID) && chat.participants.contains(auth.currentUser?.uid.toString())
         }
-
         val doc = filteredChats.firstOrNull()?.chatRoomID ?: ""
-
         val messageList: List<Message> = filteredChats.flatMap { chat ->
             chat.messages.map { message ->
                 Message(message.sender, message.content, message.timestamp)
             }
         }
-        println("ChatViewScreen: $documentationId")
-
         val onMessageSent: (Message) -> Unit = { message ->
             runBlocking {
                 sharedViewModel.saveMessages(doc, message)
-
-                //sharedViewModel.saveLastMessage(user.userID, message)
             }
         }
         ChatScreen(
@@ -501,7 +494,6 @@ class ChatView : ViewModel() {
             personList = user,
             documentId = doc,
         )
-
     }
 }
 

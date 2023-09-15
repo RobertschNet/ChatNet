@@ -1,10 +1,5 @@
 package at.htlhl.testing.views
 
-import android.annotation.SuppressLint
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
@@ -29,34 +24,29 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.BottomSheetScaffold
 import androidx.compose.material.BottomSheetState
 import androidx.compose.material.BottomSheetValue
-import androidx.compose.material.DismissDirection
-import androidx.compose.material.DismissValue
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.SwipeToDismiss
+import androidx.compose.material.IconButton
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.VolumeMute
-import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.GpsNotFixed
+import androidx.compose.material.icons.outlined.GpsOff
 import androidx.compose.material.icons.outlined.PersonAddAlt1
 import androidx.compose.material.rememberBottomSheetScaffoldState
-import androidx.compose.material.rememberDismissState
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,7 +60,6 @@ import androidx.compose.ui.text.font.FontFamily.Companion.Cursive
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat.registerReceiver
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import at.htlhl.testing.data.BottomSheetItem
@@ -85,19 +74,23 @@ import java.util.Locale
 
 
 class DropIn : ViewModel() {
-    @OptIn(ExperimentalMaterialApi::class)
     @RequiresApi(Build.VERSION_CODES.O)
-    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+    @OptIn(ExperimentalMaterialApi::class)
     @Composable
     fun DropInScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         sharedViewModel.bottomBarState.value = true
         val lazyListState = rememberLazyListState()
+        var test by remember { mutableStateOf(false) }
+        val coroutineScope = rememberCoroutineScope()
         val friendListDataState = sharedViewModel.friendListData.collectAsState()
         val friendListData: List<PersonList> = friendListDataState.value
         val messageChatRoomDataState = sharedViewModel.chatData.collectAsState()
         val messageChatRoomData: List<Chat> = messageChatRoomDataState.value
-        println("S$friendListData")
-        println("I$messageChatRoomData")
+        val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
+            localUser.userID != sharedViewModel.auth.currentUser?.uid
+        }
+        println("Friends: $friendListData")
+        println("Chats: $messageChatRoomData")
         val updatedPersonList = friendListData.map { person ->
             val matchingChat = messageChatRoomData.find { chat ->
                 chat.participants.contains(person.userID)
@@ -113,6 +106,11 @@ class DropIn : ViewModel() {
             }
         }
         val sortedPersonList = updatedPersonList.sortedByDescending { it.timestamp }
+        val uniqueLocalUsers = localChatUsers.filter { localUser ->
+            sortedPersonList.none { sortedUser ->
+                localUser.userID == sortedUser.userID
+            }
+        }
         val bottomSheetItems = listOf(
             BottomSheetItem(title = "Delete", icon = Icons.Default.Delete),
             BottomSheetItem(title = "Mute Messages", icon = Icons.Default.VolumeMute),
@@ -121,12 +119,8 @@ class DropIn : ViewModel() {
         val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(
             bottomSheetState = BottomSheetState(BottomSheetValue.Collapsed)
         )
-        var test by remember { mutableStateOf(false) }
-        val coroutineScope = rememberCoroutineScope()
-
         BottomSheetScaffold(
             scaffoldState = bottomSheetScaffoldState,
-            sheetShape = RoundedCornerShape(topEnd = 30.dp),
             sheetGesturesEnabled = true,
             drawerGesturesEnabled = false,
             sheetContent = {
@@ -174,7 +168,6 @@ class DropIn : ViewModel() {
                             modifier = Modifier.padding(bottom = 2.dp)
                         )
                         LazyColumn(userScrollEnabled = false) {
-
                             items(bottomSheetItems.size, itemContent = {
                                 Row(
                                     horizontalArrangement = Arrangement.Start,
@@ -252,14 +245,20 @@ class DropIn : ViewModel() {
                                 .clickable {
                                     navController.navigate(Screens.SearchViewScreen.Route)
                                 })
-                        Icon(
-                            imageVector = Icons.Outlined.Notifications,
-                            contentDescription = "Notifications",
+                        IconButton(
+                            onClick = {
+                                sharedViewModel.gpsState.value = !sharedViewModel.gpsState.value
+                            },
                             modifier = Modifier
                                 .align(Alignment.CenterEnd)
-                                .padding(end = 80.dp, top = 5.dp)
-                                .size(30.dp)
-                        )
+                                .padding(end = 60.dp, top = 5.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (sharedViewModel.gpsState.value) Icons.Outlined.GpsNotFixed else Icons.Outlined.GpsOff,
+                                contentDescription = "GPS",
+                                modifier = Modifier.size(30.dp)
+                            )
+                        }
                     }
                 }
                 Divider(
@@ -287,12 +286,47 @@ class DropIn : ViewModel() {
                     },
                 state = lazyListState
             ) {
+                if (sharedViewModel.gpsState.value) {
+                    item {
+                        Text(
+                            text = "Users in your area",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp)
+                        )
+
+                    }
+                    items(uniqueLocalUsers) { message ->
+                        ChatItem(
+                            person = message,
+                            sharedViewModel = sharedViewModel,
+                            navController = navController,
+                            onItemClicked = {
+                                test = !test
+                                coroutineScope.launch {
+                                    if (bottomSheetScaffoldState.bottomSheetState.isCollapsed) {
+                                        bottomSheetScaffoldState.bottomSheetState.expand()
+                                    } else {
+                                        bottomSheetScaffoldState.bottomSheetState.collapse()
+                                    }
+                                }
+                            },
+                            bottomSheetState = test
+                        )
+                    }
+                    item {
+                        Text(
+                            text = "Your Friends",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp)
+                        )
+                    }
+                }
                 items(sortedPersonList) { message ->
-                    SwipeToDeleteItem(
-                        message = message,
+                    ChatItem(
+                        person = message,
                         sharedViewModel = sharedViewModel,
-                        onDelete = {
-                        },
                         navController = navController,
                         onItemClicked = {
                             test = !test
@@ -307,55 +341,7 @@ class DropIn : ViewModel() {
                         bottomSheetState = test
                     )
                 }
-
             }
-        }
-    }
-}
-
-
-@RequiresApi(Build.VERSION_CODES.O)
-@OptIn(ExperimentalMaterialApi::class)
-@Composable
-fun SwipeToDeleteItem(
-    message: PersonList,
-    sharedViewModel: SharedViewModel,
-    onDelete: () -> Unit,
-    navController: NavController,
-    onItemClicked: () -> Unit,
-    bottomSheetState: Boolean
-) {
-    val dismissState = rememberDismissState()
-    val originalPosition = rememberUpdatedState(dismissState.currentValue)
-
-    SwipeToDismiss(state = dismissState,
-        directions = setOf(DismissDirection.StartToEnd),
-        background = {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = Color.White,
-                    modifier = Modifier.padding(start = 16.dp)
-                )
-            }
-        }) {
-        ChatItem(
-            message,
-            navController = navController,
-            bottomSheetState = bottomSheetState,
-            sharedViewModel = sharedViewModel
-        ) { onItemClicked() }
-    }
-    LaunchedEffect(dismissState) {
-        if (dismissState.isDismissed(DismissDirection.StartToEnd)) {
-            onDelete()
-        }
-        if (dismissState.currentValue != DismissValue.Default && dismissState.currentValue != originalPosition.value) {
-            dismissState.reset()
         }
     }
 }
@@ -372,6 +358,8 @@ fun ChatItem(
 ) {
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
     val formattedTime: String = formatter.format(person.timestamp.toDate())
+    Divider(thickness = 0.25f.dp, color = Color.LightGray)
+
     Row(
         modifier = Modifier
             .combinedClickable(
@@ -380,6 +368,9 @@ fun ChatItem(
                         onItemClicked()
                     } else {
                         sharedViewModel.user.value = person
+                        if (person.local) {
+                            sharedViewModel.saveChatRoom(person.userID)
+                        }
                         navController.navigate(Screens.ChatScreen.Route)
                     }
 
@@ -431,7 +422,6 @@ fun ChatItem(
             )
         }
     }
-
     Divider(thickness = 0.25f.dp, color = Color.LightGray)
 }
 

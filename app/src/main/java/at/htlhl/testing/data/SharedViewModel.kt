@@ -30,10 +30,13 @@ import kotlinx.coroutines.withContext
 
 
 class SharedViewModel : ViewModel() {
+
     // General
-    val user = mutableStateOf(PersonList("", "", "", arrayListOf(), "", Timestamp.now()))
-    private val auth: FirebaseAuth = Firebase.auth
+    val user = mutableStateOf(PersonList("", "", "", "", Timestamp.now(), false))
+    val auth: FirebaseAuth = Firebase.auth
     val bottomBarState = mutableStateOf(true)
+    val gpsState = mutableStateOf(false)
+    val localChatUserList = mutableStateOf<List<PersonList>>(emptyList())
 
     // LoadingScreen
     private val _loadingState = mutableStateOf(LoadingState.Loading)
@@ -280,10 +283,10 @@ class SharedViewModel : ViewModel() {
         }.onEach { _isSearching.update { false } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _person.value)
 
-    fun saveChatRoom(person: Person) {
+    fun saveChatRoom(person: String) {
         val collectionRef = FirebaseFirestore.getInstance().collection("chats")
         val documentRef = collectionRef.document()
-        val participantsArray = arrayListOf(auth.currentUser!!.uid, person.userID)
+        val participantsArray = arrayListOf(auth.currentUser!!.uid, person)
         val fieldUpdates = hashMapOf<String, Any>(
             "participants" to participantsArray,
         )
@@ -296,7 +299,7 @@ class SharedViewModel : ViewModel() {
             FirebaseFirestore.getInstance().collection("user/${person.userID}/friends")
         val documentRef = collectionRef.document(auth.currentUser!!.uid)
         val fieldUpdates = hashMapOf<String, Any>(
-            "status" to "accepted", // Used to be "pending" for Testing now as "accepted"
+            "status" to "accepted",
             "userID" to auth.currentUser!!.uid,
         )
         documentRef.set(fieldUpdates).addOnSuccessListener {}
