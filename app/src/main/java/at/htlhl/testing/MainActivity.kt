@@ -40,7 +40,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -64,14 +63,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val serviceIntent = Intent(this, LocationUpdateService::class.java)
         setContent {
-            val viewModel: SharedViewModel = viewModel()
+            val viewModel = (application as MyApplication).myViewModel
+            viewModel.updateOnlineStatus("Online")
             val navController = rememberNavController()
             TestingTheme {
                 val loadingState = viewModel.loadingState.value
                 LaunchedEffect(key1 = true) {
                     viewModel.fetchAuthenticationStatus()
-                    viewModel.startListeningForFriends(navController)
-                    viewModel.startListeningForMessagesForPairs(viewModel.auth.currentUser!!.uid,{}, {})
                 }
                 NavigationBarLayout(
                     navController = navController,
@@ -80,15 +78,19 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(key1 = loadingState) {
                     when (loadingState) {
                         LoadingState.Authenticated -> {
-                            println("User is logged in")
+                            Log.println(Log.INFO, "Authentication", "User is logged in")
+                            viewModel.startListeningForFriends()
+                            viewModel.startListeningForMessagesForPairs(viewModel.auth.currentUser!!.uid,{}, {})
+                            navController.navigate(Screens.Chats.Route)
                         }
 
                         LoadingState.NotAuthenticated -> {
-                            println("User is not logged in")
+                            Log.println(Log.INFO, "Authentication", "User is not logged in")
                             navController.navigate(Screens.LoginScreen.Route)
                         }
 
                         LoadingState.Error -> {
+                            Log.println(Log.ERROR, "Authentication", "Error while loading")
                         }
 
                         else -> Unit
@@ -97,8 +99,12 @@ class MainActivity : ComponentActivity() {
             }
 
             if (viewModel.gpsState.value) {
-                unbindService(serviceConnection!!)
-                stopService(serviceIntent)
+                try {
+                    unbindService(serviceConnection!!)
+                    stopService(serviceIntent)
+                }catch (e:Exception) {
+                    Log.println(Log.ERROR, "Location", e.toString())
+                }
             } else {
                 startService(serviceIntent)
                 serviceConnection = object : ServiceConnection {
@@ -123,6 +129,8 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         serviceConnection?.let { unbindService(it) }
+        stopService(Intent(this, LocationUpdateService::class.java))
+        (application as MyApplication).myViewModel.updateOnlineStatus("Offline")
     }
 
 

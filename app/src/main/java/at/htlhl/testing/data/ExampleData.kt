@@ -24,14 +24,15 @@ data class BottomNavItem(
 )
 
 data class PersonList(
-    val userID: String,
-    val name: String,
     val image: String,
-    val status: String,
+    val name: String,
+    val online: String,
+    val userID: String,
     val timestamp: Timestamp,
     val local: Boolean,
-) {
-    constructor() : this("", "", "","", Timestamp.now(), false)
+    val status: String,
+    ) {
+    constructor() : this("", "", "", "", Timestamp.now(), false, "")
 }
 
 data class Friend(

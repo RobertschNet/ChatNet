@@ -92,7 +92,10 @@ class LoginView {
                         .addOnCompleteListener { signInTask ->
                             if (signInTask.isSuccessful) {
                                 println("Sign-in successful")
-                                sharedViewModel.startListeningForFriends(navController)
+                                sharedViewModel.startListeningForFriends()
+                                sharedViewModel.startListeningForMessagesForPairs(auth.currentUser?.uid.toString(),{},{})
+                                sharedViewModel.gpsState.value=false
+                                navController.navigate(Screens.Chats.Route)
                             } else {
                                 println("Sign-in failed")
                             }
@@ -213,7 +216,10 @@ class LoginView {
                                     if (task.isSuccessful) {
                                         Log.d(ContentValues.TAG, "createUserWithEmail:success")
                                         if (!isUserEmailVerified()) {
-                                            sharedViewModel.startListeningForFriends(navController)
+                                            sharedViewModel.startListeningForFriends()
+                                            sharedViewModel.startListeningForMessagesForPairs(auth.currentUser?.uid.toString(),{},{})
+                                            sharedViewModel.gpsState.value=false
+                                            navController.navigate(Screens.Chats.Route)
                                         }else{
                                             Toast.makeText(
                                                 activity,

@@ -8,11 +8,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import at.htlhl.testing.data.Chat
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.views.ChatMate
 import at.htlhl.testing.views.ChatView
@@ -33,34 +31,14 @@ fun Navigation(
 ) {
     NavHost(navController = navController, startDestination = "LoadingScreen") {
         composable("ChatsScreen",
-            enterTransition = {
-                slideInHorizontally(
-                    initialOffsetX = { fullWidth -> -fullWidth },
-                    animationSpec = tween(durationMillis = 500)
-                )
-            },
-            exitTransition = {
-                slideOutHorizontally(
-                    targetOffsetX = { fullWidth -> -fullWidth },
-                    animationSpec = tween(durationMillis = 500)
-                )
-            }
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }
         ) {
             Chats().ChatsScreen(navController, sharedViewModel)
         }
         composable("DropInScreen",
-            enterTransition = {
-                slideInHorizontally(
-                    initialOffsetX = { fullWidth -> -fullWidth },
-                    animationSpec = tween(durationMillis = 500)
-                )
-            },
-            exitTransition = {
-                slideOutHorizontally(
-                    targetOffsetX = { fullWidth -> -fullWidth },
-                    animationSpec = tween(durationMillis = 500)
-                )
-            }
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }
         ) {
             DropIn().DropInScreen(navController = navController, sharedViewModel = sharedViewModel)
         }
@@ -112,7 +90,7 @@ fun Navigation(
         composable("ProfileScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-            Profile().ProfileScreen(navController)
+            Profile().ProfileScreen(navController, sharedViewModel)
         }
         composable("LoginScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },

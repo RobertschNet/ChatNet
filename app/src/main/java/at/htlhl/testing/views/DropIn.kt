@@ -6,6 +6,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -51,6 +52,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -83,9 +86,32 @@ class DropIn : ViewModel() {
         val coroutineScope = rememberCoroutineScope()
         val documentIdState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val documentationId: List<Chat> = documentIdState.value
-
+        val friendIdState = sharedViewModel.friendListData.collectAsState(initial = emptyList())
+        val friendListData: List<PersonList> = friendIdState.value
         val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
             localUser.userID != sharedViewModel.auth.currentUser?.uid
+        }
+        println("Friends: $friendListData")
+        println("Chats: $documentationId")
+        val updatedPersonList = friendListData.map { person ->
+            val matchingChat = documentationId.find { chat ->
+                chat.participants.contains(person.userID)
+            }
+            val updatedStatus = matchingChat?.messages?.lastOrNull()?.content ?: person.status
+            val updatedTimestamp =
+                matchingChat?.messages?.lastOrNull()?.timestamp ?: person.timestamp
+
+            if (matchingChat?.messages?.lastOrNull()?.sender != person.userID && updatedStatus != "") {
+                person.copy(status = "Me: $updatedStatus", timestamp = updatedTimestamp)
+            } else {
+                person.copy(status = updatedStatus, timestamp = updatedTimestamp)
+            }
+        }
+        val sortedPersonList = updatedPersonList.sortedByDescending { it.timestamp }
+        val uniqueLocalUsers = localChatUsers.filter { localUser ->
+            sortedPersonList.none { sortedUser ->
+                localUser.userID == sortedUser.userID
+            }
         }
         val bottomSheetItems = listOf(
             BottomSheetItem(title = "Delete", icon = Icons.Default.Delete),
@@ -215,6 +241,14 @@ class DropIn : ViewModel() {
                         IconButton(
                             onClick = {
                                 sharedViewModel.gpsState.value = !sharedViewModel.gpsState.value
+                                val usersWithEmptyChatRooms = documentationId.filter { user ->
+                                    user.messages.isEmpty()
+                                }
+                                usersWithEmptyChatRooms.forEach { user ->
+                                    sharedViewModel.deleteChatRoomForLocal(user.chatRoomID)
+                                }
+
+                                sharedViewModel.deleteChatRoom()
                             },
                             modifier = Modifier
                                 .align(Alignment.CenterEnd)
@@ -262,7 +296,7 @@ class DropIn : ViewModel() {
                             modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp)
                         )
                     }
-                    items(localChatUsers) { message ->
+                    items(uniqueLocalUsers) { message ->
                         ChatItem2(
                             person = message,
                             documentationId = documentationId,
@@ -310,10 +344,13 @@ fun ChatItem2(
                     } else {
                         sharedViewModel.user.value = person
                         val filteredChats = documentationId.filter { chat ->
-                            chat.participants.contains(person.userID) && chat.participants.contains(sharedViewModel.auth.currentUser?.uid)
+                            chat.participants.contains(person.userID) && chat.participants
+                                .contains(
+                                  sharedViewModel.auth.currentUser?.uid
+                            )
                         }
-                        if (person.local&&filteredChats.isEmpty()) {
-                            sharedViewModel.saveChatRoom(person.userID)
+                        if (person.local && filteredChats.isEmpty()) {
+                            sharedViewModel.saveChatRoom(person=person.userID)
                         }
                         navController.navigate(Screens.ChatScreen.Route)
                     }
@@ -328,15 +365,46 @@ fun ChatItem2(
             .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
             .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
     ) {
-        Image(
-            contentDescription = null,
-            painter = rememberAsyncImagePainter(person.image),
-            modifier = Modifier
-                .clip(CircleShape)
-                .size(50.dp),
-            contentScale = ContentScale.Crop,
-            alignment = Alignment.Center
-        )
+        val isOnline = person.online == "Online"
+        Box(
+            modifier = Modifier.size(50.dp)
+        ) {
+            Image(
+                contentDescription = null,
+                painter = rememberAsyncImagePainter(person.image),
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .size(50.dp),
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.Center
+            )
+            Box(
+                modifier = Modifier
+                    .size(14.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isOnline){
+                            Brush.linearGradient(
+                                colors = listOf(Color.Green, Color(0xFF00FF00)),
+                                start = Offset(0f, 0f),
+                                end = Offset(14.dp.value, 14.dp.value)
+                            )
+                        }else{
+                            Brush.linearGradient(
+                                colors = listOf(Color.Gray, Color(0xFF808080)),
+                                start = Offset(0f, 0f),
+                                end = Offset(14.dp.value, 14.dp.value)
+                            )
+                        }
+                    )
+                    .border(
+                        width = 2.dp,
+                        color = if (isSystemInDarkTheme())  Color(0xF1161616) else Color.White,
+                        shape = CircleShape)
+                    .align(Alignment.TopEnd)
+            )
+
+        }
         Column(Modifier.padding(horizontal = 8.dp)) {
             Row(
                 modifier = Modifier
@@ -362,7 +430,7 @@ fun ChatItem2(
                 text = person.status,
                 maxLines = 1,
                 fontSize = 15.sp,
-                color = Color.LightGray
+                color = if (person.status >= "User is 400 meters away") Color.Yellow else if (person.status >= "User is 450 meters away") Color.Red else Color.LightGray
             )
         }
     }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -52,6 +53,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -312,7 +315,6 @@ fun ChatItem(
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
     val formattedTime: String = formatter.format(person.timestamp.toDate())
     Divider(thickness = 0.25f.dp, color = Color.LightGray)
-
     Row(
         modifier = Modifier
             .combinedClickable(
@@ -321,12 +323,8 @@ fun ChatItem(
                         onItemClicked()
                     } else {
                         sharedViewModel.user.value = person
-                        if (person.local) {
-                            sharedViewModel.saveChatRoom(person.userID)
-                        }
                         navController.navigate(Screens.ChatScreen.Route)
                     }
-
                 },
                 onLongClick = {
                     sharedViewModel.user.value = person
@@ -337,15 +335,47 @@ fun ChatItem(
             .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
             .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
     ) {
-        Image(
-            contentDescription = null,
-            painter = rememberAsyncImagePainter(person.image),
-            modifier = Modifier
-                .clip(CircleShape)
-                .size(50.dp),
-            contentScale = ContentScale.Crop,
-            alignment = Alignment.Center
-        )
+        val isOnline = person.online == "Online"
+        Box(
+            modifier = Modifier.size(50.dp)
+        ) {
+            Image(
+                contentDescription = null,
+                painter = rememberAsyncImagePainter(person.image),
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .size(50.dp),
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.Center
+            )
+            Box(
+                modifier = Modifier
+                    .size(14.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isOnline) {
+                            Brush.linearGradient(
+                                colors = listOf(Color.Green, Color(0xFF00FF00)),
+                                start = Offset(0f, 0f),
+                                end = Offset(14.dp.value, 14.dp.value)
+                            )
+                        } else {
+                            Brush.linearGradient(
+                                colors = listOf(Color.Gray, Color(0xFF808080)),
+                                start = Offset(0f, 0f),
+                                end = Offset(14.dp.value, 14.dp.value)
+                            )
+                        }
+                    )
+                    .border(
+                        width = 2.dp,
+                        color = if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White,
+                        shape = CircleShape
+                    )
+                    .align(Alignment.TopEnd)
+            )
+
+        }
         Column(Modifier.padding(horizontal = 8.dp)) {
             Row(
                 modifier = Modifier

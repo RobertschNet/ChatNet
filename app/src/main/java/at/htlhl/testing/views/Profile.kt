@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import at.htlhl.testing.R
 import at.htlhl.testing.data.PersonList
+import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Screens
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -41,7 +42,7 @@ class Profile {
     private lateinit var auth: FirebaseAuth
 
     @Composable
-    fun ProfileScreen(navController: NavController) {
+    fun ProfileScreen(navController: NavController,sharedViewModel: SharedViewModel) {
         auth = Firebase.auth
         val currentUser = auth.currentUser?.uid
         var name by remember { mutableStateOf("") }
@@ -110,7 +111,7 @@ class Profile {
                     image = ""
                     currentUser?.let {
                         PersonList(
-                            it, name, lastMessage,image, Timestamp.now(), false
+                            it, name, "", image, Timestamp.now(),false,""
                         )
                     }?.let { saveSubscribed(it) }
                 }, modifier = Modifier.fillMaxWidth()
@@ -123,8 +124,11 @@ class Profile {
                     containerColor = Color.Black
                 ),
                 onClick = {
+                    sharedViewModel.updateOnlineStatus("Offline")
                     Firebase.auth.signOut()
                     logout()
+                    sharedViewModel.auth.signOut()
+                    sharedViewModel.gpsState.value = true
                     navController.navigate(Screens.LoginScreen.Route)
                 },
                 modifier = Modifier

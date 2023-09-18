@@ -48,11 +48,9 @@ class LocationUpdateService : Service() {
         val notification = createNotification()
         startForeground(11, notification)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
         locationRequest = LocationRequest.create()
             .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
             .setInterval(locationScanInterval)
-
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 super.onLocationResult(locationResult)
@@ -174,6 +172,7 @@ class LocationUpdateService : Service() {
         val tasks: MutableList<Task<QuerySnapshot>> = ArrayList()
         for (b in bounds) {
             val q = FirebaseFirestore.getInstance().collection("user")
+                .whereEqualTo("online", "Online")
                 .orderBy("geohash")
                 .startAt(b.startHash)
                 .endAt(b.endHash)
@@ -206,7 +205,8 @@ class LocationUpdateService : Service() {
                             image = dataMap["image"].toString(),
                             status = "User is ${distanceInM.toInt()} meters away",
                             timestamp = Timestamp.now(),
-                            local = true
+                            local = true,
+                            online = dataMap["online"] as String,
                         )
                     }
                     locationLiveData.postValue(personList)
