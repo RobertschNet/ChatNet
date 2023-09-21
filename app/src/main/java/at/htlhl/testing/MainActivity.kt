@@ -52,7 +52,6 @@ import at.htlhl.testing.navigation.Screens
 import at.htlhl.testing.service.LocationUpdateService
 import at.htlhl.testing.ui.theme.TestingTheme
 
-@ExperimentalMaterial3Api
 class MainActivity : ComponentActivity() {
     private var serviceConnection: ServiceConnection? = null
     private var locationUpdateService: LocationUpdateService? = null
@@ -97,32 +96,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-
-            if (viewModel.gpsState.value) {
-                try {
-                    unbindService(serviceConnection!!)
-                    stopService(serviceIntent)
-                }catch (e:Exception) {
-                    Log.println(Log.ERROR, "Location", e.toString())
-                }
-            } else {
-                startService(serviceIntent)
-                serviceConnection = object : ServiceConnection {
-                    override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                        val binder = service as LocationUpdateService.YourBinder
-                        locationUpdateService = binder.getService()
-                        locationUpdateService?.locationLiveData?.observe(this@MainActivity) { location ->
-                            Log.println(Log.INFO, "Location", location.toString())
-                            viewModel.localChatUserList.value = location
-                        }
-                    }
-
-                    override fun onServiceDisconnected(name: ComponentName?) {
-                        locationUpdateService = null
-                    }
-                }
-                bindService(serviceIntent, serviceConnection!!, Context.BIND_AUTO_CREATE)
-            }
+            manageLocationServiceStatus(viewModel, serviceIntent)
         }
     }
 
@@ -133,6 +107,33 @@ class MainActivity : ComponentActivity() {
         (application as MyApplication).myViewModel.updateOnlineStatus("Offline")
     }
 
+    private fun manageLocationServiceStatus(viewModel: SharedViewModel, serviceIntent: Intent) {
+        if (viewModel.gpsState.value) {
+            try {
+                unbindService(serviceConnection!!)
+                stopService(serviceIntent)
+            } catch (e: Exception) {
+                Log.println(Log.ERROR, "Location", e.toString())
+            }
+        } else {
+            startService(serviceIntent)
+            serviceConnection = object : ServiceConnection {
+                override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                    val binder = service as LocationUpdateService.YourBinder
+                    locationUpdateService = binder.getService()
+                    locationUpdateService?.locationLiveData?.observe(this@MainActivity) { location ->
+                        Log.println(Log.INFO, "Location", location.toString())
+                        viewModel.localChatUserList.value = location
+                    }
+                }
+
+                override fun onServiceDisconnected(name: ComponentName?) {
+                    locationUpdateService = null
+                }
+            }
+            bindService(serviceIntent, serviceConnection!!, Context.BIND_AUTO_CREATE)
+        }
+    }
 
     @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalMaterial3Api::class)

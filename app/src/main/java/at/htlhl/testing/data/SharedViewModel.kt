@@ -367,6 +367,10 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
 
+    fun reset(){
+        _chatData.value = emptyList()
+        _friendListData.value = emptyList()
     }
 }

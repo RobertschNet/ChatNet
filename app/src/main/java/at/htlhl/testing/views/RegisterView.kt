@@ -294,6 +294,7 @@ class RegisterView {
                                     //sendVerificationEmail()
                                     val user = User(name)
                                     coroutineScope.launch { saveMessage(user) }
+                                    createUserEntry(name)
                                     //navController.navigate(Screens.DropInScreen.Route)
                                 } else {
                                     Log.w(
@@ -551,6 +552,28 @@ class RegisterView {
             .addOnFailureListener { exception ->
                 println("Error retrieving document: ${exception.message}")
                 callback(false, exception.message)
+            }
+    }
+
+    private fun createUserEntry(name: String) {
+        val user = FirebaseAuth.getInstance().currentUser
+        val db = FirebaseFirestore.getInstance()
+        val userRef = db.collection("user").document(user!!.uid)
+        val userData = hashMapOf(
+            "userID" to user.uid,
+            "name" to name,
+            "image" to "https://www.w3schools.com/howto/img_avatar2.png",
+            "online" to "Online",
+            "lat" to 0.0,
+            "lng" to 0.0,
+            "geohash" to ""
+        )
+        userRef.set(userData)
+            .addOnSuccessListener {
+                println("User successfully created")
+            }
+            .addOnFailureListener { e ->
+                println("Error creating user: $e")
             }
     }
 

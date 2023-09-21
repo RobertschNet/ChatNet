@@ -113,6 +113,9 @@ class DropIn : ViewModel() {
                 localUser.userID == sortedUser.userID
             }
         }
+        val usersWithEmptyChatRooms = documentationId.filter { user ->
+            user.messages.isEmpty()
+        }
         val bottomSheetItems = listOf(
             BottomSheetItem(title = "Delete", icon = Icons.Default.Delete),
             BottomSheetItem(title = "Mute Messages", icon = Icons.Default.VolumeMute),
@@ -241,14 +244,9 @@ class DropIn : ViewModel() {
                         IconButton(
                             onClick = {
                                 sharedViewModel.gpsState.value = !sharedViewModel.gpsState.value
-                                val usersWithEmptyChatRooms = documentationId.filter { user ->
-                                    user.messages.isEmpty()
-                                }
                                 usersWithEmptyChatRooms.forEach { user ->
                                     sharedViewModel.deleteChatRoomForLocal(user.chatRoomID)
                                 }
-
-                                sharedViewModel.deleteChatRoom()
                             },
                             modifier = Modifier
                                 .align(Alignment.CenterEnd)

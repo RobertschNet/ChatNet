@@ -67,10 +67,12 @@ import kotlinx.coroutines.launch
 
 class LoginView {
     private lateinit var auth: FirebaseAuth
+
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun LoginScreen(navController: NavController,sharedViewModel: SharedViewModel) {
+    fun LoginScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+        sharedViewModel.bottomBarState.value = false
         val authentication = FirebaseAuth.getInstance()
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
@@ -93,8 +95,10 @@ class LoginView {
                             if (signInTask.isSuccessful) {
                                 println("Sign-in successful")
                                 sharedViewModel.startListeningForFriends()
-                                sharedViewModel.startListeningForMessagesForPairs(auth.currentUser?.uid.toString(),{},{})
-                                sharedViewModel.gpsState.value=false
+                                sharedViewModel.startListeningForMessagesForPairs(auth.currentUser?.uid.toString(),
+                                    {},
+                                    {})
+                                sharedViewModel.gpsState.value = false
                                 navController.navigate(Screens.Chats.Route)
                             } else {
                                 println("Sign-in failed")
@@ -210,44 +214,46 @@ class LoginView {
             Button(
                 onClick = {
                     controller?.hide()
-                        try {
-                            auth.signInWithEmailAndPassword(email, password)
-                                .addOnCompleteListener(activity) { task ->
-                                    if (task.isSuccessful) {
-                                        Log.d(ContentValues.TAG, "createUserWithEmail:success")
-                                        if (!isUserEmailVerified()) {
-                                            sharedViewModel.startListeningForFriends()
-                                            sharedViewModel.startListeningForMessagesForPairs(auth.currentUser?.uid.toString(),{},{})
-                                            sharedViewModel.gpsState.value=false
-                                            navController.navigate(Screens.Chats.Route)
-                                        }else{
-                                            Toast.makeText(
-                                                activity,
-                                                "Please verify your email.",
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
-                                            auth.signOut()
-                                        }
+                    try {
+                        auth.signInWithEmailAndPassword(email, password)
+                            .addOnCompleteListener(activity) { task ->
+                                if (task.isSuccessful) {
+                                    Log.d(ContentValues.TAG, "createUserWithEmail:success")
+                                    if (!isUserEmailVerified()) {
+                                        sharedViewModel.startListeningForFriends()
+                                        sharedViewModel.startListeningForMessagesForPairs(auth.currentUser?.uid.toString(),
+                                            {},
+                                            {})
+                                        sharedViewModel.gpsState.value = false
+                                        navController.navigate(Screens.Chats.Route)
                                     } else {
-                                        Log.w(
-                                            ContentValues.TAG,
-                                            "createUserWithEmail:failure",
-                                            task.exception
-                                        )
                                         Toast.makeText(
                                             activity,
-                                            task.exception.toString(),
+                                            "Please verify your email.",
                                             Toast.LENGTH_SHORT,
                                         ).show()
+                                        auth.signOut()
                                     }
+                                } else {
+                                    Log.w(
+                                        ContentValues.TAG,
+                                        "createUserWithEmail:failure",
+                                        task.exception
+                                    )
+                                    Toast.makeText(
+                                        activity,
+                                        task.exception.toString(),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
                                 }
-                        } catch (e: Exception) {
-                            Toast.makeText(
-                                activity,
-                                e.toString(),
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        }
+                            }
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            activity,
+                            e.toString(),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()

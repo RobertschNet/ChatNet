@@ -1,13 +1,11 @@
 package at.htlhl.testing.views
 
-
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -34,9 +32,9 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.VolumeMute
+import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.PersonAddAlt1
 import androidx.compose.material.rememberBottomSheetScaffoldState
 import androidx.compose.material3.Divider
@@ -52,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -152,7 +151,7 @@ class Chats {
                                     .weight(1f),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 20.sp,
-                                color = Color.White
+                                color = Color.Black
                             )
                         }
                         Spacer(modifier = Modifier.padding(6.dp))
@@ -178,12 +177,12 @@ class Chats {
                                     Icon(
                                         bottomSheetItems[it].icon,
                                         bottomSheetItems[it].title,
-                                        tint = Color.White,
+                                        tint = Color.Black,
                                         modifier = Modifier.padding(top = 14.dp, bottom = 14.dp)
                                     )
                                     Text(
                                         text = bottomSheetItems[it].title,
-                                        color = Color.White,
+                                        color = Color.Black,
                                         modifier = Modifier.padding(
                                             start = 12.dp,
                                             top = 14.dp,
@@ -199,7 +198,7 @@ class Chats {
                         .fillMaxWidth()
                         .height(250.dp)
                         .background(
-                            color = Color(0xFF252525),
+                            color = Color.White,
                         )
                         .padding(start = 16.dp, end = 16.dp, top = 16.dp),
                 )
@@ -247,7 +246,7 @@ class Chats {
                                 .padding(end = 60.dp, top = 5.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.NotificationsActive,
+                                imageVector = Icons.Outlined.NotificationsActive,
                                 contentDescription = "Notifications",
                                 modifier = Modifier.size(30.dp)
                             )
@@ -314,7 +313,6 @@ fun ChatItem(
 ) {
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
     val formattedTime: String = formatter.format(person.timestamp.toDate())
-    Divider(thickness = 0.25f.dp, color = Color.LightGray)
     Row(
         modifier = Modifier
             .combinedClickable(
@@ -335,7 +333,7 @@ fun ChatItem(
             .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
             .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
     ) {
-        val isOnline = person.online == "Online"
+        val isOnline = person.online
         Box(
             modifier = Modifier.size(50.dp)
         ) {
@@ -350,31 +348,88 @@ fun ChatItem(
             )
             Box(
                 modifier = Modifier
-                    .size(14.dp)
+                    .size(16.5f.dp)
                     .clip(CircleShape)
                     .background(
-                        if (isOnline) {
-                            Brush.linearGradient(
-                                colors = listOf(Color.Green, Color(0xFF00FF00)),
-                                start = Offset(0f, 0f),
-                                end = Offset(14.dp.value, 14.dp.value)
-                            )
-                        } else {
-                            Brush.linearGradient(
-                                colors = listOf(Color.Gray, Color(0xFF808080)),
-                                start = Offset(0f, 0f),
-                                end = Offset(14.dp.value, 14.dp.value)
+                        Brush.linearGradient(
+                            colors = if (!isSystemInDarkTheme()) listOf(
+                                Color.White,
+                                Color.White
+                            ) else listOf(Color(0xF1161616), Color(0xF1161616)),
+                            start = Offset(0f, 0f),
+                            end = Offset(14.dp.value, 14.dp.value)
+                        )
+                    )
+                    .align(Alignment.BottomEnd)
+            ) {
+
+
+                when (isOnline) {
+                    "Online" -> {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(14.dp.value, 14.dp.value)
+                                    )
+                                )
+                                .align(Alignment.Center)
+                        )
+                    }
+
+                    "Offline" -> {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Color.Gray, Color(0xFF808080)),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(14.dp.value, 14.dp.value)
+                                    )
+                                )
+                                .align(Alignment.Center)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.DarkGray)
+                                    .align(Alignment.Center)
                             )
                         }
-                    )
-                    .border(
-                        width = 2.dp,
-                        color = if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White,
-                        shape = CircleShape
-                    )
-                    .align(Alignment.TopEnd)
-            )
+                    }
 
+                    else -> {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Color.Red, Color(0xFFFF0000)),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(14.dp.value, 14.dp.value)
+                                    )
+                                )
+                                .drawBehind {
+                                    drawLine(
+                                        color = Color.White,
+                                        start = Offset(10f, size.height / 2f),
+                                        end = Offset(size.width - 10f, size.height / 2f),
+                                        strokeWidth = 5f
+                                    )
+                                }
+                                .align(Alignment.Center)
+                        )
+                    }
+                }
+            }
         }
         Column(Modifier.padding(horizontal = 8.dp)) {
             Row(
@@ -405,5 +460,4 @@ fun ChatItem(
             )
         }
     }
-    Divider(thickness = 0.25f.dp, color = Color.LightGray)
 }

@@ -82,7 +82,7 @@ class SearchView : ViewModel() {
                 tint = if (isSystemInDarkTheme()) Color.White else Color.DarkGray,
                 modifier = Modifier
                     .size(30.dp)
-                    .clickable { navController.navigate(Screens.DropInScreen.Route) }
+                    .clickable { navController.navigate(Screens.Chats.Route) }
                     .align(Alignment.CenterVertically))
             BasicTextField(value = searchText,
                 onValueChange = {
