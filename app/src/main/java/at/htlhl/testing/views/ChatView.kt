@@ -122,10 +122,11 @@ class ChatView : ViewModel() {
                         coroutineScope = coroutineScope,
                         documentId = documentId
                     )
-
                 }
             }, bottomBar = {
-                InputField { messageText ->
+                InputField (
+                    viewModel
+                ){ messageText ->
                     val message = Message(
                         sender = currentUser.toString(),
                         content = messageText,
@@ -155,7 +156,7 @@ class ChatView : ViewModel() {
                         message.sender,
                         message.content,
                         message.timestamp
-                    ),documentId
+                    ), documentId
                 )
             }
         }
@@ -197,7 +198,7 @@ class ChatView : ViewModel() {
                             RoundedCornerShape(24.dp)
                         )
                         .background(backgroundColor, shape = RoundedCornerShape(24.dp))
-                        .padding(8.dp)
+                        .padding(4.dp)
                 ) {
 
                     Text(
@@ -256,7 +257,7 @@ class ChatView : ViewModel() {
 
 
     @Composable
-    fun InputField(onMessageSent: (String) -> Unit) {
+    fun InputField(sharedViewModel: SharedViewModel ,onMessageSent: (String) -> Unit) {
         var badgeCount by remember { mutableIntStateOf(0) }
         var text by remember { mutableStateOf("") }
         BasicTextField(
@@ -360,7 +361,10 @@ class ChatView : ViewModel() {
                         if (text.isEmpty()) {
                             Icon(
                                 modifier = Modifier
-                                    .size(30.dp),
+                                    .size(30.dp)
+                                    .clickable {
+                                        sharedViewModel.imageCall.value = true
+                                    },
                                 imageVector = Icons.Outlined.CameraAlt,
                                 contentDescription = null,
                                 tint = if (isSystemInDarkTheme()) Color.White else Color.Black,
@@ -451,7 +455,7 @@ class ChatView : ViewModel() {
                     )
                     Image(
                         contentDescription = null,
-                        painter = rememberAsyncImagePainter("https://www.w3schools.com/howto/img_avatar.png"),
+                        painter = rememberAsyncImagePainter(user.image),
                         modifier = Modifier
                             .clip(CircleShape)
                             .align(CenterVertically)
@@ -470,7 +474,7 @@ class ChatView : ViewModel() {
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         sharedViewModel.bottomBarState.value = false
         auth = Firebase.auth
-        val user = sharedViewModel.user.value
+        val user = sharedViewModel.friend.value
         val documentIdState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val documentationId: List<Chat> = documentIdState.value
         Log.println(Log.INFO, "ChatView", documentationId.toString())
@@ -486,6 +490,10 @@ class ChatView : ViewModel() {
         }
         val onMessageSent: (Message) -> Unit = { message ->
             runBlocking {
+                if (user.local) {
+                    sharedViewModel.saveFriend(user.userID,true)
+                    sharedViewModel.saveSubscribed(user.userID, true)
+                }
                 sharedViewModel.saveMessages(doc, message)
             }
         }

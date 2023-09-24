@@ -38,8 +38,9 @@ data class PersonList(
 data class Friend(
     val userID: String,
     val status: String,
+    val local: Boolean,
 ) {
-    constructor() : this("", "")
+    constructor() : this("", "", false)
 }
 
 data class Message(

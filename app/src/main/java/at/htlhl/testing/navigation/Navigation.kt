@@ -80,7 +80,7 @@ fun Navigation(
                     animationSpec = tween(durationMillis = 500)
                 )
             }) {
-            SearchView().SearchViewScreen(navController)
+            SearchView().SearchViewScreen(navController, sharedViewModel)
         }
         composable("ChatMateScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },

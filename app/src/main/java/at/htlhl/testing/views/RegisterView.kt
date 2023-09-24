@@ -529,9 +529,8 @@ class RegisterView {
         callback: (Boolean, String?) -> Unit
     ) {
         val query = db.collection("usernames")
-            .whereEqualTo("username", name) // Replace "fieldName" with the field you want to query
-            .limit(1) // Limit the result to a single document
-
+            .whereEqualTo("username", name)
+            .limit(1)
         query.get()
             .addOnSuccessListener { querySnapshot ->
                 if (!querySnapshot.isEmpty) {

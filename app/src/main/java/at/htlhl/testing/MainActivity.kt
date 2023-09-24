@@ -1,5 +1,6 @@
 package at.htlhl.testing
 
+import android.app.Activity
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -7,9 +8,11 @@ import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -51,6 +54,8 @@ import at.htlhl.testing.navigation.Navigation
 import at.htlhl.testing.navigation.Screens
 import at.htlhl.testing.service.LocationUpdateService
 import at.htlhl.testing.ui.theme.TestingTheme
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
 
 class MainActivity : ComponentActivity() {
     private var serviceConnection: ServiceConnection? = null
@@ -78,8 +83,12 @@ class MainActivity : ComponentActivity() {
                     when (loadingState) {
                         LoadingState.Authenticated -> {
                             Log.println(Log.INFO, "Authentication", "User is logged in")
+                            viewModel.getUserData()
                             viewModel.startListeningForFriends()
-                            viewModel.startListeningForMessagesForPairs(viewModel.auth.currentUser!!.uid,{}, {})
+                            viewModel.startListeningForMessagesForPairs(
+                                viewModel.auth.currentUser!!.uid,
+                                {},
+                                {})
                             navController.navigate(Screens.Chats.Route)
                         }
 
@@ -97,14 +106,63 @@ class MainActivity : ComponentActivity() {
                 }
             }
             manageLocationServiceStatus(viewModel, serviceIntent)
+            if (viewModel.imageCall.value) {
+                openPhotoGallery()
+                viewModel.imageCall.value = false
+            }
         }
     }
+
+    private fun openPhotoGallery() {
+        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        galleryLauncher.launch(intent)
+    }
+
+    private val galleryLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val data: Intent? = result.data
+                if (data != null) {
+                    val selectedImageUri = data.data
+                    val storage = Firebase.storage
+                    val storageRef = storage.reference
+                    val imageRef = storageRef.child("${(application as MyApplication).myViewModel.auth.currentUser!!.uid}/profilePicture")
+                    val uploadTask = imageRef.putFile(selectedImageUri!!)
+                    uploadTask.addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            imageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
+                                Log.d("Image", downloadUrl.toString())
+                                (application as MyApplication).myViewModel.updateUserProfilePicture(downloadUrl.toString())
+                            }.addOnFailureListener { exception ->
+                                Log.e("Image", exception.toString())
+                            }
+                        } else {
+                            val exception = task.exception
+                            Log.e("Image", exception.toString())
+                        }
+                    }
+                }
+            }
+        }
+
+
 
     override fun onDestroy() {
         super.onDestroy()
         serviceConnection?.let { unbindService(it) }
         stopService(Intent(this, LocationUpdateService::class.java))
         (application as MyApplication).myViewModel.updateOnlineStatus("Offline")
+        (application as MyApplication).myViewModel.reset()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        (application as MyApplication).myViewModel.updateOnlineStatus("Idle")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        (application as MyApplication).myViewModel.updateOnlineStatus("Online")
     }
 
     private fun manageLocationServiceStatus(viewModel: SharedViewModel, serviceIntent: Intent) {

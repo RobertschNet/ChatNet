@@ -2,6 +2,7 @@ package at.htlhl.testing.views
 
 import android.annotation.SuppressLint
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import at.htlhl.testing.data.Chat
 import at.htlhl.testing.data.Person
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Screens
@@ -59,16 +61,27 @@ class SearchView : ViewModel() {
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
-    fun SearchViewScreen(navController: NavController) {
+    fun SearchViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val viewModel: SharedViewModel = viewModel()
         val persons by viewModel.person.collectAsState()
         val searchText by viewModel.searchText.collectAsState()
         val isSearching by viewModel.isSearching.collectAsState()
+        val documentIdState = sharedViewModel.chatData.collectAsState()
+        val documentationId: List<Chat> = documentIdState.value
         Scaffold(
             backgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
             modifier = Modifier.fillMaxSize(),
             topBar = { TopBarSearchView(navController, persons) },
-            content = { ContentSearchView(viewModel, persons, isSearching, searchText) })
+            content = {
+                ContentSearchView(
+                    viewModel,
+                    persons,
+                    isSearching,
+                    searchText,
+                    documentationId,
+                    sharedViewModel
+                )
+            })
     }
 
     @Composable
@@ -148,7 +161,9 @@ class SearchView : ViewModel() {
         viewModel: SharedViewModel,
         persons: List<Person>,
         isSearching: Boolean,
-        searchText: String
+        searchText: String,
+        documentId: List<Chat>,
+        sharedViewModel: SharedViewModel
     ) {
         Divider(thickness = 0.25f.dp, color = Color.LightGray)
         if (isSearching) {
@@ -207,12 +222,31 @@ class SearchView : ViewModel() {
                                     .size(35.dp)
                                     .clickable {
                                         viewModel.getDocument { data ->
+                                            val filteredChats = documentId.filter { chat ->
+                                                chat.participants.contains(person.userID) && chat.participants
+                                                    .contains(sharedViewModel.auth.currentUser?.uid)
+                                            }
                                             if (data != null) {
-                                                viewModel.saveFriend(person = person)
-                                                viewModel.saveChatRoom(person = person.userID)
+                                                viewModel.saveFriend(
+                                                    person = person.userID,
+                                                    local = false
+                                                )
+                                                if (filteredChats.isEmpty()) {
+                                                    Log.println(
+                                                        Log.INFO,
+                                                        "Chat",
+                                                        filteredChats.toString()
+                                                    )
+                                                    Log.println(
+                                                        Log.INFO,
+                                                        "Chat",
+                                                        documentId.toString()
+                                                    )
+                                                    viewModel.saveChatRoom(person = person.userID)
+                                                }
                                             }
                                         }
-                                        viewModel.saveSubscribed(person)
+                                        viewModel.saveSubscribed(person.userID, false)
 
                                     },
                                 contentDescription = null,

@@ -1,12 +1,12 @@
 package at.htlhl.testing.views
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -88,12 +88,16 @@ class DropIn : ViewModel() {
         val documentationId: List<Chat> = documentIdState.value
         val friendIdState = sharedViewModel.friendListData.collectAsState(initial = emptyList())
         val friendListData: List<PersonList> = friendIdState.value
+        val friendIdLocalState =
+            sharedViewModel.friendListDataLocal.collectAsState(initial = emptyList())
+        val friendListDataLocal: List<PersonList> = friendIdLocalState.value
         val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
             localUser.userID != sharedViewModel.auth.currentUser?.uid
         }
-        println("Friends: $friendListData")
+        val friendElements = friendListData + friendListDataLocal
+        println("Friends: $friendElements")
         println("Chats: $documentationId")
-        val updatedPersonList = friendListData.map { person ->
+        val updatedPersonList = friendListDataLocal.map { person ->
             val matchingChat = documentationId.find { chat ->
                 chat.participants.contains(person.userID)
             }
@@ -107,7 +111,7 @@ class DropIn : ViewModel() {
                 person.copy(status = updatedStatus, timestamp = updatedTimestamp)
             }
         }
-        val sortedPersonList = updatedPersonList.sortedByDescending { it.timestamp }
+        val sortedPersonList = friendElements.sortedByDescending { it.timestamp }
         val uniqueLocalUsers = localChatUsers.filter { localUser ->
             sortedPersonList.none { sortedUser ->
                 localUser.userID == sortedUser.userID
@@ -148,7 +152,7 @@ class DropIn : ViewModel() {
                         Row {
                             Image(
                                 contentDescription = null,
-                                painter = rememberAsyncImagePainter(sharedViewModel.user.value.image),
+                                painter = rememberAsyncImagePainter(sharedViewModel.friend.value.image),
                                 modifier = Modifier
                                     .clip(CircleShape)
                                     .size(40.dp),
@@ -156,7 +160,7 @@ class DropIn : ViewModel() {
                                 alignment = Alignment.Center
                             )
                             Text(
-                                text = sharedViewModel.user.value.name,
+                                text = sharedViewModel.friend.value.name,
                                 modifier = Modifier
                                     .padding(start = 16.dp)
                                     .align(Alignment.CenterVertically)
@@ -314,6 +318,33 @@ class DropIn : ViewModel() {
                         )
                     }
                 }
+                item {
+                    Text(
+                        text = "User you are in contact with",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp)
+                    )
+                }
+                items(updatedPersonList) { message ->
+                    ChatItem2(
+                        person = message,
+                        documentationId = documentationId,
+                        sharedViewModel = sharedViewModel,
+                        navController = navController,
+                        onItemClicked = {
+                            test = !test
+                            coroutineScope.launch {
+                                if (bottomSheetScaffoldState.bottomSheetState.isCollapsed) {
+                                    bottomSheetScaffoldState.bottomSheetState.expand()
+                                } else {
+                                    bottomSheetScaffoldState.bottomSheetState.collapse()
+                                }
+                            }
+                        },
+                        bottomSheetState = test
+                    )
+                }
             }
         }
     }
@@ -340,22 +371,21 @@ fun ChatItem2(
                     if (bottomSheetState) {
                         onItemClicked()
                     } else {
-                        sharedViewModel.user.value = person
+                        sharedViewModel.friend.value = person
+                        Log.println(Log.INFO, "Current", person.toString())
                         val filteredChats = documentationId.filter { chat ->
                             chat.participants.contains(person.userID) && chat.participants
-                                .contains(
-                                  sharedViewModel.auth.currentUser?.uid
-                            )
+                                .contains(sharedViewModel.auth.currentUser?.uid)
                         }
                         if (person.local && filteredChats.isEmpty()) {
-                            sharedViewModel.saveChatRoom(person=person.userID)
+                            sharedViewModel.saveChatRoom(person = person.userID)
                         }
                         navController.navigate(Screens.ChatScreen.Route)
                     }
 
                 },
                 onLongClick = {
-                    sharedViewModel.user.value = person
+                    sharedViewModel.friend.value = person
                     onItemClicked()
                 },
             )
@@ -363,7 +393,7 @@ fun ChatItem2(
             .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
             .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
     ) {
-        val isOnline = person.online == "Online"
+        val isOnline = person.online
         Box(
             modifier = Modifier.size(50.dp)
         ) {
@@ -378,30 +408,86 @@ fun ChatItem2(
             )
             Box(
                 modifier = Modifier
-                    .size(14.dp)
+                    .size(16.5f.dp)
                     .clip(CircleShape)
                     .background(
-                        if (isOnline){
-                            Brush.linearGradient(
-                                colors = listOf(Color.Green, Color(0xFF00FF00)),
-                                start = Offset(0f, 0f),
-                                end = Offset(14.dp.value, 14.dp.value)
-                            )
-                        }else{
-                            Brush.linearGradient(
-                                colors = listOf(Color.Gray, Color(0xFF808080)),
-                                start = Offset(0f, 0f),
-                                end = Offset(14.dp.value, 14.dp.value)
+                        Brush.linearGradient(
+                            colors = if (!isSystemInDarkTheme()) listOf(
+                                Color.White,
+                                Color.White
+                            ) else listOf(Color(0xF1161616), Color(0xF1161616)),
+                            start = Offset(0f, 0f),
+                            end = Offset(14.dp.value, 14.dp.value)
+                        )
+                    )
+                    .align(Alignment.BottomEnd)
+            ) {
+                when (isOnline) {
+                    "Online" -> {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(14.dp.value, 14.dp.value)
+                                    )
+                                )
+                                .align(Alignment.Center)
+                        )
+                    }
+
+                    "Offline" -> {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Color.Gray, Color(0xFF808080)),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(14.dp.value, 14.dp.value)
+                                    )
+                                )
+                                .align(Alignment.Center)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.DarkGray)
+                                    .align(Alignment.Center)
                             )
                         }
-                    )
-                    .border(
-                        width = 2.dp,
-                        color = if (isSystemInDarkTheme())  Color(0xF1161616) else Color.White,
-                        shape = CircleShape)
-                    .align(Alignment.TopEnd)
-            )
+                    }
 
+                    "Idle" -> {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Color(0xFFFFC107), Color(0xFFFFC107)),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(14.dp.value, 14.dp.value)
+                                    )
+                                )
+                                .align(Alignment.Center)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.2f.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White)
+                                    .align(Alignment.TopStart)
+                            )
+                        }
+                    }
+                }
+            }
         }
         Column(Modifier.padding(horizontal = 8.dp)) {
             Row(
