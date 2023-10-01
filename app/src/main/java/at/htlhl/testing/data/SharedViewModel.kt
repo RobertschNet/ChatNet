@@ -1,7 +1,6 @@
 package at.htlhl.testing.data
 
 import android.app.Application
-import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
@@ -28,20 +27,44 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.util.Random
 
-
+/**
+ * Created by Tobias Brandl.
+ *
+ * This class represents the shared view model, which is used to share data between different Views.
+ * It also contains the logic for the communication with Firebase.
+ */
 class SharedViewModel(application: Application) : AndroidViewModel(application) {
+    private val firebaseInstance = FirebaseFirestore.getInstance()
 
-    // General
-    val friend = mutableStateOf(PersonList("", "", "", "", Timestamp.now(), false, ""))
+    private companion object {
+        const val USER_COLLECTION = "user"
+        const val CHATS_COLLECTION = "chats"
+        const val MESSAGES_COLLECTION = "messages"
+        const val FRIENDS_COLLECTION = "friends"
+    }
+
+    /**
+     * This section contains some different list elements used to store specific values,
+     * fetched from the Code below.
+     */
+
     val auth: FirebaseAuth = Firebase.auth
+    val friend = mutableStateOf(PersonList("", "", "", "", "", Timestamp.now(), false, ""))
     val bottomBarState = mutableStateOf(true)
     val gpsState = mutableStateOf(false)
     val imageCall = mutableStateOf(false)
-    val imageUri = mutableStateOf(Uri.EMPTY)
     val localChatUserList = mutableStateOf<List<PersonList>>(emptyList())
 
-    // LoadingScreen
+    private fun getUserDocumentRef() = firebaseInstance.collection(USER_COLLECTION)
+
+    private fun getChatDocumentRef() = firebaseInstance.collection(CHATS_COLLECTION)
+
+    /**
+     * This section contains the logic for the authentication process.
+     */
+
     private val _loadingState = mutableStateOf(LoadingState.Loading)
     val loadingState: State<LoadingState> = _loadingState
 
@@ -51,7 +74,6 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 val user = withContext(Dispatchers.IO) {
                     auth.currentUser
                 }
-                Log.println(Log.INFO, "User", user.toString())
                 _loadingState.value = if (user != null) {
                     LoadingState.Authenticated
                 } else {
@@ -63,12 +85,22 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // DropIn (FriendList)
+    /**
+     * This section contains the logic for the Firebase communication,
+     * needed for the Chats & DropIn Feature.
+     */
+
     private val _friendListData = MutableStateFlow<List<PersonList>>(emptyList())
     val friendListData: StateFlow<List<PersonList>> get() = _friendListData
 
     private val _friendListDataLocal = MutableStateFlow<List<PersonList>>(emptyList())
     val friendListDataLocal: StateFlow<List<PersonList>> get() = _friendListDataLocal
+
+    private val _friendListPending = MutableStateFlow<List<PersonList>>(emptyList())
+    val friendListPending: StateFlow<List<PersonList>> get() = _friendListPending
+
+    private val _friendListInitiating = MutableStateFlow<List<PersonList>>(emptyList())
+    val friendListInitiating: StateFlow<List<PersonList>> get() = _friendListInitiating // TODO: 2023-11-16
 
 
     private var friendListDataListener: ListenerRegistration? = null
@@ -78,10 +110,9 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         if (auth.currentUser == null) {
             return
         }
-        val collectionRef = FirebaseFirestore.getInstance().collection("user")
-        val documentRef = collectionRef.document(auth.currentUser!!.uid)
-        val subCollectionRef = documentRef.collection("/friends").whereEqualTo("status", "accepted")
-
+        val subCollectionRef =
+            getUserDocumentRef().document(auth.currentUser!!.uid).collection("/$FRIENDS_COLLECTION")
+                .whereNotEqualTo("status", "blocked")
         friendListDataListener?.remove()
         friendListDataListener =
             subCollectionRef.addSnapshotListener { friendQuerySnapshot, friendException ->
@@ -90,50 +121,44 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 val personListData = mutableListOf<PersonList>()
                 val personListDataLocal = mutableListOf<PersonList>()
+                val personListDataPending = mutableListOf<PersonList>()
+                val personListDataInitiating = mutableListOf<PersonList>()
                 friendQuerySnapshot?.let { friendSnapshot ->
                     val subCollectionData = friendSnapshot.toObjects(Friend::class.java)
                     var completedCount = 0
                     val totalFriends = subCollectionData.size
                     for (friend in subCollectionData) {
                         Log.println(Log.INFO, "Friend", friend.toString())
-                        FirebaseFirestore.getInstance().collection("user")
+                        getUserDocumentRef()
                             .document(friend.userID)
                             .addSnapshotListener { userDocumentSnapshot, userException ->
                                 if (userException != null) {
                                     return@addSnapshotListener
                                 }
-                                val data =
-                                    userDocumentSnapshot?.toObject(PersonList::class.java)
+                                val data = userDocumentSnapshot?.toObject(PersonList::class.java)
                                 data?.let {
-                                    if (friend.local) personListDataLocal.add(it) else personListData.add(
-                                        it
-                                    )
+                                    if (friend.local) personListDataLocal.add(it)
+                                    else if (friend.status == "pending")
+                                        personListDataPending.add(it)
+                                    else if (friend.status == "initiated")
+                                        personListDataInitiating.add(it)
+                                    else personListData.add(it)
                                 }
                                 completedCount++
                                 if (completedCount == totalFriends) {
                                     _friendListDataLocal.value = personListDataLocal
                                     _friendListData.value = personListData
+                                    _friendListPending.value = personListDataPending
+                                    _friendListInitiating.value = personListDataInitiating
                                 }
                                 if (friend.local) {
-                                    val userIdToRemove = data?.userID
-                                    val currentList = _friendListDataLocal.value
-                                    val updatedList =
-                                        currentList.filter { it.userID != userIdToRemove }
-                                            .toMutableList()
-                                    if (updatedList != currentList) {
-                                        updatedList += data!!
-                                    }
-                                    _friendListDataLocal.value = updatedList
+                                    updateFriendsList(_friendListDataLocal, data)
+                                } else if (friend.status == "pending") {
+                                    updateFriendsList(_friendListPending, data)
+                                } else if (friend.status == "initiated") {
+                                    updateFriendsList(_friendListInitiating, data)
                                 } else {
-                                    val userIdToRemove = data?.userID
-                                    val currentList = _friendListData.value
-                                    val updatedList =
-                                        currentList.filter { it.userID != userIdToRemove }
-                                            .toMutableList()
-                                    if (updatedList != currentList) {
-                                        updatedList += data!!
-                                    }
-                                    _friendListData.value = updatedList
+                                    updateFriendsList(_friendListData, data)
                                 }
                             }
                     }
@@ -141,19 +166,25 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             }
     }
 
+    private fun updateFriendsList(list: MutableStateFlow<List<PersonList>>, data: PersonList?) {
+        val userIdToRemove = data?.userID
+        val currentList = list.value
+        val updatedList =
+            currentList.filter { it.userID != userIdToRemove }
+                .toMutableList()
+        if (updatedList != currentList) {
+            updatedList += data!!
+        }
+        list.value = updatedList
+    }
 
     fun deleteFriendFromFriendList() {
-        val userId = auth.currentUser!!.uid
-        val collectionRef = FirebaseFirestore.getInstance().collection("user")
-        val userDocumentRef = collectionRef.document(userId)
-        val friendSubCollectionRef = userDocumentRef.collection("friends")
-
+        val friendSubCollectionRef =
+            getUserDocumentRef().document(auth.currentUser!!.uid).collection(FRIENDS_COLLECTION)
         friendSubCollectionRef.document(friend.value.userID).delete().addOnSuccessListener {
-            println("Friend deleted successfully.")
-            val friendDocumentRef = collectionRef.document(friend.value.userID)
-            val userSubCollectionRef = friendDocumentRef.collection("friends")
-            userSubCollectionRef.document(userId).delete().addOnSuccessListener {
-                println("Friend deleted successfully.")
+            val userSubCollectionRef =
+                getUserDocumentRef().document(friend.value.userID).collection(FRIENDS_COLLECTION)
+            userSubCollectionRef.document(auth.currentUser!!.uid).delete().addOnSuccessListener {
             }.addOnFailureListener { exception ->
                 exception.printStackTrace()
             }
@@ -168,21 +199,22 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         friendListDataListener?.remove()
     }
 
-    // ChatMessages
+    /**
+     * This section contains the logic for the Firebase communication, used for exchanging messages,
+     * in the ChatsView.
+     */
+
     private val _chatData = MutableStateFlow<List<Chat>>(emptyList())
     val chatData: StateFlow<List<Chat>> get() = _chatData
 
 
     @Suppress("UNCHECKED_CAST", "LABEL_NAME_CLASH")
     fun startListeningForMessagesForPairs(
-        docIds: String,
-        onComplete: () -> Unit,
-        onError: (Exception) -> Unit
+        docIds: String, onComplete: () -> Unit, onError: (Exception) -> Unit
     ) {
-        val collectionRef = FirebaseFirestore.getInstance().collection("chats")
         val chatDataSet = mutableSetOf<Chat>()
         val deletedDocumentIds = mutableSetOf<String>()
-        collectionRef.whereArrayContains("participants", docIds)
+        getChatDocumentRef().whereArrayContains("participants", docIds)
             .addSnapshotListener { querySnapshot, error ->
                 if (error != null) {
                     onError.invoke(error)
@@ -192,12 +224,10 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     val document = documentChange.document
                     when (documentChange.type) {
                         DocumentChange.Type.ADDED -> {
-                            Log.println(Log.INFO, "Added", document.data.toString())
                             val data = document.data
                             data.let {
-                                val subCollectionRef =
-                                    collectionRef.document(document.id).collection("/messages")
-                                        .orderBy("timestamp")
+                                val subCollectionRef = getChatDocumentRef().document(document.id)
+                                    .collection("/$MESSAGES_COLLECTION").orderBy("timestamp")
                                 subCollectionRef.addSnapshotListener { subQuerySnapshot, exception ->
                                     if (exception != null) {
                                         onError.invoke(exception)
@@ -230,7 +260,6 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                 chatDataSet.find { it.chatRoomID == deletedDocumentId }
                             if (deletedChat != null) {
                                 chatDataSet.remove(deletedChat)
-                                Log.println(Log.INFO, "Removed", chatDataSet.toString())
                                 _chatData.value = chatDataSet.toList()
                             }
                         }
@@ -249,9 +278,8 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         documentId: String,
         messageId: Timestamp,
     ) {
-        val collectionRef = FirebaseFirestore.getInstance().collection("chats")
-        val documentRef = collectionRef.document(documentId)
-        documentRef.collection("/messages").whereEqualTo("timestamp", messageId).get()
+        getChatDocumentRef().document(documentId).collection("/$MESSAGES_COLLECTION")
+            .whereEqualTo("timestamp", messageId).get()
             .addOnSuccessListener { querySnapshot ->
                 for (document in querySnapshot) {
                     document.reference.delete().addOnSuccessListener {}
@@ -267,51 +295,43 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     fun deleteChatRoom() {
         for (chat in chatData.value) {
             if (chat.participants.contains(friend.value.userID) && chat.participants.contains(auth.currentUser!!.uid)) {
-                val subCollectionRef = FirebaseFirestore.getInstance()
-                    .collection("chats").document(chat.chatRoomID).collection("messages")
-                subCollectionRef.get()
-                    .addOnSuccessListener { querySnapshot ->
-                        for (document in querySnapshot.documents) {
-                            subCollectionRef.document(document.id).delete()
-                                .addOnSuccessListener {
-                                    val collectionRef =
-                                        FirebaseFirestore.getInstance().collection("chats")
-                                    val documentRef = collectionRef.document(chat.chatRoomID)
-                                    documentRef.delete().addOnSuccessListener {
-                                    }.addOnFailureListener { exception ->
-                                        exception.printStackTrace()
-                                    }
-                                }
-                                .addOnFailureListener { exception ->
+                val subCollectionRef =
+                    getChatDocumentRef().document(chat.chatRoomID).collection(MESSAGES_COLLECTION)
+                subCollectionRef.get().addOnSuccessListener { querySnapshot ->
+                    for (document in querySnapshot.documents) {
+                        subCollectionRef.document(document.id).delete().addOnSuccessListener {
+                            getChatDocumentRef().document(chat.chatRoomID).delete()
+                                .addOnSuccessListener {}.addOnFailureListener { exception ->
                                     exception.printStackTrace()
                                 }
+                        }.addOnFailureListener { exception ->
+                            exception.printStackTrace()
                         }
                     }
-                    .addOnFailureListener { exception ->
-                        exception.printStackTrace()
-                    }
+                }.addOnFailureListener { exception ->
+                    exception.printStackTrace()
+                }
             }
         }
     }
 
     fun deleteChatRoomForLocal(person: String) {
-        val collectionRef = FirebaseFirestore.getInstance().collection("chats")
-        val documentRef = collectionRef.document(person)
-        documentRef.delete().addOnSuccessListener {
-            println("ChatRoom deleted successfully.")
-        }.addOnFailureListener { exception ->
-            exception.printStackTrace()
-        }
-
+        getChatDocumentRef().document(person).delete()
+            .addOnSuccessListener {}.addOnFailureListener { exception ->
+                exception.printStackTrace()
+            }
     }
 
     suspend fun saveMessages(documentId: String?, message: Message) {
-        FirebaseFirestore.getInstance().collection("chats/${documentId}/messages").add(message)
-            .await()
+        firebaseInstance.collection("${CHATS_COLLECTION}/${documentId}/${MESSAGES_COLLECTION}")
+            .add(message).await()
     }
 
+    /**
+     * This section contains the logic for the Firebase communication, used for searching for users,
+     * in the SearchView.
+     */
 
-    // SearchView (Create Friend Element)
     private val _searchText = MutableStateFlow("")
     val searchText = _searchText.asStateFlow()
 
@@ -321,8 +341,8 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     private val _person = MutableStateFlow<List<Person>>(emptyList())
 
     private suspend fun retrieveMessages(): List<Person> {
-        val snapshot = FirebaseFirestore.getInstance().collection("user").orderBy("name")
-            .startAt(searchText.value).endAt(searchText.value + '\uf8ff').get().await()
+        val snapshot = getUserDocumentRef().orderBy("name").startAt(searchText.value)
+            .endAt(searchText.value + '\uf8ff').get().await()
         return snapshot.documents.mapNotNull { document ->
             val firstname = document.getString("name")
             val image = document.getString("image")
@@ -353,112 +373,176 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _person.value)
 
     fun saveChatRoom(person: String) {
-        val collectionRef = FirebaseFirestore.getInstance().collection("chats")
-        val documentRef = collectionRef.document()
         val participantsArray = arrayListOf(auth.currentUser!!.uid, person)
         val fieldUpdates = hashMapOf<String, Any>(
             "participants" to participantsArray,
         )
-        documentRef.set(fieldUpdates).addOnSuccessListener {}
+        getChatDocumentRef().document().set(fieldUpdates).addOnSuccessListener {}
             .addOnFailureListener { exception -> exception.printStackTrace() }
     }
 
-    fun saveFriend(person: String, local: Boolean) {
-        val collectionRef =
-            FirebaseFirestore.getInstance().collection("user/${person}/friends")
-        val documentRef = collectionRef.document(auth.currentUser!!.uid)
+    fun saveFriendForFriend(person: String, local: Boolean, status: String) {
         val fieldUpdates = hashMapOf<String, Any>(
             "local" to local,
-            "status" to "accepted",
+            "status" to status,
             "userID" to auth.currentUser!!.uid,
         )
-        documentRef.set(fieldUpdates).addOnSuccessListener {}
+        firebaseInstance.collection("${USER_COLLECTION}/${person}/${FRIENDS_COLLECTION}")
+            .document(auth.currentUser!!.uid).set(fieldUpdates).addOnSuccessListener {}
             .addOnFailureListener { exception -> exception.printStackTrace() }
     }
 
-    fun saveSubscribed(person: String, local: Boolean) {
-        val collectionRef =
-            FirebaseFirestore.getInstance().collection("user/${auth.currentUser!!.uid}/friends")
-        val documentRef = collectionRef.document(person)
+    fun saveFriendForUser(person: String, local: Boolean, status: String) {
         val fieldUpdates = hashMapOf<String, Any>(
             "local" to local,
-            "status" to "accepted",
+            "status" to status,
             "userID" to person,
         )
-        documentRef.set(fieldUpdates).addOnSuccessListener {}
+        firebaseInstance.collection("${USER_COLLECTION}/${auth.currentUser!!.uid}/${FRIENDS_COLLECTION}")
+            .document(person).set(fieldUpdates).addOnSuccessListener {}
             .addOnFailureListener { exception -> exception.printStackTrace() }
 
     }
 
     fun getDocument(onSuccess: (PersonList?) -> Unit) {
-        val documentRef =
-            FirebaseFirestore.getInstance().collection("user").document(auth.currentUser!!.uid)
-        documentRef.get().addOnSuccessListener { documentSnapshot ->
-            if (documentSnapshot.exists()) {
-                val personList = documentSnapshot.toObject(PersonList::class.java)
-                onSuccess(personList)
-            } else {
+        getUserDocumentRef().document(auth.currentUser!!.uid).get()
+            .addOnSuccessListener { documentSnapshot ->
+                if (documentSnapshot.exists()) {
+                    val personList = documentSnapshot.toObject(PersonList::class.java)
+                    onSuccess(personList)
+                } else {
+                    onSuccess(null)
+                }
+            }.addOnFailureListener {
                 onSuccess(null)
             }
-        }.addOnFailureListener {
-            onSuccess(null)
-        }
     }
 
     fun onSearchTextChanged(text: String) {
         _searchText.value = text
     }
 
-    fun updateOnlineStatus(boolean: String) {
-        try {
-            val collectionRef =
-                FirebaseFirestore.getInstance().collection("user")
-            val documentRef = collectionRef.document(auth.currentUser!!.uid)
-            val fieldUpdates = hashMapOf<String, Any>(
-                "online" to boolean,
-            )
-            documentRef.update(fieldUpdates).addOnSuccessListener {}
-                .addOnFailureListener { exception -> exception.printStackTrace() }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
+    /**
+     * This section contains the logic for the Firebase communication,
+     * used for the users account settings.
+     */
 
     fun updateUserProfilePicture(imageReference: String) {
+        val fieldUpdates = hashMapOf<String, Any>("image" to imageReference)
+        getUserDocumentRef().document(auth.currentUser!!.uid).update(fieldUpdates)
+            .addOnSuccessListener {}
+            .addOnFailureListener { exception -> exception.printStackTrace() }
+    }
+
+    private val _user = MutableStateFlow(PersonList("", "", "", "", "", Timestamp.now(), false, ""))
+    val user: StateFlow<PersonList> get() = _user
+    fun getUserData() {
+        getUserDocumentRef().document(auth.currentUser!!.uid)
+            .addSnapshotListener { documentSnapshot, error ->
+                if (error != null) {
+                    return@addSnapshotListener
+                }
+                if (documentSnapshot != null && documentSnapshot.exists()) {
+                    val personList = documentSnapshot.toObject(PersonList::class.java)
+                    _user.value = personList!!
+                }
+            }
+    }
+
+    /**
+     * This section contains the logic for the Firebase communication, for the randChat feature.
+     */
+
+    private val _matchedUser =
+        MutableStateFlow(PersonList("", "", "", "", "", Timestamp.now(), false, ""))
+    val matchedUser: StateFlow<PersonList> get() = _matchedUser
+
+    fun pairWithRandomUser() {
+        if (_matchedUser.value.userID.isNotEmpty()) {
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val pendingUsers = mutableListOf<PersonList>()
+            // Step 1: Check if any user has randChat value as "pending"
+            getUserDocumentRef().whereEqualTo("randChat", "pending").limit(1).get()
+                .addOnSuccessListener { querySnapshot ->
+                    for (document in querySnapshot.documents) {
+                        val user = document.toObject(PersonList::class.java)
+                        if (user != null && user.userID != auth.currentUser!!.uid) {
+                            pendingUsers.add(user)
+                        }
+                    }
+                    // Step 2: Pair with a random user from the pendingUsers list
+                    if (pendingUsers.isNotEmpty()) {
+                        val randomUser = pendingUsers[Random().nextInt(pendingUsers.size)]
+                        auth.currentUser?.let {
+                            getUserDocumentRef().document(it.uid)
+                                .update("randChat", randomUser.userID)
+                        }
+                        getUserDocumentRef().document(randomUser.userID)
+                            .update("randChat", auth.currentUser!!.uid)
+                        _matchedUser.value = randomUser
+                    } else {
+                        // Step 3: Set randChat value for current user to "pending"
+                        getUserDocumentRef().document(auth.currentUser!!.uid)
+                            .update("randChat", "pending")
+                    }
+                }.addOnFailureListener { exception ->
+                    exception.printStackTrace()
+                }
+        }
+    }
+
+    fun checkForMatches() {
+        getUserDocumentRef().whereEqualTo("randChat", auth.currentUser!!.uid)
+            .addSnapshotListener { querySnapshot, error ->
+                if (error != null) {
+                    return@addSnapshotListener
+                }
+                querySnapshot?.documentChanges?.forEach { document ->
+
+                    val user = document.document.toObject(PersonList::class.java)
+                    Log.println(Log.INFO, "MatchFound", user.toString())
+                    if ((document.type == DocumentChange.Type.MODIFIED || document.type == DocumentChange.Type.ADDED) && (user.randChat == auth.currentUser!!.uid || user.randChat == "pending")) {
+                        if (user.userID != auth.currentUser!!.uid) {
+                            _matchedUser.value = user
+                        }
+                    } else {
+                        _matchedUser.value =
+                            PersonList("", "", "", "", "", Timestamp.now(), false, "")
+                        resetMatchedUser()
+                    }
+                }
+            }
+    }
+
+    /**
+     * This section contains the logic for the Firebase communication,
+     * for handling different user availability states, based on app state.
+     */
+
+    fun updateOnlineStatus(status: String) {
         try {
-            val collectionRef =
-                FirebaseFirestore.getInstance().collection("user")
-            val documentRef = collectionRef.document(auth.currentUser!!.uid)
             val fieldUpdates = hashMapOf<String, Any>(
-                "image" to imageReference,
+                "online" to status,
             )
-            documentRef.update(fieldUpdates).addOnSuccessListener {}
+            getUserDocumentRef().document(auth.currentUser!!.uid).update(fieldUpdates)
+                .addOnSuccessListener {}
                 .addOnFailureListener { exception -> exception.printStackTrace() }
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    private val _user = MutableStateFlow(PersonList("", "", "", "", Timestamp.now(), false, ""))
-    val user: StateFlow<PersonList> get() = _user
-    fun getUserData() {
-        val collectionRef = FirebaseFirestore.getInstance().collection("user")
-        val documentRef = collectionRef.document(auth.currentUser!!.uid)
-        documentRef.addSnapshotListener { documentSnapshot, error ->
-            if (error != null) {
-                return@addSnapshotListener
-            }
-            if (documentSnapshot != null && documentSnapshot.exists()) {
-                val personList = documentSnapshot.toObject(PersonList::class.java)
-                _user.value = personList!!
-            }
-        }
+    fun resetMatchedUser() {
+        getUserDocumentRef().document(auth.currentUser!!.uid).update("randChat", "")
     }
-
 
     fun reset() {
         _chatData.value = emptyList()
         _friendListData.value = emptyList()
         _friendListDataLocal.value = emptyList()
+        _user.value = PersonList("", "", "", "", "", Timestamp.now(), false, "")
+        _matchedUser.value = PersonList("", "", "", "", "", Timestamp.now(), false, "")
     }
 }

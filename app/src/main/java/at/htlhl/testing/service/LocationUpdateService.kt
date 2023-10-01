@@ -204,6 +204,7 @@ class LocationUpdateService : Service() {
                             name = dataMap["name"].toString(),
                             image = dataMap["image"].toString(),
                             status = "User is ${distanceInM.toInt()} meters away",
+                            randChat= dataMap["randChat"].toString(),
                             timestamp = Timestamp.now(),
                             local = true,
                             online = dataMap["online"] as String,

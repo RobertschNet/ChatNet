@@ -1,6 +1,6 @@
 package at.htlhl.testing.navigation
 
-sealed class Screens(val Route: String) {
+sealed class Screens(val route: String) {
     object Chats : Screens("ChatsScreen")
     object DropInScreen : Screens("DropInScreen")
     object ChatScreen : Screens("ChatScreen")
@@ -11,5 +11,6 @@ sealed class Screens(val Route: String) {
     object RegisterScreen : Screens("RegisterScreen")
     object SearchViewScreen : Screens("SearchViewScreen")
     object LoadingScreen : Screens("LoadingScreen")
+    object InboxScreen : Screens("InboxScreen")
 
 }

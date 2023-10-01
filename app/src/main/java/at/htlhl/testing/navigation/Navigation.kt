@@ -16,6 +16,7 @@ import at.htlhl.testing.views.ChatMate
 import at.htlhl.testing.views.ChatView
 import at.htlhl.testing.views.Chats
 import at.htlhl.testing.views.DropIn
+import at.htlhl.testing.views.InboxView
 import at.htlhl.testing.views.LoadingView
 import at.htlhl.testing.views.LoginView
 import at.htlhl.testing.views.Profile
@@ -65,7 +66,7 @@ fun Navigation(
         composable("RandChatScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-            RandChat().RandChatScreen()
+            RandChat().RandChatScreen(navController, sharedViewModel)
         }
         composable("SearchViewScreen",
             enterTransition = {
@@ -107,6 +108,10 @@ fun Navigation(
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             LoadingView().LoadingScreen(navController)
         }
-
+        composable("InboxScreen",
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
+            InboxView().Inbox(sharedViewModel = sharedViewModel)
+        }
     }
 }

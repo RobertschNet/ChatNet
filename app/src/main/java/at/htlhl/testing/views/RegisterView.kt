@@ -157,7 +157,7 @@ class RegisterView {
                 color = if (isSystemInDarkTheme()) Color.White else Color.Black,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.clickable {
-                    navController.navigate(Screens.LoginScreen.Route)
+                    navController.navigate(Screens.LoginScreen.route)
                 }
             )
         }
@@ -407,7 +407,7 @@ class RegisterView {
         Dialog(
             onDismissRequest = {
                 onDismiss()
-                navController.navigate(Screens.LoginScreen.Route)
+                navController.navigate(Screens.LoginScreen.route)
             }
         ) {
             Surface(

@@ -61,7 +61,6 @@ class LoadingView {
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
         ) {
             CircularProgressIndicator(
                 modifier = Modifier

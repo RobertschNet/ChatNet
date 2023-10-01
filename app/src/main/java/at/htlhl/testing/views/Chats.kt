@@ -58,7 +58,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily.Companion.Cursive
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,7 +69,6 @@ import at.htlhl.testing.data.PersonList
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
-import coil.request.ImageRequest
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -238,10 +236,11 @@ class Chats {
                                 .padding(end = 20.dp, top = 5.dp)
                                 .size(30.dp)
                                 .clickable {
-                                    navController.navigate(Screens.SearchViewScreen.Route)
+                                    navController.navigate(Screens.SearchViewScreen.route)
                                 })
                         IconButton(
                             onClick = {
+                                navController.navigate(Screens.InboxScreen.route)
                             },
                             modifier = Modifier
                                 .align(Alignment.CenterEnd)
@@ -324,7 +323,7 @@ fun ChatItem(
                     } else {
                         sharedViewModel.friend.value = person
                         Log.println(Log.INFO, "Current", person.toString())
-                        navController.navigate(Screens.ChatScreen.Route)
+                        navController.navigate(Screens.ChatScreen.route)
                     }
                 },
                 onLongClick = {

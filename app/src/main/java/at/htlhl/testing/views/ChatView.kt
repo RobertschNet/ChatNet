@@ -78,9 +78,6 @@ import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.Timestamp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -88,7 +85,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 class ChatView : ViewModel() {
-    private lateinit var auth: FirebaseAuth
 
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
@@ -103,8 +99,6 @@ class ChatView : ViewModel() {
     ) {
         val coroutineScope = rememberCoroutineScope()
         val lazyListState = rememberLazyListState()
-        auth = Firebase.auth
-        val currentUser = auth.currentUser?.uid
         Scaffold(
             topBar = { MessageTopBar(navController, personList) },
             content = {
@@ -128,7 +122,7 @@ class ChatView : ViewModel() {
                     viewModel
                 ){ messageText ->
                     val message = Message(
-                        sender = currentUser.toString(),
+                        sender = viewModel.auth.currentUser?.uid.toString(),
                         content = messageText,
                         timestamp = Timestamp.now()
                     )
@@ -166,10 +160,10 @@ class ChatView : ViewModel() {
     @Composable
     fun MessageItem(viewModel: SharedViewModel, message: Message, documentId: String) {
         val backgroundColor =
-            if (message.sender == auth.currentUser?.uid) if (isSystemInDarkTheme()) Color.DarkGray
+            if (message.sender ==viewModel.auth.currentUser?.uid) if (isSystemInDarkTheme()) Color.DarkGray
             else Color.White else if (isSystemInDarkTheme()) Color.Black else Color.LightGray
         val alignment =
-            if (message.sender == auth.currentUser?.uid) Arrangement.End else Arrangement.Start
+            if (message.sender ==viewModel.auth.currentUser?.uid) Arrangement.End else Arrangement.Start
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
         val formattedTime = message.timestamp.toDate().toInstant().atZone(ZoneId.systemDefault())
             .toLocalTime().format(formatter)
@@ -186,7 +180,7 @@ class ChatView : ViewModel() {
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onLongPress = {
-                                    if (message.sender == auth.currentUser?.uid) {
+                                    if (message.sender ==viewModel.auth.currentUser?.uid) {
                                         openDialog = true
                                     }
                                 }
@@ -451,7 +445,7 @@ class ChatView : ViewModel() {
                         modifier = Modifier
                             .align(CenterVertically)
                             .size(25.dp)
-                            .clickable { navController.navigate(Screens.DropInScreen.Route) }
+                            .clickable { navController.navigate(Screens.Chats.route) }
                     )
                     Image(
                         contentDescription = null,
@@ -473,13 +467,12 @@ class ChatView : ViewModel() {
     @Composable
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         sharedViewModel.bottomBarState.value = false
-        auth = Firebase.auth
         val user = sharedViewModel.friend.value
         val documentIdState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val documentationId: List<Chat> = documentIdState.value
         Log.println(Log.INFO, "ChatView", documentationId.toString())
         val filteredChats = documentationId.filter { chat ->
-            chat.participants.contains(user.userID) && chat.participants.contains(auth.currentUser?.uid.toString())
+            chat.participants.contains(user.userID) && chat.participants.contains(sharedViewModel.auth.currentUser?.uid.toString())
         }
         val doc = filteredChats.firstOrNull()?.chatRoomID ?: ""
         Log.println(Log.INFO, "ChatView", doc)
@@ -491,8 +484,8 @@ class ChatView : ViewModel() {
         val onMessageSent: (Message) -> Unit = { message ->
             runBlocking {
                 if (user.local) {
-                    sharedViewModel.saveFriend(user.userID,true)
-                    sharedViewModel.saveSubscribed(user.userID, true)
+                    sharedViewModel.saveFriendForFriend(user.userID,true, status = "accepted")
+                    sharedViewModel.saveFriendForUser(user.userID, true, status = "accepted")
                 }
                 sharedViewModel.saveMessages(doc, message)
             }

@@ -99,7 +99,7 @@ class LoginView {
                                     {},
                                     {})
                                 sharedViewModel.gpsState.value = false
-                                navController.navigate(Screens.Chats.Route)
+                                navController.navigate(Screens.Chats.route)
                             } else {
                                 println("Sign-in failed")
                             }
@@ -154,7 +154,7 @@ class LoginView {
                 color = if (isSystemInDarkTheme()) Color.White else Color.Black,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.clickable {
-                    navController.navigate(Screens.RegisterScreen.Route)
+                    navController.navigate(Screens.RegisterScreen.route)
                 }
             )
         }
@@ -225,7 +225,7 @@ class LoginView {
                                             {},
                                             {})
                                         sharedViewModel.gpsState.value = false
-                                        navController.navigate(Screens.Chats.Route)
+                                        navController.navigate(Screens.Chats.route)
                                     } else {
                                         Toast.makeText(
                                             activity,

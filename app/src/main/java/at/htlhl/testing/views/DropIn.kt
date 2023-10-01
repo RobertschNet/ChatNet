@@ -380,7 +380,7 @@ fun ChatItem2(
                         if (person.local && filteredChats.isEmpty()) {
                             sharedViewModel.saveChatRoom(person = person.userID)
                         }
-                        navController.navigate(Screens.ChatScreen.Route)
+                        navController.navigate(Screens.ChatScreen.route)
                     }
 
                 },

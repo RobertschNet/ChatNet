@@ -95,7 +95,7 @@ class SearchView : ViewModel() {
                 tint = if (isSystemInDarkTheme()) Color.White else Color.DarkGray,
                 modifier = Modifier
                     .size(30.dp)
-                    .clickable { navController.navigate(Screens.Chats.Route) }
+                    .clickable { navController.navigate(Screens.Chats.route) }
                     .align(Alignment.CenterVertically))
             BasicTextField(value = searchText,
                 onValueChange = {
@@ -227,9 +227,10 @@ class SearchView : ViewModel() {
                                                     .contains(sharedViewModel.auth.currentUser?.uid)
                                             }
                                             if (data != null) {
-                                                viewModel.saveFriend(
+                                                viewModel.saveFriendForFriend(
                                                     person = person.userID,
-                                                    local = false
+                                                    local = false,
+                                                    status = "pending"
                                                 )
                                                 if (filteredChats.isEmpty()) {
                                                     Log.println(
@@ -246,7 +247,7 @@ class SearchView : ViewModel() {
                                                 }
                                             }
                                         }
-                                        viewModel.saveSubscribed(person.userID, false)
+                                        viewModel.saveFriendForUser(person=person.userID, local = false, status = "initiated")
 
                                     },
                                 contentDescription = null,

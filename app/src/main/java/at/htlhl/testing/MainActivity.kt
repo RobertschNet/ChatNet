@@ -68,7 +68,6 @@ class MainActivity : ComponentActivity() {
         val serviceIntent = Intent(this, LocationUpdateService::class.java)
         setContent {
             val viewModel = (application as MyApplication).myViewModel
-            viewModel.updateOnlineStatus("Online")
             val navController = rememberNavController()
             TestingTheme {
                 val loadingState = viewModel.loadingState.value
@@ -83,18 +82,19 @@ class MainActivity : ComponentActivity() {
                     when (loadingState) {
                         LoadingState.Authenticated -> {
                             Log.println(Log.INFO, "Authentication", "User is logged in")
+                            viewModel.updateOnlineStatus("Online")
                             viewModel.getUserData()
                             viewModel.startListeningForFriends()
                             viewModel.startListeningForMessagesForPairs(
                                 viewModel.auth.currentUser!!.uid,
                                 {},
                                 {})
-                            navController.navigate(Screens.Chats.Route)
+                            navController.navigate(Screens.Chats.route)
                         }
 
                         LoadingState.NotAuthenticated -> {
                             Log.println(Log.INFO, "Authentication", "User is not logged in")
-                            navController.navigate(Screens.LoginScreen.Route)
+                            navController.navigate(Screens.LoginScreen.route)
                         }
 
                         LoadingState.Error -> {
@@ -126,13 +126,16 @@ class MainActivity : ComponentActivity() {
                     val selectedImageUri = data.data
                     val storage = Firebase.storage
                     val storageRef = storage.reference
-                    val imageRef = storageRef.child("${(application as MyApplication).myViewModel.auth.currentUser!!.uid}/profilePicture")
+                    val imageRef =
+                        storageRef.child("${(application as MyApplication).myViewModel.auth.currentUser!!.uid}/profilePicture")
                     val uploadTask = imageRef.putFile(selectedImageUri!!)
                     uploadTask.addOnCompleteListener { task ->
                         if (task.isSuccessful) {
                             imageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
                                 Log.d("Image", downloadUrl.toString())
-                                (application as MyApplication).myViewModel.updateUserProfilePicture(downloadUrl.toString())
+                                (application as MyApplication).myViewModel.updateUserProfilePicture(
+                                    downloadUrl.toString()
+                                )
                             }.addOnFailureListener { exception ->
                                 Log.e("Image", exception.toString())
                             }
@@ -146,12 +149,12 @@ class MainActivity : ComponentActivity() {
         }
 
 
-
     override fun onDestroy() {
         super.onDestroy()
         serviceConnection?.let { unbindService(it) }
         stopService(Intent(this, LocationUpdateService::class.java))
         (application as MyApplication).myViewModel.updateOnlineStatus("Offline")
+        (application as MyApplication).myViewModel.resetMatchedUser()
         (application as MyApplication).myViewModel.reset()
     }
 
@@ -204,31 +207,31 @@ class MainActivity : ComponentActivity() {
             BottomNavigationBar(isBottomBarEnabled = viewModel.bottomBarState, items = listOf(
                 BottomNavItem(
                     name = "Chats",
-                    route = Screens.Chats.Route,
+                    route = Screens.Chats.route,
                     icon = Icons.Default.Group,
                     color = Color(0xFF00A0E8)
                 ),
                 BottomNavItem(
                     name = "Drop In",
-                    route = Screens.DropInScreen.Route,
+                    route = Screens.DropInScreen.route,
                     icon = Icons.Default.Message,
                     color = Color(0xFF00B1A9)
                 ),
                 BottomNavItem(
                     name = "RandChat",
-                    route = Screens.RandChatScreen.Route,
+                    route = Screens.RandChatScreen.route,
                     icon = Icons.Default.LiveHelp,
                     color = Color(0xFFE21515)
                 ),
                 BottomNavItem(
                     name = "ChatMate",
-                    route = Screens.ChatMateScreen.Route,
+                    route = Screens.ChatMateScreen.route,
                     icon = Icons.Default.Api,
                     color = Color(0xFF15B625)
                 ),
                 BottomNavItem(
                     name = "Profile",
-                    route = Screens.ProfileScreen.Route,
+                    route = Screens.ProfileScreen.route,
                     icon = Icons.Default.ManageAccounts,
                     color = Color(0xFF00A0E8)
                 ),
@@ -303,4 +306,5 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
 }
