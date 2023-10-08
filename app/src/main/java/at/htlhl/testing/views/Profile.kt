@@ -67,7 +67,7 @@ class Profile {
         val userState = sharedViewModel.user.collectAsState()
         val userData: PersonList = userState.value
         val context = LocalContext.current
-        var otto: String by remember { mutableStateOf(userData.name) }
+        var otto: String by remember { mutableStateOf(userData.username) }
         val scope = rememberCoroutineScope()
         val coroutineScope = rememberCoroutineScope()
         val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(
@@ -215,7 +215,7 @@ class Profile {
                                 .padding(bottom = 3.dp)
                         )
                         Text(
-                            text = userData.name,
+                            text = userData.username,
                             color = Color.Black,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -269,7 +269,7 @@ class Profile {
                             modifier = Modifier.padding(bottom = 3.dp)
                         )
                         Text(
-                            text = userData.online,
+                            text = userData.status,
                             color = Color.White,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -336,7 +336,7 @@ class Profile {
                         containerColor = Color.White
                     ),
                     onClick = {
-                        sharedViewModel.updateOnlineStatus("Offline")
+                        sharedViewModel.updateOnlineStatus("offline")
                         logout()
                         sharedViewModel.reset()
                         sharedViewModel.resetMatchedUser()

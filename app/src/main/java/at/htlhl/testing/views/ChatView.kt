@@ -118,9 +118,9 @@ class ChatView : ViewModel() {
                     )
                 }
             }, bottomBar = {
-                InputField (
+                InputField(
                     viewModel
-                ){ messageText ->
+                ) { messageText ->
                     val message = Message(
                         sender = viewModel.auth.currentUser?.uid.toString(),
                         content = messageText,
@@ -160,10 +160,10 @@ class ChatView : ViewModel() {
     @Composable
     fun MessageItem(viewModel: SharedViewModel, message: Message, documentId: String) {
         val backgroundColor =
-            if (message.sender ==viewModel.auth.currentUser?.uid) if (isSystemInDarkTheme()) Color.DarkGray
+            if (message.sender == viewModel.auth.currentUser?.uid) if (isSystemInDarkTheme()) Color.DarkGray
             else Color.White else if (isSystemInDarkTheme()) Color.Black else Color.LightGray
         val alignment =
-            if (message.sender ==viewModel.auth.currentUser?.uid) Arrangement.End else Arrangement.Start
+            if (message.sender == viewModel.auth.currentUser?.uid) Arrangement.End else Arrangement.Start
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
         val formattedTime = message.timestamp.toDate().toInstant().atZone(ZoneId.systemDefault())
             .toLocalTime().format(formatter)
@@ -180,7 +180,7 @@ class ChatView : ViewModel() {
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onLongPress = {
-                                    if (message.sender ==viewModel.auth.currentUser?.uid) {
+                                    if (message.sender == viewModel.auth.currentUser?.uid) {
                                         openDialog = true
                                     }
                                 }
@@ -251,7 +251,7 @@ class ChatView : ViewModel() {
 
 
     @Composable
-    fun InputField(sharedViewModel: SharedViewModel ,onMessageSent: (String) -> Unit) {
+    fun InputField(sharedViewModel: SharedViewModel, onMessageSent: (String) -> Unit) {
         var badgeCount by remember { mutableIntStateOf(0) }
         var text by remember { mutableStateOf("") }
         BasicTextField(
@@ -393,7 +393,7 @@ class ChatView : ViewModel() {
             backgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
             title = {
                 Text(
-                    text = user.name,
+                    text = user.username,
                     color = if (isSystemInDarkTheme()) Color.White else Color.Black,
                     fontSize = 22.sp,
                     fontFamily = FontFamily.SansSerif,
@@ -472,7 +472,7 @@ class ChatView : ViewModel() {
         val documentationId: List<Chat> = documentIdState.value
         Log.println(Log.INFO, "ChatView", documentationId.toString())
         val filteredChats = documentationId.filter { chat ->
-            chat.participants.contains(user.userID) && chat.participants.contains(sharedViewModel.auth.currentUser?.uid.toString())
+            chat.members.contains(user.id) && chat.members.contains(sharedViewModel.auth.currentUser?.uid.toString())
         }
         val doc = filteredChats.firstOrNull()?.chatRoomID ?: ""
         Log.println(Log.INFO, "ChatView", doc)
@@ -483,10 +483,6 @@ class ChatView : ViewModel() {
         }
         val onMessageSent: (Message) -> Unit = { message ->
             runBlocking {
-                if (user.local) {
-                    sharedViewModel.saveFriendForFriend(user.userID,true, status = "accepted")
-                    sharedViewModel.saveFriendForUser(user.userID, true, status = "accepted")
-                }
                 sharedViewModel.saveMessages(doc, message)
             }
         }

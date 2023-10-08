@@ -35,6 +35,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import at.htlhl.testing.data.Chat
 import at.htlhl.testing.data.PersonList
 import at.htlhl.testing.data.SharedViewModel
 import coil.compose.rememberAsyncImagePainter
@@ -47,6 +48,8 @@ class InboxView {
     fun Inbox(sharedViewModel: SharedViewModel) {
         val friendListDataState = sharedViewModel.friendListPending.collectAsState()
         val friendListData: List<PersonList> = friendListDataState.value
+        val documentIdState = sharedViewModel.chatData.collectAsState()
+        val documentationId: List<Chat> = documentIdState.value
         Log.println(Log.INFO, "InboxView", "friendListData: $friendListData")
 
         LazyColumn(
@@ -58,6 +61,7 @@ class InboxView {
                 ChatItem(
                     person = message,
                     sharedViewModel = sharedViewModel,
+                    documentId = documentationId
                 )
             }
         }
@@ -70,6 +74,7 @@ class InboxView {
     fun ChatItem(
         person: PersonList,
         sharedViewModel: SharedViewModel,
+        documentId: List<Chat>,
     ) {
         val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
         val formattedTime: String = formatter.format(person.timestamp.toDate())
@@ -79,7 +84,7 @@ class InboxView {
                 .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
                 .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
         ) {
-            val isOnline = person.online
+            val isOnline = person.status
             Box(
                 modifier = Modifier.size(50.dp)
             ) {
@@ -109,7 +114,7 @@ class InboxView {
                         .align(Alignment.BottomEnd)
                 ) {
                     when (isOnline) {
-                        "Online" -> {
+                        "online" -> {
                             Box(
                                 modifier = Modifier
                                     .size(14.dp)
@@ -125,7 +130,7 @@ class InboxView {
                             )
                         }
 
-                        "Offline" -> {
+                        "offline" -> {
                             Box(
                                 modifier = Modifier
                                     .size(14.dp)
@@ -149,7 +154,7 @@ class InboxView {
                             }
                         }
 
-                        "Idle" -> {
+                        "idle" -> {
                             Box(
                                 modifier = Modifier
                                     .size(14.dp)
@@ -183,7 +188,7 @@ class InboxView {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = person.name,
+                        text = person.username,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 17.sp,
                         color = if (isSystemInDarkTheme()) Color.White else Color.Black
@@ -200,13 +205,28 @@ class InboxView {
                     tint = Color.Green,
                     contentDescription = null,
                     modifier = Modifier.clickable {
+                        val filteredChats = documentId.filter { chat ->
+                            chat.members.contains(person.id) && chat.members
+                                .contains(sharedViewModel.auth.currentUser?.uid)
+                        }
+                        if (filteredChats.isEmpty()) {
+                            sharedViewModel.saveChatRoom(
+                                person = person.id,
+                                tab = "chats"
+                            )
+                        } else {
+                            sharedViewModel.updateChatRoom(
+                                tab = "chats",
+                                chatRoomId = filteredChats[0].chatRoomID
+                            ) {}
+                        }
                         sharedViewModel.saveFriendForFriend(
-                            person = person.userID,
+                            person = person,
                             local = false,
                             status = "accepted"
                         )
                         sharedViewModel.saveFriendForUser(
-                            person = person.userID,
+                            person = person,
                             local = false,
                             status = "accepted"
                         )

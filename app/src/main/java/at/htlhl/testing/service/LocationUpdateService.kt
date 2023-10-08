@@ -156,7 +156,7 @@ class LocationUpdateService : Service() {
     }
 
     fun sendLocation(documentId: MutableMap<String, Any>, auth: FirebaseAuth) {
-        FirebaseFirestore.getInstance().document("user/${auth.currentUser?.uid}")
+        FirebaseFirestore.getInstance().document("users/${auth.currentUser?.uid}")
             .update(documentId)
             .addOnSuccessListener {
                 println("Location sent successfully.")
@@ -171,8 +171,8 @@ class LocationUpdateService : Service() {
         val bounds = GeoFireUtils.getGeoHashQueryBounds(center, radiusInM)
         val tasks: MutableList<Task<QuerySnapshot>> = ArrayList()
         for (b in bounds) {
-            val q = FirebaseFirestore.getInstance().collection("user")
-                .whereEqualTo("online", "Online")
+            val q = FirebaseFirestore.getInstance().collection("users")
+                .whereEqualTo("status", "online")
                 .orderBy("geohash")
                 .startAt(b.startHash)
                 .endAt(b.endHash)
@@ -200,14 +200,14 @@ class LocationUpdateService : Service() {
                         val distanceInM = GeoFireUtils.getDistanceBetween(docLocation, center)
 
                         PersonList(
-                            userID = dataMap["userID"].toString(),
-                            name = dataMap["name"].toString(),
+                            id = dataMap["id"].toString(),
+                            username = dataMap["username"].toString(),
                             image = dataMap["image"].toString(),
-                            status = "User is ${distanceInM.toInt()} meters away",
-                            randChat= dataMap["randChat"].toString(),
+                            statusIntern = "User is ${distanceInM.toInt()} meters away",
+                            connection = dataMap["connection"].toString(),
                             timestamp = Timestamp.now(),
                             local = true,
-                            online = dataMap["online"] as String,
+                            status = dataMap["status"] as String,
                         )
                     }
                     locationLiveData.postValue(personList)

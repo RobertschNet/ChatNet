@@ -14,6 +14,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,13 +23,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.Icon
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Api
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.LiveHelp
-import androidx.compose.material.icons.filled.ManageAccounts
-import androidx.compose.material.icons.filled.Message
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -39,6 +33,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,6 +49,7 @@ import at.htlhl.testing.navigation.Navigation
 import at.htlhl.testing.navigation.Screens
 import at.htlhl.testing.service.LocationUpdateService
 import at.htlhl.testing.ui.theme.TestingTheme
+import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 
@@ -82,7 +78,7 @@ class MainActivity : ComponentActivity() {
                     when (loadingState) {
                         LoadingState.Authenticated -> {
                             Log.println(Log.INFO, "Authentication", "User is logged in")
-                            viewModel.updateOnlineStatus("Online")
+                            viewModel.updateOnlineStatus("online")
                             viewModel.getUserData()
                             viewModel.startListeningForFriends()
                             viewModel.startListeningForMessagesForPairs(
@@ -153,19 +149,19 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         serviceConnection?.let { unbindService(it) }
         stopService(Intent(this, LocationUpdateService::class.java))
-        (application as MyApplication).myViewModel.updateOnlineStatus("Offline")
+        (application as MyApplication).myViewModel.updateOnlineStatus("offline")
         (application as MyApplication).myViewModel.resetMatchedUser()
         (application as MyApplication).myViewModel.reset()
     }
 
     override fun onPause() {
         super.onPause()
-        (application as MyApplication).myViewModel.updateOnlineStatus("Idle")
+        (application as MyApplication).myViewModel.updateOnlineStatus("idle")
     }
 
     override fun onResume() {
         super.onResume()
-        (application as MyApplication).myViewModel.updateOnlineStatus("Online")
+        (application as MyApplication).myViewModel.updateOnlineStatus("online")
     }
 
     private fun manageLocationServiceStatus(viewModel: SharedViewModel, serviceIntent: Intent) {
@@ -208,31 +204,31 @@ class MainActivity : ComponentActivity() {
                 BottomNavItem(
                     name = "Chats",
                     route = Screens.Chats.route,
-                    icon = Icons.Default.Group,
+                    icon = R.drawable.chat_ui_web_svgrepo_com,
                     color = Color(0xFF00A0E8)
                 ),
                 BottomNavItem(
                     name = "Drop In",
                     route = Screens.DropInScreen.route,
-                    icon = Icons.Default.Message,
+                    icon = R.drawable.location_place_pin_svgrepo_com,
                     color = Color(0xFF00B1A9)
                 ),
                 BottomNavItem(
                     name = "RandChat",
                     route = Screens.RandChatScreen.route,
-                    icon = Icons.Default.LiveHelp,
+                    icon = R.drawable.chat_bubbles_question_svgrepo_com_1_,
                     color = Color(0xFFE21515)
                 ),
                 BottomNavItem(
                     name = "ChatMate",
                     route = Screens.ChatMateScreen.route,
-                    icon = Icons.Default.Api,
+                    icon = R.drawable.brain_illustration_12_svgrepo_com,
                     color = Color(0xFF15B625)
                 ),
                 BottomNavItem(
                     name = "Profile",
                     route = Screens.ProfileScreen.route,
-                    icon = Icons.Default.ManageAccounts,
+                    icon = R.drawable.user_circle_svgrepo_com,
                     color = Color(0xFF00A0E8)
                 ),
             ), navController = navController, onItemClick = {
@@ -272,11 +268,11 @@ class MainActivity : ComponentActivity() {
                         icon = {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 if (selected) {
-                                    Icon(
-                                        imageVector = item.icon,
+                                    Image(
+                                        painter = rememberAsyncImagePainter(item.icon),
                                         contentDescription = item.name,
-                                        modifier = Modifier.size(35.dp),
-                                        tint = item.color
+                                        colorFilter = ColorFilter.tint(item.color),
+                                        modifier = Modifier.size(38.dp),
                                     )
                                     Text(
                                         text = item.name,
@@ -285,9 +281,8 @@ class MainActivity : ComponentActivity() {
                                         fontSize = 10.sp
                                     )
                                 } else {
-                                    Icon(
-                                        imageVector = item.icon,
-                                        tint = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                                    Image(
+                                        painter = rememberAsyncImagePainter(item.icon),
                                         contentDescription = item.name,
                                         modifier = Modifier.size(30.dp)
                                     )
@@ -306,5 +301,4 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
 }

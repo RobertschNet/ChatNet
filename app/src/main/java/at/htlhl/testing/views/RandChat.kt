@@ -96,8 +96,12 @@ class RandChat {
         sharedViewModel.pairWithRandomUser()
         val matchedUserState = sharedViewModel.matchedUser.collectAsState()
         val matchedUser: PersonList = matchedUserState.value
-        if (matchedUser.userID.isNotEmpty()) {
-            ChatViewScreen(navController = navController, sharedViewModel = sharedViewModel ,matchedUser = matchedUser)
+        if (matchedUser.id.isNotEmpty()) {
+            ChatViewScreen(
+                navController = navController,
+                sharedViewModel = sharedViewModel,
+                matchedUser = matchedUser
+            )
         } else {
             LoadingAnimation()
             sharedViewModel.checkForMatches()
@@ -460,7 +464,7 @@ class RandChat {
             backgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
             title = {
                 androidx.compose.material3.Text(
-                    text = user.name,
+                    text = user.username,
                     color = if (isSystemInDarkTheme()) Color.White else Color.Black,
                     fontSize = 22.sp,
                     fontFamily = FontFamily.SansSerif,
@@ -532,15 +536,18 @@ class RandChat {
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("MutableCollectionMutableState")
     @Composable
-    fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel, matchedUser: PersonList) {
+    fun ChatViewScreen(
+        navController: NavController,
+        sharedViewModel: SharedViewModel,
+        matchedUser: PersonList
+    ) {
         val documentIdState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val documentationId: List<Chat> = documentIdState.value
         Log.println(Log.INFO, "ChatView", documentationId.toString())
         val filteredChats = documentationId.filter { chat ->
-            chat.participants.contains(matchedUser.userID) && chat.participants.contains(sharedViewModel.auth.currentUser?.uid.toString())
+            chat.members.contains(matchedUser.id) && chat.members.contains(sharedViewModel.auth.currentUser?.uid.toString())
         }
         val doc = filteredChats.firstOrNull()?.chatRoomID ?: ""
-        Log.println(Log.INFO, "ChatView", doc)
         val messageList: List<Message> = filteredChats.flatMap { chat ->
             chat.messages.map { message ->
                 Message(message.sender, message.content, message.timestamp)
@@ -548,10 +555,17 @@ class RandChat {
         }
         val onMessageSent: (Message) -> Unit = { message ->
             runBlocking {
-                if (matchedUser.local) {
-                    sharedViewModel.saveFriendForFriend(matchedUser.userID, true, status = "accepted")
-                    sharedViewModel.saveFriendForUser(matchedUser.userID, true, status = "accepted")
+                if (filteredChats.isEmpty()) {
+                    sharedViewModel.saveChatRoom(person = matchedUser.id, tab = "randchat")
                 }
+                sharedViewModel.saveFriendForFriendWithoutLocal(
+                    person = matchedUser,
+                    status = "pending"
+                )
+                sharedViewModel.saveFriendForUserWithoutLocal(
+                    person = matchedUser,
+                    status = "initiated"
+                )
                 sharedViewModel.saveMessages(doc, message)
             }
         }

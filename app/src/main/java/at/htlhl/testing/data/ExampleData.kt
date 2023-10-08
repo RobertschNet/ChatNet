@@ -3,6 +3,7 @@ package at.htlhl.testing.data
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentReference
 
 /**
  * Created by Tobias Brandl.
@@ -35,7 +36,7 @@ data class BottomSheetItem(
 data class BottomNavItem(
     val name: String,
     val route: String,
-    val icon: ImageVector,
+    val icon: Int,
     val color: Color
 )
 
@@ -44,26 +45,33 @@ data class BottomNavItem(
  */
 data class PersonList(
     val image: String,
-    val name: String,
-    val online: String,
-    val userID: String,
-    val randChat: String,
+    val username: String,
+    val status: String,
+    val id: String,
+    val connection: String,
     val timestamp: Timestamp,
     val local: Boolean,
-    val status: String,
+    val statusIntern: String,
 ) {
     constructor() : this("", "", "", "", "", Timestamp.now(), false, "")
+
+    fun doesMatch(query: String): Boolean {
+        val matchingCombinations = listOf(
+            username,
+            "${username.first()}",
+        )
+        return matchingCombinations.any { it.contains(query, ignoreCase = true) }
+    }
 }
 
 /**
  * This data class is used to represent the content of a single specific user element from Firebase.
  */
 data class Friend(
-    val userID: String,
+    val id: String,
     val status: String,
-    val local: Boolean,
 ) {
-    constructor() : this("", "", false)
+    constructor() : this("", "")
 }
 
 /**
@@ -82,11 +90,12 @@ data class Message(
  * including a list of all messages sent between the two users.
  */
 data class Chat(
-    val participants: List<String>,
+    val members: List<String>,
+    val tab: String,
     val chatRoomID: String,
     val messages: List<Message>,
 ) {
-    constructor() : this(arrayListOf(), "", listOf())
+    constructor() : this(arrayListOf(),"", "", listOf())
 }
 
 /**
@@ -98,21 +107,3 @@ data class User(
 ) {
     constructor() : this("")
 }
-
-/**
- * This data class is used to store a list of specific user values from the Firebase user entry.
- */
-data class Person(
-    val userID: String,
-    val name: String,
-    val image: String,
-) {
-    fun doesMatch(query: String): Boolean {
-        val matchingCombinations = listOf(
-            name,
-            "${name.first()}",
-        )
-        return matchingCombinations.any { it.contains(query, ignoreCase = true) }
-    }
-}
-

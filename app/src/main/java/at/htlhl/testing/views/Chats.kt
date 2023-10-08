@@ -58,17 +58,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily.Companion.Cursive
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import at.htlhl.testing.R
 import at.htlhl.testing.data.BottomSheetItem
 import at.htlhl.testing.data.Chat
 import at.htlhl.testing.data.PersonList
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -87,20 +90,18 @@ class Chats {
         val friendListData: List<PersonList> = friendListDataState.value
         val messageChatRoomDataState = sharedViewModel.chatData.collectAsState()
         val messageChatRoomData: List<Chat> = messageChatRoomDataState.value
-        println("Friends: $friendListData")
-        println("Chats: $messageChatRoomData")
         val updatedPersonList = friendListData.map { person ->
             val matchingChat = messageChatRoomData.find { chat ->
-                chat.participants.contains(person.userID)
+                chat.members.contains(person.id) && chat.tab == "chats"
             }
-            val updatedStatus = matchingChat?.messages?.lastOrNull()?.content ?: person.status
+            val updatedStatus = matchingChat?.messages?.lastOrNull()?.content ?: person.statusIntern
             val updatedTimestamp =
                 matchingChat?.messages?.lastOrNull()?.timestamp ?: person.timestamp
 
-            if (matchingChat?.messages?.lastOrNull()?.sender != person.userID && updatedStatus != "") {
-                person.copy(status = "Me: $updatedStatus", timestamp = updatedTimestamp)
+            if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != "") {
+                person.copy(statusIntern = "Me: $updatedStatus", timestamp = updatedTimestamp)
             } else {
-                person.copy(status = updatedStatus, timestamp = updatedTimestamp)
+                person.copy(statusIntern = updatedStatus, timestamp = updatedTimestamp)
             }
         }
         val sortedPersonList = updatedPersonList.sortedByDescending { it.timestamp }
@@ -136,7 +137,13 @@ class Chats {
                         Row {
                             Image(
                                 contentDescription = null,
-                                painter = rememberAsyncImagePainter(sharedViewModel.friend.value.image),
+                                painter = rememberAsyncImagePainter(
+                                    ImageRequest.Builder(LocalContext.current)
+                                        .data(data = sharedViewModel.friend.value.image)
+                                        .apply(block = fun ImageRequest.Builder.() {
+                                            placeholder(R.drawable.user_circle_svgrepo_com)
+                                        }).build()
+                                ),
                                 modifier = Modifier
                                     .clip(CircleShape)
                                     .size(40.dp),
@@ -144,7 +151,7 @@ class Chats {
                                 alignment = Alignment.Center
                             )
                             Text(
-                                text = sharedViewModel.friend.value.name,
+                                text = sharedViewModel.friend.value.username,
                                 modifier = Modifier
                                     .padding(start = 16.dp)
                                     .align(Alignment.CenterVertically)
@@ -335,13 +342,20 @@ fun ChatItem(
             .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
             .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
     ) {
-        val isOnline = person.online
+        val isOnline = person.status
         Box(
             modifier = Modifier.size(50.dp)
         ) {
             Image(
                 contentDescription = null,
-                painter = rememberAsyncImagePainter(person.image),
+
+                painter = rememberAsyncImagePainter(
+                    ImageRequest.Builder(LocalContext.current)
+                        .data(data = person.image)
+                        .apply(block = fun ImageRequest.Builder.() {
+                            placeholder(R.drawable.user_circle_svgrepo_com)
+                        }).build()
+                ),
                 modifier = Modifier
                     .clip(CircleShape)
                     .size(50.dp),
@@ -365,7 +379,7 @@ fun ChatItem(
                     .align(Alignment.BottomEnd)
             ) {
                 when (isOnline) {
-                    "Online" -> {
+                    "online" -> {
                         Box(
                             modifier = Modifier
                                 .size(14.dp)
@@ -381,7 +395,7 @@ fun ChatItem(
                         )
                     }
 
-                    "Offline" -> {
+                    "offline" -> {
                         Box(
                             modifier = Modifier
                                 .size(14.dp)
@@ -405,7 +419,7 @@ fun ChatItem(
                         }
                     }
 
-                    "Idle" -> {
+                    "idle" -> {
                         Box(
                             modifier = Modifier
                                 .size(14.dp)
@@ -439,7 +453,7 @@ fun ChatItem(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = person.name,
+                    text = person.username,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 17.sp,
                     color = if (isSystemInDarkTheme()) Color.White else Color.Black
@@ -453,10 +467,10 @@ fun ChatItem(
             }
             Text(
                 modifier = Modifier.padding(start = 10.dp),
-                text = person.status,
+                text = person.statusIntern,
                 maxLines = 1,
                 fontSize = 15.sp,
-                color = Color.LightGray
+                color = Color.LightGray,
             )
         }
     }

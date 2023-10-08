@@ -51,7 +51,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import at.htlhl.testing.data.Chat
-import at.htlhl.testing.data.Person
+import at.htlhl.testing.data.PersonList
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
@@ -85,7 +85,7 @@ class SearchView : ViewModel() {
     }
 
     @Composable
-    fun TopBarSearchView(navController: NavController, persons: List<Person>) {
+    fun TopBarSearchView(navController: NavController, persons: List<PersonList>) {
         val viewModel: SharedViewModel = viewModel()
         val searchText by viewModel.searchText.collectAsState()
         var search by rememberSaveable { mutableStateOf(true) }
@@ -159,7 +159,7 @@ class SearchView : ViewModel() {
     @Composable
     fun ContentSearchView(
         viewModel: SharedViewModel,
-        persons: List<Person>,
+        persons: List<PersonList>,
         isSearching: Boolean,
         searchText: String,
         documentId: List<Chat>,
@@ -205,7 +205,7 @@ class SearchView : ViewModel() {
                                 alignment = Alignment.Center
                             )
                             Text(
-                                text = person.name,
+                                text = person.username,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 22.sp,
                                 color = if (isSystemInDarkTheme()) Color.White else Color.Black,
@@ -223,13 +223,12 @@ class SearchView : ViewModel() {
                                     .clickable {
                                         viewModel.getDocument { data ->
                                             val filteredChats = documentId.filter { chat ->
-                                                chat.participants.contains(person.userID) && chat.participants
+                                                chat.members.contains(person.id) && chat.members
                                                     .contains(sharedViewModel.auth.currentUser?.uid)
                                             }
                                             if (data != null) {
-                                                viewModel.saveFriendForFriend(
-                                                    person = person.userID,
-                                                    local = false,
+                                                viewModel.saveFriendForFriendWithoutLocal(
+                                                    person = person,
                                                     status = "pending"
                                                 )
                                                 if (filteredChats.isEmpty()) {
@@ -243,11 +242,13 @@ class SearchView : ViewModel() {
                                                         "Chat",
                                                         documentId.toString()
                                                     )
-                                                    viewModel.saveChatRoom(person = person.userID)
                                                 }
                                             }
                                         }
-                                        viewModel.saveFriendForUser(person=person.userID, local = false, status = "initiated")
+                                        viewModel.saveFriendForUserWithoutLocal(
+                                            person = person,
+                                            status = "initiated"
+                                        )
 
                                     },
                                 contentDescription = null,

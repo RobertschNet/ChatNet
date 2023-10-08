@@ -86,37 +86,29 @@ class DropIn : ViewModel() {
         val coroutineScope = rememberCoroutineScope()
         val documentIdState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val documentationId: List<Chat> = documentIdState.value
-        val friendIdState = sharedViewModel.friendListData.collectAsState(initial = emptyList())
+        val friendIdState = sharedViewModel.personData.collectAsState(initial = emptyList())
         val friendListData: List<PersonList> = friendIdState.value
-        val friendIdLocalState =
-            sharedViewModel.friendListDataLocal.collectAsState(initial = emptyList())
-        val friendListDataLocal: List<PersonList> = friendIdLocalState.value
         val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
-            localUser.userID != sharedViewModel.auth.currentUser?.uid
+            localUser.id != sharedViewModel.auth.currentUser?.uid &&
+                    sharedViewModel.friendListData.value.none { friend ->
+                        friend.id == localUser.id
+                    }
         }
-        val friendElements = friendListData + friendListDataLocal
-        println("Friends: $friendElements")
-        println("Chats: $documentationId")
-        val updatedPersonList = friendListDataLocal.map { person ->
+        val updatedPersonList = friendListData.map { person ->
             val matchingChat = documentationId.find { chat ->
-                chat.participants.contains(person.userID)
+                chat.members.contains(person.id) && chat.tab == "dropIn"
             }
-            val updatedStatus = matchingChat?.messages?.lastOrNull()?.content ?: person.status
+            val updatedStatus = matchingChat?.messages?.lastOrNull()?.content ?: person.statusIntern
             val updatedTimestamp =
                 matchingChat?.messages?.lastOrNull()?.timestamp ?: person.timestamp
 
-            if (matchingChat?.messages?.lastOrNull()?.sender != person.userID && updatedStatus != "") {
-                person.copy(status = "Me: $updatedStatus", timestamp = updatedTimestamp)
+            if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != "") {
+                person.copy(statusIntern = "Me: $updatedStatus", timestamp = updatedTimestamp)
             } else {
-                person.copy(status = updatedStatus, timestamp = updatedTimestamp)
+                person.copy(statusIntern = updatedStatus, timestamp = updatedTimestamp)
             }
         }
-        val sortedPersonList = friendElements.sortedByDescending { it.timestamp }
-        val uniqueLocalUsers = localChatUsers.filter { localUser ->
-            sortedPersonList.none { sortedUser ->
-                localUser.userID == sortedUser.userID
-            }
-        }
+        val sortedPersonList = updatedPersonList.sortedByDescending { it.timestamp }
         val usersWithEmptyChatRooms = documentationId.filter { user ->
             user.messages.isEmpty()
         }
@@ -160,7 +152,7 @@ class DropIn : ViewModel() {
                                 alignment = Alignment.Center
                             )
                             Text(
-                                text = sharedViewModel.friend.value.name,
+                                text = sharedViewModel.friend.value.username,
                                 modifier = Modifier
                                     .padding(start = 16.dp)
                                     .align(Alignment.CenterVertically)
@@ -298,7 +290,7 @@ class DropIn : ViewModel() {
                             modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp)
                         )
                     }
-                    items(uniqueLocalUsers) { message ->
+                    items(localChatUsers) { message ->
                         ChatItem2(
                             person = message,
                             documentationId = documentationId,
@@ -326,7 +318,7 @@ class DropIn : ViewModel() {
                         modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp)
                     )
                 }
-                items(updatedPersonList) { message ->
+                items(sortedPersonList) { message ->
                     ChatItem2(
                         person = message,
                         documentationId = documentationId,
@@ -374,11 +366,11 @@ fun ChatItem2(
                         sharedViewModel.friend.value = person
                         Log.println(Log.INFO, "Current", person.toString())
                         val filteredChats = documentationId.filter { chat ->
-                            chat.participants.contains(person.userID) && chat.participants
+                            chat.members.contains(person.id) && chat.members
                                 .contains(sharedViewModel.auth.currentUser?.uid)
                         }
                         if (person.local && filteredChats.isEmpty()) {
-                            sharedViewModel.saveChatRoom(person = person.userID)
+                            sharedViewModel.saveChatRoom(person = person.id, tab = "dropIn")
                         }
                         navController.navigate(Screens.ChatScreen.route)
                     }
@@ -393,7 +385,7 @@ fun ChatItem2(
             .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
             .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
     ) {
-        val isOnline = person.online
+        val isOnline = person.status
         Box(
             modifier = Modifier.size(50.dp)
         ) {
@@ -423,7 +415,7 @@ fun ChatItem2(
                     .align(Alignment.BottomEnd)
             ) {
                 when (isOnline) {
-                    "Online" -> {
+                    "online" -> {
                         Box(
                             modifier = Modifier
                                 .size(14.dp)
@@ -439,7 +431,7 @@ fun ChatItem2(
                         )
                     }
 
-                    "Offline" -> {
+                    "offline" -> {
                         Box(
                             modifier = Modifier
                                 .size(14.dp)
@@ -463,7 +455,7 @@ fun ChatItem2(
                         }
                     }
 
-                    "Idle" -> {
+                    "idle" -> {
                         Box(
                             modifier = Modifier
                                 .size(14.dp)
@@ -497,7 +489,7 @@ fun ChatItem2(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = person.name,
+                    text = person.username,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 17.sp,
                     color = if (isSystemInDarkTheme()) Color.White else Color.Black
@@ -511,10 +503,10 @@ fun ChatItem2(
             }
             Text(
                 modifier = Modifier.padding(start = 10.dp),
-                text = person.status,
+                text = person.statusIntern,
                 maxLines = 1,
                 fontSize = 15.sp,
-                color = if (person.status >= "User is 400 meters away") Color.Yellow else if (person.status >= "User is 450 meters away") Color.Red else Color.LightGray
+                color = if (person.statusIntern >= "User is 400 meters away") Color.Yellow else if (person.statusIntern >= "User is 450 meters away") Color.Red else Color.LightGray
             )
         }
     }
