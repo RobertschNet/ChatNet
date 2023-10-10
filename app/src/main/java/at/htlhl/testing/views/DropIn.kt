@@ -89,10 +89,7 @@ class DropIn : ViewModel() {
         val friendIdState = sharedViewModel.personData.collectAsState(initial = emptyList())
         val friendListData: List<PersonList> = friendIdState.value
         val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
-            localUser.id != sharedViewModel.auth.currentUser?.uid &&
-                    sharedViewModel.friendListData.value.none { friend ->
-                        friend.id == localUser.id
-                    }
+            localUser.id != sharedViewModel.auth.currentUser?.uid
         }
         val updatedPersonList = friendListData.map { person ->
             val matchingChat = documentationId.find { chat ->

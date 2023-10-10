@@ -6,10 +6,13 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.android.gms.tasks.Task
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.DocumentChange
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
@@ -82,6 +85,9 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 }
             } catch (e: Exception) {
                 _loadingState.value = LoadingState.Error
+            }
+            chatData.collect {
+                getDropInContactUsers()
             }
         }
     }
@@ -214,92 +220,47 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         onError: (Exception) -> Unit
     ) {
         val chatDataSet = mutableSetOf<Chat>()
-        val dataWasModified = mutableStateOf(false)
-        val deletedDocumentIds = mutableSetOf<String>()
-        Log.println(Log.INFO, "Chat", "docIds: $docIds")
         getChatDocumentRef().whereArrayContains("members", docIds)
             .addSnapshotListener { querySnapshot, error ->
                 if (error != null) {
                     onError.invoke(error)
                     return@addSnapshotListener
                 }
+                Log.println(Log.INFO, "1", querySnapshot?.documents.toString())
                 querySnapshot?.documentChanges?.forEach { documentChange ->
-                    Log.println(Log.INFO, "Robert", documentChange.type.toString())
-                    when (documentChange.type) {
-                        DocumentChange.Type.ADDED -> {
-                            val subCollectionRef =
-                                getChatDocumentRef().document(documentChange.document.id)
-                                    .collection("/$MESSAGES_COLLECTION").orderBy("timestamp")
-                            subCollectionRef.addSnapshotListener { subQuerySnapshot, exception ->
-                                if (exception != null) {
-                                    onError.invoke(exception)
-                                    return@addSnapshotListener
-                                }
-                                subQuerySnapshot?.let { subSnapshot ->
-                                    val subCollectionData =
-                                        subSnapshot.toObjects(Message::class.java)
-                                    Log.println(Log.INFO, "Chat", subCollectionData.toString())
-                                    val chat: Chat = if (dataWasModified.value) {
-                                        Chat(
-                                            members = documentChange.document.data["members"] as List<String>,
-                                            tab = chatDataSet.find { it.chatRoomID == documentChange.document.id }!!.tab,
-                                            chatRoomID = documentChange.document.id,
-                                            messages = subCollectionData
-                                        )
-                                    } else {
-                                        Chat(
-                                            members = documentChange.document.data["members"] as List<String>,
-                                            tab = documentChange.document.data["tab"] as String,
-                                            chatRoomID = documentChange.document.id,
-                                            messages = subCollectionData
-                                        )
-                                    }
-                                    dataWasModified.value = false
-                                    val existingChat =
-                                        chatDataSet.find { it.chatRoomID == chat.chatRoomID }
-                                    if (existingChat != null) {
-                                        chatDataSet.remove(existingChat)
-                                    }
-                                    chatDataSet.add(chat)
-                                    _chatData.value = chatDataSet.toList()
-                                    getDropInContactUsers()
-                                }
-                            }
+                    if (documentChange.type == DocumentChange.Type.REMOVED) {
+                        val removedDocumentId = documentChange.document.id
+                        val removedChat = chatDataSet.find { it.chatRoomID == removedDocumentId }
+                        if (removedChat != null) {
+                            chatDataSet.remove(removedChat)
                         }
-
-                        DocumentChange.Type.REMOVED -> {
-                            val deletedDocumentId = documentChange.document.id
-                            deletedDocumentIds.add(deletedDocumentId)
-                            val deletedChat =
-                                chatDataSet.find { it.chatRoomID == deletedDocumentId }
-                            if (deletedChat != null) {
-                                chatDataSet.remove(deletedChat)
-                                _chatData.value = chatDataSet.toList()
+                        _chatData.value = chatDataSet.toList()
+                    } else {
+                        val subCollectionRef =
+                            getChatDocumentRef().document(documentChange.document.id)
+                                .collection("/$MESSAGES_COLLECTION").orderBy("timestamp")
+                        subCollectionRef.addSnapshotListener { subQuerySnapshot, exception ->
+                            if (exception != null) {
+                                onError.invoke(exception)
+                                return@addSnapshotListener
                             }
-                            getDropInContactUsers()
-                        }
-
-                        DocumentChange.Type.MODIFIED -> {
-                            dataWasModified.value = true
-                            val existingChat =
-                                chatDataSet.find { it.chatRoomID == documentChange.document.id }
-                            if (existingChat != null) {
-                                val modifiedChat = Chat(
+                            Log.println(Log.INFO, "2", subQuerySnapshot?.documents.toString())
+                            subQuerySnapshot?.let { subSnapshot ->
+                                val subCollectionData = subSnapshot.toObjects(Message::class.java)
+                                val chat = Chat(
                                     members = documentChange.document.data["members"] as List<String>,
                                     tab = documentChange.document.data["tab"] as String,
                                     chatRoomID = documentChange.document.id,
-                                    messages = existingChat.messages
+                                    messages = subCollectionData
                                 )
-                                Log.println(Log.INFO, "oi2z", modifiedChat.toString())
-                                chatDataSet.remove(existingChat)
-                                chatDataSet.add(modifiedChat)
+                                val existingChat =
+                                    chatDataSet.find { it.chatRoomID == chat.chatRoomID }
+                                if (existingChat != null) {
+                                    chatDataSet.remove(existingChat)
+                                }
+                                chatDataSet.add(chat)
                                 _chatData.value = chatDataSet.toList()
                             }
-                            getDropInContactUsers()
-                        }
-
-                        else -> {
-                            return@addSnapshotListener
                         }
                     }
                 }
@@ -335,7 +296,8 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     for (document in querySnapshot.documents) {
                         subCollectionRef.document(document.id).delete().addOnSuccessListener {
                             getChatDocumentRef().document(chat.chatRoomID).delete()
-                                .addOnSuccessListener {}.addOnFailureListener { exception ->
+                                .addOnSuccessListener {
+                                }.addOnFailureListener { exception ->
                                     exception.printStackTrace()
                                 }
                         }.addOnFailureListener { exception ->
@@ -616,31 +578,72 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         _matchedUser.value = PersonList("", "", "", "", "", Timestamp.now(), false, "")
     }
 
+
     private val _personData = MutableStateFlow<List<PersonList>>(emptyList())
     val personData: StateFlow<List<PersonList>> get() = _personData
     private fun getDropInContactUsers() {
-        _personData.value = emptyList()
-        val dropInUser = _chatData.value.filter { it.tab == "dropIn" }
-        val usersToFetch = dropInUser.mapNotNull { chat ->
-            chat.members.firstOrNull { member ->
+        Log.println(Log.INFO, "6", _chatData.value.toString())
+        val previousChatData = _chatData.value
+        val dropInUsers = previousChatData.filter { it.tab == "dropIn" }
+        if (dropInUsers.isEmpty()) {
+            _personData.value = emptyList()
+            return
+        }
+        val usersToFetch = dropInUsers.flatMap { chat ->
+            chat.members.filter { member ->
                 member != auth.currentUser?.uid
             }
-        }
+        }.distinct() // Remove duplicates
+
+        // Filter out users that are already in _personData
         val usersToFetchFiltered = usersToFetch.filter { userId ->
             _personData.value.none { personList -> personList.id == userId }
         }
+
+        // Fetch the user documents
+        val fetchTasks = mutableListOf<Task<DocumentSnapshot>>()
         usersToFetchFiltered.forEach { userId ->
-            getUserDocumentRef().document(userId).get().addOnSuccessListener { documentSnapshot ->
-                if (documentSnapshot.exists()) {
-                    val personList = documentSnapshot.toObject(PersonList::class.java)
-                    personList?.let {
-                        if (_personData.value.none { existingPersonList -> existingPersonList.id == userId }) {
-                            _personData.value += it
+            val userDocRef = getUserDocumentRef().document(userId)
+            fetchTasks.add(userDocRef.get())
+        }
+
+        // Wait for all fetch tasks to complete
+        Tasks.whenAllComplete(fetchTasks)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val newPersonData = _personData.value.toMutableList()
+
+                    fetchTasks.forEachIndexed { index, fetchTask ->
+                        if (fetchTask.isSuccessful) {
+                            val documentSnapshot = fetchTask.result
+                            if (documentSnapshot.exists()) {
+                                val personList = documentSnapshot.toObject(PersonList::class.java)
+                                personList?.let {
+                                    if (!newPersonData.any { existingPersonList -> existingPersonList.id == usersToFetchFiltered[index] }) {
+                                        newPersonData.add(it)
+                                    }
+                                }
+                            }
                         }
                     }
+
+
+                    val currentChatData = _chatData.value
+                    val removedUsers = previousChatData
+                        .filter { it.tab == "dropIn" }
+                        .filterNot { currentChatData.contains(it) }
+                        .flatMap { it.members }
+                        .distinct()
+
+                    newPersonData.removeAll { personList -> removedUsers.contains(personList.id) }
+                    Log.println(Log.INFO, "3", newPersonData.toString())
+                    _personData.value = newPersonData
+                    Log.println(Log.INFO, "4", _personData.value.toString())
+                } else {
+                    // Handle errors
                 }
             }
-        }
-        Log.println(Log.INFO, "PersonData", _personData.value.toString())
     }
+
+
 }
