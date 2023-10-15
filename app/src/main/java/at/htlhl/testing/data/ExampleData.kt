@@ -3,7 +3,6 @@ package at.htlhl.testing.data
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.google.firebase.Timestamp
-import com.google.firebase.firestore.DocumentReference
 
 /**
  * Created by Tobias Brandl.
@@ -43,25 +42,37 @@ data class BottomNavItem(
 /**
  * This data class is used to represent the content of a user instance from Firebase.
  */
-data class PersonList(
+data class FetchedUsers(
     val image: String,
-    val username: String,
+    val username: Map<String,String>,
     val status: String,
     val id: String,
+    val email: String,
+    val color: String,
     val connection: String,
-    val timestamp: Timestamp,
-    val local: Boolean,
-    val statusIntern: String,
+    val mutedFriend: Boolean,
+    val statusFriend: String,
 ) {
-    constructor() : this("", "", "", "", "", Timestamp.now(), false, "")
+    constructor() : this("", mapOf(), "","","", "", "", false, "")
 
     fun doesMatch(query: String): Boolean {
         val matchingCombinations = listOf(
-            username,
-            "${username.first()}",
+            username["lowercase"],
+            username["mixedcase"],
+            "${username["lowercase"]} ${username["mixedcase"]}",
         )
-        return matchingCombinations.any { it.contains(query, ignoreCase = true) }
+        return matchingCombinations.any { it?.contains(query, ignoreCase = true) ?: false}
     }
+}
+
+data class ShownUsers(
+    val personList: FetchedUsers,
+    val timestampMessage: Timestamp,
+    val lastMessage: String,
+    val pinChat: Boolean,
+    val read: Int,
+    ) {
+    constructor() : this(FetchedUsers(), Timestamp.now(), "", false, 0)
 }
 
 /**
@@ -69,9 +80,10 @@ data class PersonList(
  */
 data class Friend(
     val id: String,
+    val muted: Boolean,
     val status: String,
 ) {
-    constructor() : this("", "")
+    constructor() : this("", false, "")
 }
 
 /**
@@ -79,10 +91,13 @@ data class Friend(
  */
 data class Message(
     val sender: String,
+    val type: String,
+    val read: Boolean,
     val content: String,
     val timestamp: Timestamp,
+    val visible: List<String>,
 ) {
-    constructor() : this("", "", Timestamp.now())
+    constructor() : this("", "", false, "", Timestamp.now(), arrayListOf())
 }
 
 /**
@@ -91,19 +106,11 @@ data class Message(
  */
 data class Chat(
     val members: List<String>,
+    val pinned: List<String>,
+    val unread: List<String>,
     val tab: String,
     val chatRoomID: String,
     val messages: List<Message>,
 ) {
-    constructor() : this(arrayListOf(),"", "", listOf())
-}
-
-/**
- * This data class is used to represent the username of the User who registered,
- * based on the Firebase username element.
- */
-data class User(
-    val username: String,
-) {
-    constructor() : this("")
+    constructor() : this(arrayListOf(), arrayListOf(), arrayListOf(), "", "", listOf())
 }

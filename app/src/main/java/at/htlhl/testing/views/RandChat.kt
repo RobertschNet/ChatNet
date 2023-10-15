@@ -37,6 +37,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.Scaffold
+import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -77,8 +78,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.htlhl.testing.data.Chat
+import at.htlhl.testing.data.FetchedUsers
 import at.htlhl.testing.data.Message
-import at.htlhl.testing.data.PersonList
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
@@ -95,7 +96,7 @@ class RandChat {
     fun RandChatScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         sharedViewModel.pairWithRandomUser()
         val matchedUserState = sharedViewModel.matchedUser.collectAsState()
-        val matchedUser: PersonList = matchedUserState.value
+        val matchedUser: FetchedUsers = matchedUserState.value
         if (matchedUser.id.isNotEmpty()) {
             ChatViewScreen(
                 navController = navController,
@@ -164,7 +165,7 @@ class RandChat {
         navController: NavController,
         messages: List<Message>,
         onMessageSent: (Message) -> Unit,
-        personList: PersonList,
+        personList: FetchedUsers,
         viewModel: SharedViewModel,
         documentId: String,
     ) {
@@ -194,8 +195,11 @@ class RandChat {
                 ) { messageText ->
                     val message = Message(
                         sender = viewModel.auth.currentUser?.uid.toString(),
+                        type = "text",
+                        read = false,
                         content = messageText,
-                        timestamp = Timestamp.now()
+                        timestamp = Timestamp.now(),
+                        visible = listOf(viewModel.auth.currentUser?.uid.toString())
                     )
                     onMessageSent(message)
                 }
@@ -218,9 +222,12 @@ class RandChat {
                 MessageItem(
                     viewModel = viewModel,
                     Message(
-                        message.sender,
-                        message.content,
-                        message.timestamp
+                        sender = message.sender,
+                        type = "text",
+                        read = false,
+                        content = message.content,
+                        timestamp = message.timestamp,
+                        visible = message.visible
                     ), documentId
                 )
             }
@@ -266,7 +273,7 @@ class RandChat {
                         .padding(4.dp)
                 ) {
 
-                    androidx.compose.material3.Text(
+                    Text(
                         text = message.content,
                         color = if (isSystemInDarkTheme()) Color.White else Color.Black,
                         modifier = Modifier.padding(8.dp),
@@ -277,19 +284,19 @@ class RandChat {
             if (openDialog) {
                 AlertDialog(
                     onDismissRequest = { openDialog = false },
-                    title = { androidx.compose.material3.Text(text = "Delete Message") },
-                    text = { androidx.compose.material3.Text(text = "Are you sure you want to delete this message?") },
+                    title = { Text(text = "Delete Message") },
+                    text = { Text(text = "Are you sure you want to delete this message?") },
                     confirmButton = {
                         Button(
                             onClick = {
-                                viewModel.deleteMessageForUser(
+                                viewModel.deleteMessage(
                                     documentId,
                                     message.timestamp
                                 )
                                 openDialog = false
                             }
                         ) {
-                            androidx.compose.material3.Text(text = "Delete for me")
+                            Text(text = "Delete for me")
                         }
                     },
                     dismissButton = {
@@ -298,7 +305,7 @@ class RandChat {
                                 openDialog = false
                             }
                         ) {
-                            androidx.compose.material3.Text(text = "Cancel")
+                            Text(text = "Cancel")
                         }
                     }
                 )
@@ -309,7 +316,7 @@ class RandChat {
                 horizontalArrangement = alignment,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                androidx.compose.material3.Text(
+                Text(
                     text = formattedTime,
                     fontSize = 14.sp,
                     color = if (isSystemInDarkTheme()) Color.White else Color.Black,
@@ -435,7 +442,7 @@ class RandChat {
                                 tint = if (isSystemInDarkTheme()) Color.White else Color.Black,
                             )
                         } else {
-                            androidx.compose.material3.Text(
+                            Text(
                                 text = "Send",
                                 fontSize = 20.sp,
                                 color = Color(0xFF00B1A9),
@@ -456,15 +463,15 @@ class RandChat {
     }
 
     @Composable
-    fun MessageTopBar(navController: NavController, user: PersonList) {
+    fun MessageTopBar(navController: NavController, user: FetchedUsers) {
         var favorite by remember { mutableStateOf(false) }
         var comment by remember { mutableStateOf(false) }
         var pin by remember { mutableStateOf(false) }
         TopAppBar(
             backgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
             title = {
-                androidx.compose.material3.Text(
-                    text = user.username,
+                Text(
+                    text = user.username["mixedcase"].toString(),
                     color = if (isSystemInDarkTheme()) Color.White else Color.Black,
                     fontSize = 22.sp,
                     fontFamily = FontFamily.SansSerif,
@@ -539,7 +546,7 @@ class RandChat {
     fun ChatViewScreen(
         navController: NavController,
         sharedViewModel: SharedViewModel,
-        matchedUser: PersonList
+        matchedUser: FetchedUsers
     ) {
         val documentIdState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val documentationId: List<Chat> = documentIdState.value
@@ -550,7 +557,14 @@ class RandChat {
         val doc = filteredChats.firstOrNull()?.chatRoomID ?: ""
         val messageList: List<Message> = filteredChats.flatMap { chat ->
             chat.messages.map { message ->
-                Message(message.sender, message.content, message.timestamp)
+                Message(
+                    sender = message.sender,
+                    type = "text",
+                    read = false,
+                    content = message.content,
+                    timestamp = message.timestamp,
+                    visible = message.visible
+                )
             }
         }
         val onMessageSent: (Message) -> Unit = { message ->
@@ -558,11 +572,11 @@ class RandChat {
                 if (filteredChats.isEmpty()) {
                     sharedViewModel.saveChatRoom(person = matchedUser.id, tab = "randchat")
                 }
-                sharedViewModel.saveFriendForFriendWithoutLocal(
+                sharedViewModel.saveFriendForFriend(
                     person = matchedUser,
                     status = "pending"
                 )
-                sharedViewModel.saveFriendForUserWithoutLocal(
+                sharedViewModel.saveFriendForUser(
                     person = matchedUser,
                     status = "initiated"
                 )

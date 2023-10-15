@@ -3,7 +3,6 @@ package at.htlhl.testing.views
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,28 +35,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.htlhl.testing.data.Chat
-import at.htlhl.testing.data.PersonList
+import at.htlhl.testing.data.FetchedUsers
 import at.htlhl.testing.data.SharedViewModel
 import coil.compose.rememberAsyncImagePainter
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 class InboxView {
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun Inbox(sharedViewModel: SharedViewModel) {
-        val friendListDataState = sharedViewModel.friendListPending.collectAsState()
-        val friendListData: List<PersonList> = friendListDataState.value
+        val friendListDataState = sharedViewModel.friendListData.collectAsState()
+        val friendListData: List<FetchedUsers> = friendListDataState.value
         val documentIdState = sharedViewModel.chatData.collectAsState()
         val documentationId: List<Chat> = documentIdState.value
         Log.println(Log.INFO, "InboxView", "friendListData: $friendListData")
+        val finalFriendList = friendListData.filter { friend ->
+            friend.statusFriend == "pending"
+        }
 
         LazyColumn(
             Modifier
                 .fillMaxSize()
                 .background(if (isSystemInDarkTheme()) Color.Black else Color.White)
         ) {
-            items(friendListData) { message ->
+            items(finalFriendList) { message ->
                 ChatItem(
                     person = message,
                     sharedViewModel = sharedViewModel,
@@ -68,16 +68,13 @@ class InboxView {
 
     }
 
-    @OptIn(ExperimentalFoundationApi::class)
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun ChatItem(
-        person: PersonList,
+        person: FetchedUsers,
         sharedViewModel: SharedViewModel,
         documentId: List<Chat>,
     ) {
-        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
-        val formattedTime: String = formatter.format(person.timestamp.toDate())
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -188,15 +185,9 @@ class InboxView {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = person.username,
+                        text = person.username["mixedcase"].toString(),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 17.sp,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black
-                    )
-                    Text(
-                        text = formattedTime,
-                        fontWeight = FontWeight.Light,
-                        fontSize = 12.sp,
                         color = if (isSystemInDarkTheme()) Color.White else Color.Black
                     )
                 }
@@ -222,12 +213,10 @@ class InboxView {
                         }
                         sharedViewModel.saveFriendForFriend(
                             person = person,
-                            local = false,
                             status = "accepted"
                         )
                         sharedViewModel.saveFriendForUser(
                             person = person,
-                            local = false,
                             status = "accepted"
                         )
                     })

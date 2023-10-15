@@ -16,7 +16,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
-import at.htlhl.testing.data.PersonList
+import at.htlhl.testing.data.FetchedUsers
 import com.firebase.geofire.GeoFireUtils
 import com.firebase.geofire.GeoLocation
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -26,10 +26,10 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.ktx.Firebase
 
@@ -41,7 +41,7 @@ class LocationUpdateService : Service() {
     private lateinit var locationCallback: LocationCallback
     val auth: FirebaseAuth = Firebase.auth
     private var lastKnownLocation: Location? = null
-    val locationLiveData = MutableLiveData<List<PersonList>>()
+    val locationLiveData = MutableLiveData<List<FetchedUsers>>()
 
     override fun onCreate() {
         super.onCreate()
@@ -66,9 +66,8 @@ class LocationUpdateService : Service() {
                             "lat" to latitude,
                             "lng" to longitude,
                         )
-                        println("Latitude: $latitude, Longitude: $longitude")
                         sendLocation(updates, auth)
-                        robert(latitude, longitude)
+                        fetchLocation(latitude, longitude)
                     }
                 }
             }
@@ -156,8 +155,12 @@ class LocationUpdateService : Service() {
     }
 
     fun sendLocation(documentId: MutableMap<String, Any>, auth: FirebaseAuth) {
+        val location = mutableMapOf(
+            "geohash" to documentId["geohash"],
+            "geopoint" to GeoPoint(documentId["lat"] as Double, documentId["lng"] as Double)
+        )
         FirebaseFirestore.getInstance().document("users/${auth.currentUser?.uid}")
-            .update(documentId)
+            .update("location", location)
             .addOnSuccessListener {
                 println("Location sent successfully.")
             }.addOnFailureListener { exception ->
@@ -165,7 +168,7 @@ class LocationUpdateService : Service() {
             }
     }
 
-    fun robert(latitude: Double, longitude: Double) {
+    fun fetchLocation(latitude: Double, longitude: Double) {
         val center = GeoLocation(latitude, longitude)
         val radiusInM = 5.0 * 100.0
         val bounds = GeoFireUtils.getGeoHashQueryBounds(center, radiusInM)
@@ -173,7 +176,7 @@ class LocationUpdateService : Service() {
         for (b in bounds) {
             val q = FirebaseFirestore.getInstance().collection("users")
                 .whereEqualTo("status", "online")
-                .orderBy("geohash")
+                .orderBy("location.geohash")
                 .startAt(b.startHash)
                 .endAt(b.endHash)
             tasks.add(q.get())
@@ -184,8 +187,10 @@ class LocationUpdateService : Service() {
                 for (task in tasks) {
                     val snap = task.result
                     for (doc in snap!!.documents) {
-                        val lat = doc.getDouble("lat")!!
-                        val lng = doc.getDouble("lng")!!
+                        val location = doc.get("location") as Map<*, *>
+                        val geolocation = location["geopoint"] as GeoPoint
+                        val lat = geolocation.latitude
+                        val lng = geolocation.longitude
                         val docLocation = GeoLocation(lat, lng)
                         val distanceInM = GeoFireUtils.getDistanceBetween(docLocation, center)
                         println(distanceInM)
@@ -194,24 +199,26 @@ class LocationUpdateService : Service() {
                         }
                     }
                     val personList = matchingDocs.map { dataMap ->
-                        val lat = dataMap["lat"] as Double
-                        val lng = dataMap["lng"] as Double
-                        val docLocation = GeoLocation(lat, lng)
+                        val location = dataMap["location"] as Map<*, *>
+                        val geolocation = location["geopoint"] as GeoPoint
+                        val docLocation = GeoLocation(geolocation.latitude, geolocation.longitude)
                         val distanceInM = GeoFireUtils.getDistanceBetween(docLocation, center)
 
-                        PersonList(
+                        FetchedUsers(
                             id = dataMap["id"].toString(),
-                            username = dataMap["username"].toString(),
+                            username =  dataMap["username"] as Map<String, String>,
                             image = dataMap["image"].toString(),
-                            statusIntern = "User is ${distanceInM.toInt()} meters away",
                             connection = dataMap["connection"].toString(),
-                            timestamp = Timestamp.now(),
-                            local = true,
                             status = dataMap["status"] as String,
+                            email = dataMap["email"].toString(),
+                            color = dataMap["color"].toString(),
+                            mutedFriend = false,
+                            statusFriend = "User is ${distanceInM.toInt()} meters away",
                         )
                     }
                     locationLiveData.postValue(personList)
                 }
             }
     }
+
 }

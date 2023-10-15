@@ -51,7 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.htlhl.testing.R
-import at.htlhl.testing.data.PersonList
+import at.htlhl.testing.data.FetchedUsers
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
@@ -65,9 +65,9 @@ class Profile {
     @Composable
     fun ProfileScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val userState = sharedViewModel.user.collectAsState()
-        val userData: PersonList = userState.value
+        val userData: FetchedUsers = userState.value
         val context = LocalContext.current
-        var otto: String by remember { mutableStateOf(userData.username) }
+        var otto: String by remember { mutableStateOf(userData.username["mixedcase"].toString()) }
         val scope = rememberCoroutineScope()
         val coroutineScope = rememberCoroutineScope()
         val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(
@@ -215,7 +215,7 @@ class Profile {
                                 .padding(bottom = 3.dp)
                         )
                         Text(
-                            text = userData.username,
+                            text = userData.username["mixedcase"].toString(),
                             color = Color.Black,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,

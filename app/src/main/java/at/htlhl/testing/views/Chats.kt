@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.BottomSheetScaffold
 import androidx.compose.material.BottomSheetState
 import androidx.compose.material.BottomSheetValue
@@ -33,8 +34,12 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.VolumeMute
+import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.PersonAddAlt1
 import androidx.compose.material.rememberBottomSheetScaffoldState
@@ -63,15 +68,20 @@ import androidx.compose.ui.text.font.FontFamily.Companion.Cursive
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import at.htlhl.testing.R
 import at.htlhl.testing.data.BottomSheetItem
 import at.htlhl.testing.data.Chat
-import at.htlhl.testing.data.PersonList
+import at.htlhl.testing.data.FetchedUsers
 import at.htlhl.testing.data.SharedViewModel
+import at.htlhl.testing.data.ShownUsers
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -86,25 +96,55 @@ class Chats {
         val lazyListState = rememberLazyListState()
         var test by remember { mutableStateOf(false) }
         val coroutineScope = rememberCoroutineScope()
+        var showUserIconPrompt by remember { mutableStateOf(false) }
+        var largeUserIconUrl by remember { mutableStateOf("") }
+        var largeUserIconName by remember { mutableStateOf("") }
         val friendListDataState = sharedViewModel.friendListData.collectAsState()
-        val friendListData: List<PersonList> = friendListDataState.value
+        val friendListData: List<FetchedUsers> = friendListDataState.value
         val messageChatRoomDataState = sharedViewModel.chatData.collectAsState()
         val messageChatRoomData: List<Chat> = messageChatRoomDataState.value
-        val updatedPersonList = friendListData.map { person ->
+        val updatedPersonList: List<ShownUsers> = friendListData.map { person ->
             val matchingChat = messageChatRoomData.find { chat ->
                 chat.members.contains(person.id) && chat.tab == "chats"
             }
-            val updatedStatus = matchingChat?.messages?.lastOrNull()?.content ?: person.statusIntern
-            val updatedTimestamp =
-                matchingChat?.messages?.lastOrNull()?.timestamp ?: person.timestamp
-
+            val lastVisibleMessage = matchingChat?.messages?.lastOrNull { message ->
+                sharedViewModel.auth.currentUser?.uid.toString() in message.visible
+            }
+            val updatedStatus = lastVisibleMessage?.content ?: ""
             if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != "") {
-                person.copy(statusIntern = "Me: $updatedStatus", timestamp = updatedTimestamp)
+                ShownUsers(
+                    personList = person,
+                    timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
+                        ?: Timestamp.now(),
+                    lastMessage = "Me: $updatedStatus",
+                    pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
+                    read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
+                        ?: 0
+                )
             } else {
-                person.copy(statusIntern = updatedStatus, timestamp = updatedTimestamp)
+                ShownUsers(
+                    personList = person,
+                    timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
+                        ?: Timestamp.now(),
+                    lastMessage = updatedStatus,
+                    pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
+                    read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
+                        ?: 0
+                )
             }
         }
-        val sortedPersonList = updatedPersonList.sortedByDescending { it.timestamp }
+        if (showUserIconPrompt) {
+            CustomUserDialog(
+                imageUrl = largeUserIconUrl,
+                userName = largeUserIconName,
+                onDismiss = { showUserIconPrompt = false }
+            )
+        }
+        val finalPersonList =
+            updatedPersonList.filter { person -> person.personList.statusFriend == "accepted" }
+        val sortedPersonList =
+            finalPersonList.sortedWith(compareByDescending<ShownUsers> { it.pinChat }.thenByDescending { it.timestampMessage })
+        Log.println(Log.INFO, "SortedPersonList", sortedPersonList.toString())
         val bottomSheetItems = listOf(
             BottomSheetItem(title = "Delete", icon = Icons.Default.Delete),
             BottomSheetItem(title = "Mute Messages", icon = Icons.Default.VolumeMute),
@@ -139,7 +179,7 @@ class Chats {
                                 contentDescription = null,
                                 painter = rememberAsyncImagePainter(
                                     ImageRequest.Builder(LocalContext.current)
-                                        .data(data = sharedViewModel.friend.value.image)
+                                        .data(data = sharedViewModel.friend.value.personList.image)
                                         .apply(block = fun ImageRequest.Builder.() {
                                             placeholder(R.drawable.user_circle_svgrepo_com)
                                         }).build()
@@ -151,7 +191,7 @@ class Chats {
                                 alignment = Alignment.Center
                             )
                             Text(
-                                text = sharedViewModel.friend.value.username,
+                                text = sharedViewModel.friend.value.personList.username["mixedcase"].toString(),
                                 modifier = Modifier
                                     .padding(start = 16.dp)
                                     .align(Alignment.CenterVertically)
@@ -175,9 +215,32 @@ class Chats {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
-                                            if (bottomSheetItems[it].title == "Delete") {
-                                                sharedViewModel.deleteFriendFromFriendList()
-                                                sharedViewModel.deleteChatRoom()
+                                            when (bottomSheetItems[it].title) {
+                                                "Delete" -> {
+                                                    sharedViewModel.deleteFriendFromFriendList()
+                                                    sharedViewModel.deleteChatRoom()
+                                                }
+
+                                                "Pin Chat" -> {
+                                                    Log.println(
+                                                        Log.INFO,
+                                                        "PinChat",
+                                                        sharedViewModel.friend.value.toString()
+                                                    )
+                                                    if (sharedViewModel.friend.value.pinChat) {
+                                                        sharedViewModel.updatePinChatStatus(true)
+                                                    } else {
+                                                        sharedViewModel.updatePinChatStatus(false)
+                                                    }
+                                                }
+
+                                                "Mute Messages" -> {
+                                                    if (sharedViewModel.friend.value.personList.mutedFriend) {
+                                                        sharedViewModel.updateMuteFriendStatus(true)
+                                                    } else {
+                                                        sharedViewModel.updateMuteFriendStatus(false)
+                                                    }
+                                                }
                                             }
                                         },
                                 ) {
@@ -301,7 +364,13 @@ class Chats {
                                 }
                             }
                         },
-                        bottomSheetState = test
+                        bottomSheetState = test,
+                        onUserIconClicked = { imageUrl, userName ->
+                            showUserIconPrompt = true
+                            largeUserIconUrl = imageUrl
+                            largeUserIconName = userName
+                        }
+
                     )
                 }
             }
@@ -309,18 +378,116 @@ class Chats {
     }
 }
 
+@Composable
+fun CustomUserDialog(
+    imageUrl: String,
+    userName: String,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = { onDismiss() },
+        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
+    ) {
+        Box(
+            modifier = Modifier
+                .height(295.dp)
+                .width(250.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .zIndex(1f)
+                    .background(Color.Gray.copy(alpha = 0.4f))
+            ) {
+                Text(
+                    text = userName,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Normal,
+                    modifier = Modifier
+                        .zIndex(1f)
+                        .padding(start = 5.dp, top = 5.dp, bottom = 5.dp),
+                    color = Color.White
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Display the user's image
+                Image(
+                    painter = rememberAsyncImagePainter(
+                        ImageRequest.Builder(LocalContext.current)
+                            .data(data = imageUrl)
+                            .apply(block = fun ImageRequest.Builder.() {
+                                placeholder(R.drawable.user_circle_svgrepo_com)
+                            }).build()
+                    ),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(250.dp)
+                        .clip(shape = RoundedCornerShape(4.dp)),
+                    contentScale = ContentScale.Crop
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    IconButton(onClick = { /* Handle icon click */ }) {
+                        Icon(
+                            imageVector = Icons.Default.Message,
+                            contentDescription = "Message",
+                            tint = Color(0xFF00A0E8),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    IconButton(onClick = { /* Handle icon click */ }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Block,
+                            contentDescription = "Block",
+                            tint = Color(0xFF00A0E8),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    IconButton(onClick = { /* Handle icon click */ }) {
+                        Icon(
+                            imageVector = Icons.Default.Image,
+                            contentDescription = "Image",
+                            tint = Color(0xFF00A0E8),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    IconButton(onClick = { /* Handle icon click */ }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = "Info",
+                            tint = Color(0xFF00A0E8),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 @OptIn(ExperimentalFoundationApi::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun ChatItem(
-    person: PersonList,
+    person: ShownUsers,
     bottomSheetState: Boolean,
     navController: NavController,
     sharedViewModel: SharedViewModel,
+    onUserIconClicked: (String, String) -> Unit,
     onItemClicked: () -> Unit
 ) {
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
-    val formattedTime: String = formatter.format(person.timestamp.toDate())
+    val formattedTime: String = formatter.format(person.timestampMessage.toDate())
     Row(
         modifier = Modifier
             .combinedClickable(
@@ -342,7 +509,7 @@ fun ChatItem(
             .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
             .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
     ) {
-        val isOnline = person.status
+        val isOnline = person.personList.status
         Box(
             modifier = Modifier.size(50.dp)
         ) {
@@ -351,14 +518,21 @@ fun ChatItem(
 
                 painter = rememberAsyncImagePainter(
                     ImageRequest.Builder(LocalContext.current)
-                        .data(data = person.image)
+                        .data(data = person.personList.image)
                         .apply(block = fun ImageRequest.Builder.() {
                             placeholder(R.drawable.user_circle_svgrepo_com)
                         }).build()
                 ),
                 modifier = Modifier
                     .clip(CircleShape)
-                    .size(50.dp),
+
+                    .size(50.dp)
+                    .clickable {
+                        onUserIconClicked.invoke(
+                            person.personList.image,
+                            person.personList.username["mixedcase"].toString()
+                        )
+                    },
                 contentScale = ContentScale.Crop,
                 alignment = Alignment.Center
             )
@@ -453,7 +627,7 @@ fun ChatItem(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = person.username,
+                    text = person.personList.username["mixedcase"].toString(),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 17.sp,
                     color = if (isSystemInDarkTheme()) Color.White else Color.Black
@@ -461,17 +635,71 @@ fun ChatItem(
                 Text(
                     text = formattedTime,
                     fontWeight = FontWeight.Light,
-                    fontSize = 12.sp,
-                    color = if (isSystemInDarkTheme()) Color.White else Color.Black
+                    fontSize = if (person.read > 0) 13.sp else 12.sp,
+                    color = if (person.read > 0) Color(0xFF00A0E8) else Color.Black
                 )
             }
-            Text(
-                modifier = Modifier.padding(start = 10.dp),
-                text = person.statusIntern,
-                maxLines = 1,
-                fontSize = 15.sp,
-                color = Color.LightGray,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    modifier = Modifier
+                        .padding(start = 10.dp)
+                        .weight(1f),
+                    text = if (person.lastMessage.length > 24) "${person.lastMessage.substring(
+                        0,
+                        24
+                    )}..." else person.lastMessage,
+                    maxLines = 1,
+                    fontSize = 15.sp,
+                    color = if (person.read > 0) Color(0xFF00A0E8) else Color.LightGray,
+                )
+                if (person.personList.mutedFriend) {
+                    Icon(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .align(Alignment.CenterVertically),
+                        imageVector = Icons.Default.VolumeMute,
+                        contentDescription = null,
+                        tint = Color.LightGray,
+                    )
+                }
+                if (person.pinChat) {
+                    Icon(
+                        modifier = Modifier
+                            .align(Alignment.CenterVertically)
+                            .size(20.dp),
+                        imageVector = Icons.Default.PushPin,
+                        contentDescription = null,
+                        tint = Color.LightGray,
+                    )
+                }
+                if (person.read > 0) {
+                    Spacer(modifier = Modifier.padding(start = 4.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(if (person.read > 99) 24.dp else if (person.read > 9) 20.dp else 16.dp)
+                            .clip(CircleShape)
+                            .align(Alignment.CenterVertically)
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(Color(0xFF00A0E8), Color(0xFF00A0E8)),
+                                )
+                            )
+                    ) {
+                        Text(
+                            text = if (person.read < 100) person.read.toString() else "99+",
+                            modifier = Modifier.align(Alignment.Center),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
         }
     }
+
+
 }

@@ -13,6 +13,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
@@ -55,11 +56,12 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
      */
 
     val auth: FirebaseAuth = Firebase.auth
-    val friend = mutableStateOf(PersonList("", "", "", "", "", Timestamp.now(), false, ""))
+    val friend =
+        mutableStateOf(ShownUsers(FetchedUsers(), Timestamp.now(), "", false, 0))
     val bottomBarState = mutableStateOf(true)
     val gpsState = mutableStateOf(false)
     val imageCall = mutableStateOf(false)
-    val localChatUserList = mutableStateOf<List<PersonList>>(emptyList())
+    val localChatUserList = mutableStateOf<List<FetchedUsers>>(emptyList())
 
     private fun getUserDocumentRef() = firebaseInstance.collection(USER_COLLECTION)
 
@@ -97,15 +99,8 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
      * needed for the Chats & DropIn Feature.
      */
 
-    private val _friendListData = MutableStateFlow<List<PersonList>>(emptyList())
-    val friendListData: StateFlow<List<PersonList>> get() = _friendListData
-
-    private val _friendListPending = MutableStateFlow<List<PersonList>>(emptyList())
-    val friendListPending: StateFlow<List<PersonList>> get() = _friendListPending
-
-    private val _friendListInitiating = MutableStateFlow<List<PersonList>>(emptyList())
-    val friendListInitiating: StateFlow<List<PersonList>> get() = _friendListInitiating // TODO: 2023-11-16
-
+    private val _friendListData = MutableStateFlow<List<FetchedUsers>>(emptyList())
+    val friendListData: StateFlow<List<FetchedUsers>> get() = _friendListData
 
     private var friendListDataListener: ListenerRegistration? = null
 
@@ -123,9 +118,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 if (friendException != null) {
                     return@addSnapshotListener
                 }
-                val personListData = mutableListOf<PersonList>()
-                val personListDataPending = mutableListOf<PersonList>()
-                val personListDataInitiating = mutableListOf<PersonList>()
+                val personListData = mutableListOf<FetchedUsers>()
                 friendQuerySnapshot?.let { friendSnapshot ->
                     val subCollectionData = friendSnapshot.toObjects(Friend::class.java)
                     var completedCount = 0
@@ -138,33 +131,26 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                 if (userException != null) {
                                     return@addSnapshotListener
                                 }
-                                val data = userDocumentSnapshot?.toObject(PersonList::class.java)
-                                data?.let {
-                                    when (friend.status) {
-                                        "pending" -> personListDataPending.add(it)
-                                        "initiated" -> personListDataInitiating.add(it)
-                                        else -> personListData.add(it)
-                                    }
+                                val data = userDocumentSnapshot?.toObject(FetchedUsers::class.java)
+                                val finalData = FetchedUsers(
+                                    image = data?.image!!,
+                                    username = data.username,
+                                    id = data.id,
+                                    status = data.status,
+                                    email = data.email,
+                                    color = data.color,
+                                    connection = data.connection,
+                                    mutedFriend = friend.muted,
+                                    statusFriend = friend.status,
+                                )
+                                finalData.let {
+                                    personListData.add(it)
                                 }
                                 completedCount++
                                 if (completedCount == totalFriends) {
                                     _friendListData.value = personListData
-                                    _friendListPending.value = personListDataPending
-                                    _friendListInitiating.value = personListDataInitiating
                                 }
-                                when (friend.status) {
-                                    "pending" -> {
-                                        updateFriendsList(_friendListPending, data)
-                                    }
-
-                                    "initiated" -> {
-                                        updateFriendsList(_friendListInitiating, data)
-                                    }
-
-                                    else -> {
-                                        updateFriendsList(_friendListData, data)
-                                    }
-                                }
+                                updateFriendsList(_friendListData, finalData)
                             }
                     }
                 }
@@ -172,7 +158,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     }
 
 
-    private fun updateFriendsList(list: MutableStateFlow<List<PersonList>>, data: PersonList?) {
+    private fun updateFriendsList(list: MutableStateFlow<List<FetchedUsers>>, data: FetchedUsers?) {
         val userIdToRemove = data?.id
         val currentList = list.value
         val updatedList =
@@ -187,9 +173,10 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     fun deleteFriendFromFriendList() {
         val friendSubCollectionRef =
             getUserDocumentRef().document(auth.currentUser!!.uid).collection(FRIENDS_COLLECTION)
-        friendSubCollectionRef.document(friend.value.id).delete().addOnSuccessListener {
+        friendSubCollectionRef.document(friend.value.personList.id).delete().addOnSuccessListener {
             val userSubCollectionRef =
-                getUserDocumentRef().document(friend.value.id).collection(FRIENDS_COLLECTION)
+                getUserDocumentRef().document(friend.value.personList.id)
+                    .collection(FRIENDS_COLLECTION)
             userSubCollectionRef.document(auth.currentUser!!.uid).delete().addOnSuccessListener {
             }.addOnFailureListener { exception ->
                 exception.printStackTrace()
@@ -199,11 +186,6 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-
-    override fun onCleared() {
-        super.onCleared()
-        friendListDataListener?.remove()
-    }
 
     /**
      * This section contains the logic for the Firebase communication, used for exchanging messages,
@@ -220,13 +202,14 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         onError: (Exception) -> Unit
     ) {
         val chatDataSet = mutableSetOf<Chat>()
+        // Step 1: Listen for changes in the chats collection
         getChatDocumentRef().whereArrayContains("members", docIds)
             .addSnapshotListener { querySnapshot, error ->
                 if (error != null) {
                     onError.invoke(error)
                     return@addSnapshotListener
                 }
-                Log.println(Log.INFO, "1", querySnapshot?.documents.toString())
+                // Step 2: For each change in the chats collection, fetch the messages subcollection
                 querySnapshot?.documentChanges?.forEach { documentChange ->
                     if (documentChange.type == DocumentChange.Type.REMOVED) {
                         val removedDocumentId = documentChange.document.id
@@ -236,6 +219,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                         }
                         _chatData.value = chatDataSet.toList()
                     } else {
+                        // Step 3: Listen for changes in the messages subcollection
                         val subCollectionRef =
                             getChatDocumentRef().document(documentChange.document.id)
                                 .collection("/$MESSAGES_COLLECTION").orderBy("timestamp")
@@ -244,15 +228,19 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                 onError.invoke(exception)
                                 return@addSnapshotListener
                             }
+                            // Step 4: For each change in the messages subcollection, update the chatDataSet
                             Log.println(Log.INFO, "2", subQuerySnapshot?.documents.toString())
                             subQuerySnapshot?.let { subSnapshot ->
                                 val subCollectionData = subSnapshot.toObjects(Message::class.java)
                                 val chat = Chat(
                                     members = documentChange.document.data["members"] as List<String>,
+                                    pinned = documentChange.document.data["pinned"] as List<String>,
+                                    unread = documentChange.document.data["unread"] as List<String>,
                                     tab = documentChange.document.data["tab"] as String,
                                     chatRoomID = documentChange.document.id,
                                     messages = subCollectionData
                                 )
+                                // Step 5: Update the chatDataSet
                                 val existingChat =
                                     chatDataSet.find { it.chatRoomID == chat.chatRoomID }
                                 if (existingChat != null) {
@@ -269,12 +257,12 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     }
 
 
-    fun deleteMessageForUser(
+    fun deleteMessage(
         documentId: String,
-        messageId: Timestamp,
+        timestamp: Timestamp,
     ) {
         getChatDocumentRef().document(documentId).collection("/$MESSAGES_COLLECTION")
-            .whereEqualTo("timestamp", messageId).get()
+            .whereEqualTo("timestamp", timestamp).get()
             .addOnSuccessListener { querySnapshot ->
                 for (document in querySnapshot) {
                     document.reference.delete().addOnSuccessListener {}
@@ -287,9 +275,31 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             }
     }
 
+    fun changeMessageVisibility(
+        documentId: String,
+        timestamp: Timestamp
+    ) {
+        getChatDocumentRef().document(documentId)
+            .collection("/$MESSAGES_COLLECTION")
+            .whereEqualTo("timestamp", timestamp).get()
+            .addOnSuccessListener { querySnapshot ->
+                for (document in querySnapshot) {
+                    document.reference.update(
+                        "visible",
+                        FieldValue.arrayRemove(auth.currentUser?.uid.toString())
+                    ).addOnSuccessListener {}
+                        .addOnFailureListener { exception ->
+                            exception.printStackTrace()
+                        }
+                }
+            }.addOnFailureListener { exception ->
+                exception.printStackTrace()
+            }
+    }
+
     fun deleteChatRoom() {
         for (chat in chatData.value) {
-            if (chat.members.contains(friend.value.id) && chat.members.contains(auth.currentUser!!.uid)) {
+            if (chat.members.contains(friend.value.personList.id) && chat.members.contains(auth.currentUser!!.uid)) {
                 val subCollectionRef =
                     getChatDocumentRef().document(chat.chatRoomID).collection(MESSAGES_COLLECTION)
                 subCollectionRef.get().addOnSuccessListener { querySnapshot ->
@@ -334,28 +344,32 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     private val _isSearching = MutableStateFlow(false)
     val isSearching = _isSearching.asStateFlow()
 
-    private val _person = MutableStateFlow<List<PersonList>>(emptyList())
+    private val _person = MutableStateFlow<List<FetchedUsers>>(emptyList())
 
-    private suspend fun retrieveMessages(): List<PersonList> {
-        val snapshot = getUserDocumentRef().orderBy("username").startAt(searchText.value)
+    private suspend fun retrieveMessages(): List<FetchedUsers> {
+        val snapshot = getUserDocumentRef().orderBy("username.mixedcase").startAt(searchText.value)
             .endAt(searchText.value + '\uf8ff').get().await()
         return snapshot.documents.mapNotNull { document ->
-            val username = document.getString("username")
+            val usernameMap = document["username"] as Map<String, String>?
             val image = document.getString("image")
             val id = document.getString("id")
             val status = document.getString("status")
+            val email = document.getString("email")
+            val color = document.getString("color")
             val connection = document.getString("connection")
-            PersonList(
+            FetchedUsers(
                 image = image!!,
-                username = username!!,
+                username = usernameMap!!,
                 id = id!!,
                 status = status!!,
+                email = email!!,
+                color = color!!,
                 connection = connection!!,
-                timestamp = Timestamp.now(),
-                local = false,
-                statusIntern = "",
+                mutedFriend = false,
+                statusFriend = "",
             )
         }
+
     }
 
     @OptIn(FlowPreview::class)
@@ -373,9 +387,11 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     fun saveChatRoom(person: String, tab: String) {
         val membersArray = arrayListOf(auth.currentUser!!.uid, person)
-        val fieldUpdates = hashMapOf<String, Any>(
+        val fieldUpdates = hashMapOf(
             "members" to membersArray,
             "tab" to tab,
+            "pinned" to emptyList<String>(),
+            "unread" to emptyList<String>(),
         )
         getChatDocumentRef().document().set(fieldUpdates).addOnSuccessListener {}
             .addOnFailureListener { exception -> exception.printStackTrace() }
@@ -390,57 +406,37 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             .addOnFailureListener { exception -> exception.printStackTrace() }
     }
 
-    fun saveFriendForFriend(person: PersonList, local: Boolean, status: String) {
-        val fieldUpdates = hashMapOf<String, Any>(
-            "local" to local,
-            "status" to status,
-            "id" to auth.currentUser!!.uid,
-        )
-        firebaseInstance.collection("${USER_COLLECTION}/${person.id}/${FRIENDS_COLLECTION}")
-            .document(auth.currentUser!!.uid).set(fieldUpdates).addOnSuccessListener {}
-            .addOnFailureListener { exception -> exception.printStackTrace() }
-    }
-
-    fun saveFriendForUser(person: PersonList, local: Boolean, status: String) {
-        val fieldUpdates = hashMapOf<String, Any>(
-            "local" to local,
-            "status" to status,
-            "id" to person.id,
-        )
-        firebaseInstance.collection("${USER_COLLECTION}/${auth.currentUser!!.uid}/${FRIENDS_COLLECTION}")
-            .document(person.id).set(fieldUpdates).addOnSuccessListener {}
-            .addOnFailureListener { exception -> exception.printStackTrace() }
-    }
-
-    fun saveFriendForFriendWithoutLocal(person: PersonList, status: String) {
+    fun saveFriendForFriend(person: FetchedUsers, status: String) {
         val fieldUpdates = mapOf(
             "status" to status,
+            "muted" to false,
             "id" to auth.currentUser!!.uid
         )
         firebaseInstance.collection("${USER_COLLECTION}/${person.id}/${FRIENDS_COLLECTION}")
             .document(auth.currentUser!!.uid)
-            .set(fieldUpdates, SetOptions.mergeFields("status", "id"))
+            .set(fieldUpdates, SetOptions.mergeFields("status", "muted", "id"))
             .addOnFailureListener { exception ->
                 exception.printStackTrace()
             }
     }
 
 
-    fun saveFriendForUserWithoutLocal(person: PersonList, status: String) {
+    fun saveFriendForUser(person: FetchedUsers, status: String) {
         val fieldUpdates = mapOf(
             "status" to status,
+            "muted" to false,
             "id" to person.id,
         )
         firebaseInstance.collection("${USER_COLLECTION}/${auth.currentUser!!.uid}/${FRIENDS_COLLECTION}")
-            .document(person.id).set(fieldUpdates, SetOptions.mergeFields("status", "id"))
+            .document(person.id).set(fieldUpdates, SetOptions.mergeFields("status", "muted", "id"))
             .addOnFailureListener { exception -> exception.printStackTrace() }
     }
 
-    fun getDocument(onSuccess: (PersonList?) -> Unit) {
+    fun getDocument(onSuccess: (FetchedUsers?) -> Unit) {
         getUserDocumentRef().document(auth.currentUser!!.uid).get()
             .addOnSuccessListener { documentSnapshot ->
                 if (documentSnapshot.exists()) {
-                    val personList = documentSnapshot.toObject(PersonList::class.java)
+                    val personList = documentSnapshot.toObject(FetchedUsers::class.java)
                     onSuccess(personList)
                 } else {
                     onSuccess(null)
@@ -466,8 +462,9 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             .addOnFailureListener { exception -> exception.printStackTrace() }
     }
 
-    private val _user = MutableStateFlow(PersonList("", "", "", "", "", Timestamp.now(), false, ""))
-    val user: StateFlow<PersonList> get() = _user
+    private val _user =
+        MutableStateFlow(FetchedUsers("", mapOf(), "", "", "", "", "", false, ""))
+    val user: StateFlow<FetchedUsers> get() = _user
     fun getUserData() {
         getUserDocumentRef().document(auth.currentUser!!.uid)
             .addSnapshotListener { documentSnapshot, error ->
@@ -475,7 +472,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     return@addSnapshotListener
                 }
                 if (documentSnapshot != null && documentSnapshot.exists()) {
-                    val personList = documentSnapshot.toObject(PersonList::class.java)
+                    val personList = documentSnapshot.toObject(FetchedUsers::class.java)
                     _user.value = personList!!
                 }
             }
@@ -486,20 +483,20 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
      */
 
     private val _matchedUser =
-        MutableStateFlow(PersonList("", "", "", "", "", Timestamp.now(), false, ""))
-    val matchedUser: StateFlow<PersonList> get() = _matchedUser
+        MutableStateFlow(FetchedUsers("", mapOf(), "", "", "", "", "", false, ""))
+    val matchedUser: StateFlow<FetchedUsers> get() = _matchedUser
 
     fun pairWithRandomUser() {
         if (_matchedUser.value.id.isNotEmpty()) {
             return
         }
         viewModelScope.launch(Dispatchers.IO) {
-            val pendingUsers = mutableListOf<PersonList>()
+            val pendingUsers = mutableListOf<FetchedUsers>()
             // Step 1: Check if any user has connection value as "pending"
             getUserDocumentRef().whereEqualTo("connection", "pending").limit(1).get()
                 .addOnSuccessListener { querySnapshot ->
                     for (document in querySnapshot.documents) {
-                        val user = document.toObject(PersonList::class.java)
+                        val user = document.toObject(FetchedUsers::class.java)
                         if (user != null && user.id != auth.currentUser!!.uid) {
                             pendingUsers.add(user)
                         }
@@ -533,7 +530,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 querySnapshot?.documentChanges?.forEach { document ->
 
-                    val user = document.document.toObject(PersonList::class.java)
+                    val user = document.document.toObject(FetchedUsers::class.java)
                     Log.println(Log.INFO, "MatchFound", user.toString())
                     if ((document.type == DocumentChange.Type.MODIFIED || document.type == DocumentChange.Type.ADDED) && (user.connection == auth.currentUser!!.uid || user.connection == "pending")) {
                         if (user.id != auth.currentUser!!.uid) {
@@ -541,7 +538,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                         }
                     } else {
                         _matchedUser.value =
-                            PersonList("", "", "", "", "", Timestamp.now(), false, "")
+                            FetchedUsers("", mapOf(), "", "", "", "", "", false, "")
                         resetMatchedUser()
                     }
                 }
@@ -572,15 +569,16 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     fun reset() {
         _chatData.value = emptyList()
+        friend.value = ShownUsers(FetchedUsers(), Timestamp.now(), "", false, 0)
         _personData.value = emptyList()
         _friendListData.value = emptyList()
-        _user.value = PersonList("", "", "", "", "", Timestamp.now(), false, "")
-        _matchedUser.value = PersonList("", "", "", "", "", Timestamp.now(), false, "")
+        _user.value = FetchedUsers("", mapOf(), "", "", "", "", "", false, "")
+        _matchedUser.value = FetchedUsers("", mapOf(), "", "", "", "", "", false, "")
     }
 
 
-    private val _personData = MutableStateFlow<List<PersonList>>(emptyList())
-    val personData: StateFlow<List<PersonList>> get() = _personData
+    private val _personData = MutableStateFlow<List<FetchedUsers>>(emptyList())
+    val personData: StateFlow<List<FetchedUsers>> get() = _personData
     private fun getDropInContactUsers() {
         Log.println(Log.INFO, "6", _chatData.value.toString())
         val previousChatData = _chatData.value
@@ -617,7 +615,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                         if (fetchTask.isSuccessful) {
                             val documentSnapshot = fetchTask.result
                             if (documentSnapshot.exists()) {
-                                val personList = documentSnapshot.toObject(PersonList::class.java)
+                                val personList = documentSnapshot.toObject(FetchedUsers::class.java)
                                 personList?.let {
                                     if (!newPersonData.any { existingPersonList -> existingPersonList.id == usersToFetchFiltered[index] }) {
                                         newPersonData.add(it)
@@ -645,5 +643,58 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             }
     }
 
+    fun updatePinChatStatus(isAlreadyPinned: Boolean) {
+        for (chat in chatData.value) {
+            if (chat.members.contains(friend.value.personList.id) && chat.members.contains(auth.currentUser?.uid.toString())) {
+                val chatRef = getChatDocumentRef().document(chat.chatRoomID)
+                val updateData = if (isAlreadyPinned) {
+                    mapOf("pinned" to FieldValue.arrayRemove(auth.currentUser?.uid.toString()))
+                } else {
+                    mapOf("pinned" to FieldValue.arrayUnion(auth.currentUser?.uid.toString()))
+                }
 
+                chatRef.update(updateData)
+                    .addOnSuccessListener {}
+                    .addOnFailureListener { exception -> exception.printStackTrace() }
+            }
+        }
+    }
+
+    fun updateMuteFriendStatus(isAlreadyMuted: Boolean) {
+        val chatRef =
+            firebaseInstance.collection("${USER_COLLECTION}/${auth.currentUser?.uid.toString()}/${FRIENDS_COLLECTION}")
+                .document(friend.value.personList.id)
+        val updateData = if (isAlreadyMuted) {
+            mapOf("muted" to false)
+        } else {
+            mapOf("muted" to true)
+        }
+        chatRef.update(updateData)
+            .addOnSuccessListener {
+            }
+            .addOnFailureListener { exception ->
+                exception.printStackTrace()
+            }
+    }
+
+    fun markMessagesAsRead(user: ShownUsers) {
+        for (chat in chatData.value) {
+            if (chat.members.contains(user.personList.id) && chat.members.contains(auth.currentUser?.uid.toString())) {
+                val chatRef =
+                    getChatDocumentRef().document(chat.chatRoomID).collection(MESSAGES_COLLECTION)
+                chatRef.get().addOnSuccessListener { querySnapshot ->
+                    for (document in querySnapshot.documents) {
+                        val sender = document.getString("sender")
+                        if (sender != auth.currentUser?.uid.toString()) {
+                            chatRef.document(document.id).update("read", true)
+                                .addOnSuccessListener {}
+                                .addOnFailureListener { exception -> exception.printStackTrace() }
+                        }
+                    }
+                }.addOnFailureListener { exception ->
+                    exception.printStackTrace()
+                }
+            }
+        }
+    }
 }

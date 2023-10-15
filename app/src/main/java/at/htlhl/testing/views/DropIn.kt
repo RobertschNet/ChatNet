@@ -66,10 +66,12 @@ import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import at.htlhl.testing.data.BottomSheetItem
 import at.htlhl.testing.data.Chat
-import at.htlhl.testing.data.PersonList
+import at.htlhl.testing.data.FetchedUsers
 import at.htlhl.testing.data.SharedViewModel
+import at.htlhl.testing.data.ShownUsers
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -87,25 +89,56 @@ class DropIn : ViewModel() {
         val documentIdState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val documentationId: List<Chat> = documentIdState.value
         val friendIdState = sharedViewModel.personData.collectAsState(initial = emptyList())
-        val friendListData: List<PersonList> = friendIdState.value
+        val friendListData: List<FetchedUsers> = friendIdState.value
         val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
             localUser.id != sharedViewModel.auth.currentUser?.uid
         }
-        val updatedPersonList = friendListData.map { person ->
+        val updatedPersonList: List<ShownUsers> = friendListData.map { person ->
             val matchingChat = documentationId.find { chat ->
                 chat.members.contains(person.id) && chat.tab == "dropIn"
             }
-            val updatedStatus = matchingChat?.messages?.lastOrNull()?.content ?: person.statusIntern
-            val updatedTimestamp =
-                matchingChat?.messages?.lastOrNull()?.timestamp ?: person.timestamp
-
+            val lastVisibleMessage = matchingChat?.messages?.lastOrNull { message ->
+                sharedViewModel.auth.currentUser?.uid.toString() in message.visible
+            }
+            val updatedStatus = lastVisibleMessage?.content ?: ""
             if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != "") {
-                person.copy(statusIntern = "Me: $updatedStatus", timestamp = updatedTimestamp)
+                ShownUsers(
+                    personList = person,
+                    timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
+                        ?: Timestamp.now(),
+                    lastMessage = "Me: $updatedStatus",
+                    pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
+                    read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
+                        ?: 0
+                )
             } else {
-                person.copy(statusIntern = updatedStatus, timestamp = updatedTimestamp)
+                ShownUsers(
+                    personList = person,
+                    timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
+                        ?: Timestamp.now(),
+                    lastMessage = updatedStatus,
+                    pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
+                    read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
+                        ?: 0
+                )
             }
         }
-        val sortedPersonList = updatedPersonList.sortedByDescending { it.timestamp }
+
+        val updatedLocalChatUsers: List<ShownUsers> = localChatUsers.map { person ->
+            val matchingChat = documentationId.find { chat ->
+                chat.members.contains(person.id)
+            }
+            ShownUsers(
+                personList = person,
+                timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
+                    ?: Timestamp.now(),
+                lastMessage = matchingChat?.messages?.lastOrNull()?.content ?: "",
+                pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
+                read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
+                    ?: 0
+            )
+        }
+        val sortedPersonList = updatedPersonList.sortedByDescending { it.timestampMessage }
         val usersWithEmptyChatRooms = documentationId.filter { user ->
             user.messages.isEmpty()
         }
@@ -141,7 +174,7 @@ class DropIn : ViewModel() {
                         Row {
                             Image(
                                 contentDescription = null,
-                                painter = rememberAsyncImagePainter(sharedViewModel.friend.value.image),
+                                painter = rememberAsyncImagePainter(sharedViewModel.friend.value.personList.image),
                                 modifier = Modifier
                                     .clip(CircleShape)
                                     .size(40.dp),
@@ -149,7 +182,7 @@ class DropIn : ViewModel() {
                                 alignment = Alignment.Center
                             )
                             Text(
-                                text = sharedViewModel.friend.value.username,
+                                text = sharedViewModel.friend.value.personList.username["mixedcase"].toString(),
                                 modifier = Modifier
                                     .padding(start = 16.dp)
                                     .align(Alignment.CenterVertically)
@@ -287,8 +320,8 @@ class DropIn : ViewModel() {
                             modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp)
                         )
                     }
-                    items(localChatUsers) { message ->
-                        ChatItem2(
+                    items(updatedLocalChatUsers) { message ->
+                        ChatItemForDropIn(
                             person = message,
                             documentationId = documentationId,
                             sharedViewModel = sharedViewModel,
@@ -307,6 +340,7 @@ class DropIn : ViewModel() {
                         )
                     }
                 }
+
                 item {
                     Text(
                         text = "User you are in contact with",
@@ -316,9 +350,8 @@ class DropIn : ViewModel() {
                     )
                 }
                 items(sortedPersonList) { message ->
-                    ChatItem2(
+                    ChatItem(
                         person = message,
-                        documentationId = documentationId,
                         sharedViewModel = sharedViewModel,
                         navController = navController,
                         onItemClicked = {
@@ -331,7 +364,9 @@ class DropIn : ViewModel() {
                                 }
                             }
                         },
-                        bottomSheetState = test
+                        bottomSheetState = test,
+                        onUserIconClicked = { _, _ ->
+                        }
                     )
                 }
             }
@@ -342,8 +377,8 @@ class DropIn : ViewModel() {
 @OptIn(ExperimentalFoundationApi::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun ChatItem2(
-    person: PersonList,
+fun ChatItemForDropIn(
+    person: ShownUsers,
     bottomSheetState: Boolean,
     navController: NavController,
     sharedViewModel: SharedViewModel,
@@ -351,7 +386,7 @@ fun ChatItem2(
     onItemClicked: () -> Unit
 ) {
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
-    val formattedTime: String = formatter.format(person.timestamp.toDate())
+    val formattedTime: String = formatter.format(person.timestampMessage.toDate())
     Divider(thickness = 0.25f.dp, color = Color.LightGray)
     Row(
         modifier = Modifier
@@ -363,11 +398,14 @@ fun ChatItem2(
                         sharedViewModel.friend.value = person
                         Log.println(Log.INFO, "Current", person.toString())
                         val filteredChats = documentationId.filter { chat ->
-                            chat.members.contains(person.id) && chat.members
+                            chat.members.contains(person.personList.id) && chat.members
                                 .contains(sharedViewModel.auth.currentUser?.uid)
                         }
-                        if (person.local && filteredChats.isEmpty()) {
-                            sharedViewModel.saveChatRoom(person = person.id, tab = "dropIn")
+                        if (filteredChats.isEmpty()) {
+                            sharedViewModel.saveChatRoom(
+                                person = person.personList.id,
+                                tab = "dropIn"
+                            )
                         }
                         navController.navigate(Screens.ChatScreen.route)
                     }
@@ -382,13 +420,13 @@ fun ChatItem2(
             .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
             .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
     ) {
-        val isOnline = person.status
+        val isOnline = person.personList.status
         Box(
             modifier = Modifier.size(50.dp)
         ) {
             Image(
                 contentDescription = null,
-                painter = rememberAsyncImagePainter(person.image),
+                painter = rememberAsyncImagePainter(person.personList.image),
                 modifier = Modifier
                     .clip(CircleShape)
                     .size(50.dp),
@@ -486,7 +524,7 @@ fun ChatItem2(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = person.username,
+                    text = person.personList.username["mixedcase"].toString(),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 17.sp,
                     color = if (isSystemInDarkTheme()) Color.White else Color.Black
@@ -500,10 +538,10 @@ fun ChatItem2(
             }
             Text(
                 modifier = Modifier.padding(start = 10.dp),
-                text = person.statusIntern,
+                text = person.personList.statusFriend,
                 maxLines = 1,
                 fontSize = 15.sp,
-                color = if (person.statusIntern >= "User is 400 meters away") Color.Yellow else if (person.statusIntern >= "User is 450 meters away") Color.Red else Color.LightGray
+                color = if (person.lastMessage >= "User is 400 meters away") Color.Yellow else if (person.lastMessage >= "User is 450 meters away") Color.Red else Color.LightGray
             )
         }
     }

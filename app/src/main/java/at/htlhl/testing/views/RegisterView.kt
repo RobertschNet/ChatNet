@@ -60,7 +60,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import at.htlhl.testing.R
-import at.htlhl.testing.data.User
 import at.htlhl.testing.navigation.Screens
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -71,9 +70,8 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
+import java.util.Locale
 
 class RegisterView {
     private lateinit var auth: FirebaseAuth
@@ -176,7 +174,6 @@ class RegisterView {
         var name by rememberSaveable { mutableStateOf("") }
         var email by rememberSaveable { mutableStateOf("") }
         var password by rememberSaveable { mutableStateOf("") }
-        val coroutineScope = CoroutineScope(Dispatchers.Main)
         var openDialog by remember { mutableStateOf(false) }
         val regexPattern = "[A-Za-z0-9]+".toRegex()
         var usernameTexFieldColor by remember { mutableStateOf(Color.Gray) }
@@ -292,8 +289,6 @@ class RegisterView {
                                     ).show()
                                     openDialog = true
                                     //sendVerificationEmail()
-                                    val user = User(name)
-                                    coroutineScope.launch { saveMessage(user) }
                                     createUserEntry(name)
                                     //navController.navigate(Screens.DropInScreen.Route)
                                 } else {
@@ -501,27 +496,24 @@ class RegisterView {
             }
         }
     }
+    /* TODO: Implement email verification
 
-    private fun sendVerificationEmail() {
-        val auth = FirebaseAuth.getInstance()
-        val user = auth.currentUser
-        user?.let {
-            it.sendEmailVerification()
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        println("Email sent.")
-                    } else {
-                        println("Email not sent.")
+        private fun sendVerificationEmail() {
+            val auth = FirebaseAuth.getInstance()
+            val user = auth.currentUser
+            user?.let {
+                it.sendEmailVerification()
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            println("Email sent.")
+                        } else {
+                            println("Email not sent.")
+                        }
                     }
-                }
+            }
         }
-    }
 
-    private suspend fun saveMessage(message: User) {
-        db.collection("usernames")
-            .add(message)
-            .await()
-    }
+     */
 
     private fun retrieveMessages(
         name: String,
@@ -559,13 +551,14 @@ class RegisterView {
         val db = FirebaseFirestore.getInstance()
         val userRef = db.collection("user").document(user!!.uid)
         val userData = hashMapOf(
-            "userID" to user.uid,
-            "name" to name,
+            "color" to "",
+            "connection" to "",
+            "email" to user.email,
+            "id" to user.uid,
             "image" to "https://www.w3schools.com/howto/img_avatar2.png",
-            "online" to "Online",
-            "lat" to 0.0,
-            "lng" to 0.0,
-            "geohash" to ""
+            "status" to "online",
+            "username.lowercase" to name.lowercase(Locale.ROOT),
+            "username.mixedcase" to name,
         )
         userRef.set(userData)
             .addOnSuccessListener {
