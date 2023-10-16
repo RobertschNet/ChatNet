@@ -25,6 +25,7 @@ enum class LoadingState {
  * This data class is used to represent the content of the bottom-context-menu.
  */
 data class BottomSheetItem(
+    val tag: String,
     val title: String,
     val icon: ImageVector
 )
@@ -68,11 +69,12 @@ data class FetchedUsers(
 data class ShownUsers(
     val personList: FetchedUsers,
     val timestampMessage: Timestamp,
-    val lastMessage: String,
+    val lastMessage: Message,
     val pinChat: Boolean,
     val read: Int,
+    val markedAsUnread: Boolean,
     ) {
-    constructor() : this(FetchedUsers(), Timestamp.now(), "", false, 0)
+    constructor() : this(FetchedUsers(), Timestamp.now(), Message(), false, 0, false)
 }
 
 /**

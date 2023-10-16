@@ -67,6 +67,7 @@ import androidx.navigation.NavController
 import at.htlhl.testing.data.BottomSheetItem
 import at.htlhl.testing.data.Chat
 import at.htlhl.testing.data.FetchedUsers
+import at.htlhl.testing.data.Message
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.data.ShownUsers
 import at.htlhl.testing.navigation.Screens
@@ -100,13 +101,14 @@ class DropIn : ViewModel() {
             val lastVisibleMessage = matchingChat?.messages?.lastOrNull { message ->
                 sharedViewModel.auth.currentUser?.uid.toString() in message.visible
             }
-            val updatedStatus = lastVisibleMessage?.content ?: ""
-            if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != "") {
+            val updatedStatus = lastVisibleMessage?: Message()
+            if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != Message()) {
                 ShownUsers(
                     personList = person,
                     timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                         ?: Timestamp.now(),
-                    lastMessage = "Me: $updatedStatus",
+                    lastMessage = updatedStatus,
+                    markedAsUnread= matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                     pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                     read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                         ?: 0
@@ -118,6 +120,7 @@ class DropIn : ViewModel() {
                         ?: Timestamp.now(),
                     lastMessage = updatedStatus,
                     pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
+                    markedAsUnread= matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                     read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                         ?: 0
                 )
@@ -132,7 +135,8 @@ class DropIn : ViewModel() {
                 personList = person,
                 timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                     ?: Timestamp.now(),
-                lastMessage = matchingChat?.messages?.lastOrNull()?.content ?: "",
+                lastMessage = matchingChat?.messages?.lastOrNull()?: Message(),
+                markedAsUnread= matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                 pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                 read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                     ?: 0
@@ -143,9 +147,9 @@ class DropIn : ViewModel() {
             user.messages.isEmpty()
         }
         val bottomSheetItems = listOf(
-            BottomSheetItem(title = "Delete", icon = Icons.Default.Delete),
-            BottomSheetItem(title = "Mute Messages", icon = Icons.Default.VolumeMute),
-            BottomSheetItem(title = "Pin Chat", icon = Icons.Default.PushPin),
+            BottomSheetItem(title = "Delete", icon = Icons.Default.Delete, tag = "delete"),
+            BottomSheetItem(title = "Mute Messages", icon = Icons.Default.VolumeMute, tag = "mute"),
+            BottomSheetItem(title = "Pin Chat", icon = Icons.Default.PushPin, tag = "pin"),
         )
         val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(
             bottomSheetState = BottomSheetState(BottomSheetValue.Collapsed)
@@ -354,19 +358,15 @@ class DropIn : ViewModel() {
                         person = message,
                         sharedViewModel = sharedViewModel,
                         navController = navController,
-                        onItemClicked = {
-                            test = !test
+                        onItemLongClicked = { person ->
+                            sharedViewModel.friend.value = person
                             coroutineScope.launch {
-                                if (bottomSheetScaffoldState.bottomSheetState.isCollapsed) {
-                                    bottomSheetScaffoldState.bottomSheetState.expand()
-                                } else {
-                                    bottomSheetScaffoldState.bottomSheetState.collapse()
-                                }
+                                bottomSheetScaffoldState.bottomSheetState.expand()
                             }
                         },
-                        bottomSheetState = test,
                         onUserIconClicked = { _, _ ->
-                        }
+                        },
+                        bottomSheetState = bottomSheetScaffoldState.bottomSheetState
                     )
                 }
             }
@@ -541,7 +541,7 @@ fun ChatItemForDropIn(
                 text = person.personList.statusFriend,
                 maxLines = 1,
                 fontSize = 15.sp,
-                color = if (person.lastMessage >= "User is 400 meters away") Color.Yellow else if (person.lastMessage >= "User is 450 meters away") Color.Red else Color.LightGray
+                color = if (person.lastMessage.content >= "User is 400 meters away") Color.Yellow else if (person.lastMessage.content >= "User is 450 meters away") Color.Red else Color.LightGray
             )
         }
     }

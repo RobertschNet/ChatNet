@@ -551,6 +551,7 @@ class RegisterView {
         val db = FirebaseFirestore.getInstance()
         val userRef = db.collection("user").document(user!!.uid)
         val userData = hashMapOf(
+            "blocked" to emptyList<String>(),
             "color" to "",
             "connection" to "",
             "email" to user.email,

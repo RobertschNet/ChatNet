@@ -57,7 +57,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     val auth: FirebaseAuth = Firebase.auth
     val friend =
-        mutableStateOf(ShownUsers(FetchedUsers(), Timestamp.now(), "", false, 0))
+        mutableStateOf(ShownUsers(FetchedUsers(), Timestamp.now(), Message(), false, 0, false))
     val bottomBarState = mutableStateOf(true)
     val gpsState = mutableStateOf(false)
     val imageCall = mutableStateOf(false)
@@ -569,7 +569,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     fun reset() {
         _chatData.value = emptyList()
-        friend.value = ShownUsers(FetchedUsers(), Timestamp.now(), "", false, 0)
+        friend.value = ShownUsers(FetchedUsers(), Timestamp.now(), Message(), false, 0, false)
         _personData.value = emptyList()
         _friendListData.value = emptyList()
         _user.value = FetchedUsers("", mapOf(), "", "", "", "", "", false, "")
@@ -694,6 +694,22 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 }.addOnFailureListener { exception ->
                     exception.printStackTrace()
                 }
+            }
+        }
+    }
+    fun updateMarkAsReadStatus(isAlreadyUnread:Boolean){
+        for (chat in chatData.value) {
+            if (chat.members.contains(friend.value.personList.id) && chat.members.contains(auth.currentUser?.uid.toString())) {
+                val chatRef = getChatDocumentRef().document(chat.chatRoomID)
+                val updateData = if (isAlreadyUnread) {
+                    mapOf("unread" to FieldValue.arrayRemove(auth.currentUser?.uid.toString()))
+                } else {
+                    mapOf("unread" to FieldValue.arrayUnion(auth.currentUser?.uid.toString()))
+                }
+
+                chatRef.update(updateData)
+                    .addOnSuccessListener {}
+                    .addOnFailureListener { exception -> exception.printStackTrace() }
             }
         }
     }

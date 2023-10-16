@@ -3,7 +3,6 @@ package at.htlhl.testing.views
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -27,23 +26,27 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.BottomSheetScaffold
+import androidx.compose.material.BottomSheetScaffoldState
 import androidx.compose.material.BottomSheetState
 import androidx.compose.material.BottomSheetValue
+import androidx.compose.material.DrawerState
+import androidx.compose.material.DrawerValue
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.IconButton
-import androidx.compose.material.TopAppBar
+import androidx.compose.material.SnackbarHostState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.MarkChatUnread
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.VolumeMute
+import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.NotificationsActive
-import androidx.compose.material.icons.outlined.PersonAddAlt1
-import androidx.compose.material.rememberBottomSheetScaffoldState
-import androidx.compose.material3.Divider
+import androidx.compose.material.icons.outlined.MarkChatUnread
+import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.VolumeMute
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,15 +59,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily.Companion.Cursive
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -76,6 +75,7 @@ import at.htlhl.testing.R
 import at.htlhl.testing.data.BottomSheetItem
 import at.htlhl.testing.data.Chat
 import at.htlhl.testing.data.FetchedUsers
+import at.htlhl.testing.data.Message
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.data.ShownUsers
 import at.htlhl.testing.navigation.Screens
@@ -88,13 +88,16 @@ import java.util.Locale
 
 
 class Chats {
+
     @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalMaterialApi::class)
     @Composable
-    fun ChatsScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+    fun ChatsScreen(
+        navController: NavController,
+        sharedViewModel: SharedViewModel
+    ) {
         sharedViewModel.bottomBarState.value = true
         val lazyListState = rememberLazyListState()
-        var test by remember { mutableStateOf(false) }
         val coroutineScope = rememberCoroutineScope()
         var showUserIconPrompt by remember { mutableStateOf(false) }
         var largeUserIconUrl by remember { mutableStateOf("") }
@@ -110,13 +113,14 @@ class Chats {
             val lastVisibleMessage = matchingChat?.messages?.lastOrNull { message ->
                 sharedViewModel.auth.currentUser?.uid.toString() in message.visible
             }
-            val updatedStatus = lastVisibleMessage?.content ?: ""
-            if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != "") {
+            val updatedStatus = lastVisibleMessage ?: Message()
+            if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != Message()) {
                 ShownUsers(
                     personList = person,
                     timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                         ?: Timestamp.now(),
-                    lastMessage = "Me: $updatedStatus",
+                    lastMessage = updatedStatus,
+                    markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                     pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                     read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                         ?: 0
@@ -127,12 +131,45 @@ class Chats {
                     timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                         ?: Timestamp.now(),
                     lastMessage = updatedStatus,
+                    markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                     pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                     read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                         ?: 0
                 )
             }
         }
+        val finalPersonList =
+            updatedPersonList.filter { person -> person.personList.statusFriend == "accepted" }
+        val sortedPersonList =
+            finalPersonList.sortedWith(compareByDescending<ShownUsers> { it.pinChat }.thenByDescending { it.timestampMessage })
+        val bottomSheetScaffoldState = remember {
+            BottomSheetScaffoldState(
+                bottomSheetState = BottomSheetState(BottomSheetValue.Collapsed),
+                drawerState = DrawerState(DrawerValue.Closed),
+                snackbarHostState = SnackbarHostState()
+
+            )
+        }
+        Log.println(Log.INFO, "SortedPersonList", sortedPersonList.toString())
+        val bottomSheetItems = listOf(
+            BottomSheetItem(
+                title = if (sharedViewModel.friend.value.markedAsUnread) "Mark as Unread" else "Mark as Read",
+                icon = if (sharedViewModel.friend.value.markedAsUnread) Icons.Outlined.MarkChatUnread else Icons.Default.MarkChatUnread,
+                tag = "unread"
+            ),
+            BottomSheetItem(title = "Clear Chat", icon = Icons.Default.ClearAll, tag = "clear"),
+            BottomSheetItem(
+                title = if (sharedViewModel.friend.value.personList.mutedFriend) "Unmute User" else "Mute User",
+                icon = if (sharedViewModel.friend.value.personList.mutedFriend) Icons.Default.VolumeOff else Icons.Outlined.VolumeMute,
+                tag = "mute"
+            ),
+            BottomSheetItem(
+                title = if (sharedViewModel.friend.value.pinChat) "Unpin Chat" else "Pin Chat",
+                icon = if (sharedViewModel.friend.value.pinChat) Icons.Outlined.PushPin else Icons.Default.PushPin,
+                tag = "pin"
+            ),
+        )
+
         if (showUserIconPrompt) {
             CustomUserDialog(
                 imageUrl = largeUserIconUrl,
@@ -140,238 +177,94 @@ class Chats {
                 onDismiss = { showUserIconPrompt = false }
             )
         }
-        val finalPersonList =
-            updatedPersonList.filter { person -> person.personList.statusFriend == "accepted" }
-        val sortedPersonList =
-            finalPersonList.sortedWith(compareByDescending<ShownUsers> { it.pinChat }.thenByDescending { it.timestampMessage })
-        Log.println(Log.INFO, "SortedPersonList", sortedPersonList.toString())
-        val bottomSheetItems = listOf(
-            BottomSheetItem(title = "Delete", icon = Icons.Default.Delete),
-            BottomSheetItem(title = "Mute Messages", icon = Icons.Default.VolumeMute),
-            BottomSheetItem(title = "Pin Chat", icon = Icons.Default.PushPin),
-        )
-        val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(
-            bottomSheetState = BottomSheetState(BottomSheetValue.Collapsed)
-        )
         BottomSheetScaffold(
             scaffoldState = bottomSheetScaffoldState,
             sheetGesturesEnabled = true,
             drawerGesturesEnabled = false,
             sheetContent = {
-                Column(
-                    content = {
-                        Canvas(
-                            modifier = Modifier
-                                .width(50.dp)
-                                .height(10.dp)
-                                .align(Alignment.CenterHorizontally)
-                        ) {
-                            drawRoundRect(
-                                color = Color.LightGray,
-                                size = size.copy(height = 2.dp.toPx()),
-                                cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx()),
-                                style = Stroke(2.dp.toPx())
-                            )
-                        }
-                        Spacer(modifier = Modifier.padding(6.dp))
-                        Row {
-                            Image(
-                                contentDescription = null,
-                                painter = rememberAsyncImagePainter(
-                                    ImageRequest.Builder(LocalContext.current)
-                                        .data(data = sharedViewModel.friend.value.personList.image)
-                                        .apply(block = fun ImageRequest.Builder.() {
-                                            placeholder(R.drawable.user_circle_svgrepo_com)
-                                        }).build()
-                                ),
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .size(40.dp),
-                                contentScale = ContentScale.Crop,
-                                alignment = Alignment.Center
-                            )
-                            Text(
-                                text = sharedViewModel.friend.value.personList.username["mixedcase"].toString(),
-                                modifier = Modifier
-                                    .padding(start = 16.dp)
-                                    .align(Alignment.CenterVertically)
-                                    .weight(1f),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp,
-                                color = Color.Black
-                            )
-                        }
-                        Spacer(modifier = Modifier.padding(6.dp))
-                        Divider(
-                            thickness = 0.25f.dp,
-                            color = Color.LightGray,
-                            modifier = Modifier.padding(bottom = 2.dp)
-                        )
-                        LazyColumn(userScrollEnabled = false) {
-                            items(bottomSheetItems.size, itemContent = {
-                                Row(
-                                    horizontalArrangement = Arrangement.Start,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            when (bottomSheetItems[it].title) {
-                                                "Delete" -> {
-                                                    sharedViewModel.deleteFriendFromFriendList()
-                                                    sharedViewModel.deleteChatRoom()
-                                                }
-
-                                                "Pin Chat" -> {
-                                                    Log.println(
-                                                        Log.INFO,
-                                                        "PinChat",
-                                                        sharedViewModel.friend.value.toString()
-                                                    )
-                                                    if (sharedViewModel.friend.value.pinChat) {
-                                                        sharedViewModel.updatePinChatStatus(true)
-                                                    } else {
-                                                        sharedViewModel.updatePinChatStatus(false)
-                                                    }
-                                                }
-
-                                                "Mute Messages" -> {
-                                                    if (sharedViewModel.friend.value.personList.mutedFriend) {
-                                                        sharedViewModel.updateMuteFriendStatus(true)
-                                                    } else {
-                                                        sharedViewModel.updateMuteFriendStatus(false)
-                                                    }
-                                                }
-                                            }
-                                        },
-                                ) {
-                                    Icon(
-                                        bottomSheetItems[it].icon,
-                                        bottomSheetItems[it].title,
-                                        tint = Color.Black,
-                                        modifier = Modifier.padding(top = 14.dp, bottom = 14.dp)
-                                    )
-                                    Text(
-                                        text = bottomSheetItems[it].title,
-                                        color = Color.Black,
-                                        modifier = Modifier.padding(
-                                            start = 12.dp,
-                                            top = 14.dp,
-                                            bottom = 14.dp
-                                        ),
-                                    )
+                BottomSheetContent(
+                    bottomSheetItems,
+                    onItemClicked = { item ->
+                        when (item.tag) {
+                            "unread" -> {
+                                if (sharedViewModel.friend.value.markedAsUnread) {
+                                    if (sharedViewModel.friend.value.read > 0) {
+                                        sharedViewModel.markMessagesAsRead(sharedViewModel.friend.value)
+                                    } else {
+                                        sharedViewModel.updateMarkAsReadStatus(false)
+                                    }
+                                } else {
+                                    sharedViewModel.updateMarkAsReadStatus(true)
                                 }
+                            }
 
-                            })
+                            "clear" -> {
+                                // TODO sharedViewModel.clearChat()
+
+                            }
+
+                            "mute" -> {
+                                if (sharedViewModel.friend.value.personList.mutedFriend) {
+                                    sharedViewModel.updateMuteFriendStatus(true)
+                                } else {
+                                    sharedViewModel.updateMuteFriendStatus(false)
+                                }
+                            }
+
+                            "pin" -> {
+                                if (sharedViewModel.friend.value.pinChat) {
+                                    sharedViewModel.updatePinChatStatus(true)
+                                } else {
+                                    sharedViewModel.updatePinChatStatus(false)
+                                }
+                            }
                         }
+                        coroutineScope.launch { bottomSheetScaffoldState.bottomSheetState.collapse() }
+
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(250.dp)
-                        .background(
-                            color = Color.White,
-                        )
-                        .padding(start = 16.dp, end = 16.dp, top = 16.dp),
+                    friend = sharedViewModel.friend.value,
                 )
             },
             sheetPeekHeight = 0.dp,
             topBar = {
-                TopAppBar(
-                    backgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
-                    modifier = Modifier
-                        .height(70.dp)
-                        .fillMaxWidth(),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer(
-                                alpha = if (bottomSheetScaffoldState.bottomSheetState.isAnimationRunning ||
-                                    bottomSheetScaffoldState.bottomSheetState.isExpanded
-                                ) 0.5f else 1f
-                            )
-                    ) {
-                        Text(
-                            text = "ChatNet",
-                            modifier = Modifier
-                                .align(Alignment.CenterStart)
-                                .padding(start = 20.dp),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 36.sp,
-                            fontFamily = Cursive
-                        )
-                        Icon(imageVector = Icons.Outlined.PersonAddAlt1,
-                            contentDescription = "AddFriend",
-                            modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .padding(end = 20.dp, top = 5.dp)
-                                .size(30.dp)
-                                .clickable {
-                                    navController.navigate(Screens.SearchViewScreen.route)
-                                })
-                        IconButton(
-                            onClick = {
-                                navController.navigate(Screens.InboxScreen.route)
-                            },
-                            modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .padding(end = 60.dp, top = 5.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.NotificationsActive,
-                                contentDescription = "Notifications",
-                                modifier = Modifier.size(30.dp)
-                            )
-                        }
-                    }
-                }
-                Divider(
-                    thickness = 1.dp,
-                    color = if (isSystemInDarkTheme()) Color.DarkGray else Color.Transparent
-                )
+                BottomSheetTopBar(navController, bottomSheetScaffoldState, coroutineScope)
             },
         ) {
-            LazyColumn(
-                Modifier
-                    .fillMaxSize()
-                    .background(if (isSystemInDarkTheme()) Color.Black else Color.White)
-                    .graphicsLayer(
-                        alpha = if (bottomSheetScaffoldState.bottomSheetState.isAnimationRunning ||
-                            bottomSheetScaffoldState.bottomSheetState.isExpanded
-                        ) 0.5f else 1f
-                    )
-                    .clickable(enabled = test) {
-                        if (test) {
-                            coroutineScope.launch {
-                                bottomSheetScaffoldState.bottomSheetState.collapse()
-                                test = !test
-                            }
-                        }
-                    },
-                state = lazyListState
+            Box(
+                modifier =
+                if (bottomSheetScaffoldState.bottomSheetState.isExpanded || bottomSheetScaffoldState.bottomSheetState.isAnimationRunning) {
+                    Modifier
+                        .fillMaxSize()
+                        .clickable { coroutineScope.launch { bottomSheetScaffoldState.bottomSheetState.collapse() } }
+                } else {
+                    Modifier
+                }
             ) {
-                items(sortedPersonList) { message ->
-                    ChatItem(
-                        person = message,
-                        sharedViewModel = sharedViewModel,
-                        navController = navController,
-                        onItemClicked = {
-                            test = !test
-                            coroutineScope.launch {
-                                if (bottomSheetScaffoldState.bottomSheetState.isCollapsed) {
+                LazyColumn(
+                    Modifier
+                        .fillMaxSize()
+                        .background(if (isSystemInDarkTheme()) Color.Black else Color.White),
+                    state = lazyListState
+                ) {
+                    items(sortedPersonList) { message ->
+                        ChatItem(
+                            person = message,
+                            sharedViewModel = sharedViewModel,
+                            navController = navController,
+                            onUserIconClicked = { imageUrl, userName ->
+                                showUserIconPrompt = true
+                                largeUserIconUrl = imageUrl
+                                largeUserIconName = userName
+                            },
+                            onItemLongClicked = { person ->
+                                sharedViewModel.friend.value = person
+                                coroutineScope.launch {
                                     bottomSheetScaffoldState.bottomSheetState.expand()
-                                } else {
-                                    bottomSheetScaffoldState.bottomSheetState.collapse()
                                 }
-                            }
-                        },
-                        bottomSheetState = test,
-                        onUserIconClicked = { imageUrl, userName ->
-                            showUserIconPrompt = true
-                            largeUserIconUrl = imageUrl
-                            largeUserIconName = userName
-                        }
-
-                    )
+                            },
+                            bottomSheetState = bottomSheetScaffoldState.bottomSheetState
+                        )
+                    }
                 }
             }
         }
@@ -475,39 +368,40 @@ fun CustomUserDialog(
 }
 
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun ChatItem(
     person: ShownUsers,
-    bottomSheetState: Boolean,
+    bottomSheetState: BottomSheetState,
     navController: NavController,
     sharedViewModel: SharedViewModel,
     onUserIconClicked: (String, String) -> Unit,
-    onItemClicked: () -> Unit
+    onItemLongClicked: (ShownUsers) -> Unit
 ) {
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
     val formattedTime: String = formatter.format(person.timestampMessage.toDate())
     Row(
-        modifier = Modifier
-            .combinedClickable(
-                onClick = {
-                    if (bottomSheetState) {
-                        onItemClicked()
-                    } else {
+        modifier = if (bottomSheetState.isAnimationRunning || bottomSheetState.isExpanded) {
+            Modifier
+                .fillMaxWidth()
+                .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
+                .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
+        } else {
+            Modifier
+                .combinedClickable(
+                    onClick = {
                         sharedViewModel.friend.value = person
-                        Log.println(Log.INFO, "Current", person.toString())
                         navController.navigate(Screens.ChatScreen.route)
-                    }
-                },
-                onLongClick = {
-                    sharedViewModel.friend.value = person
-                    onItemClicked()
-                },
-            )
-            .fillMaxWidth()
-            .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
-            .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
+                    },
+                    onLongClick = {
+                        onItemLongClicked.invoke(person)
+                    },
+                )
+                .fillMaxWidth()
+                .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
+                .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
+        }
     ) {
         val isOnline = person.personList.status
         Box(
@@ -647,13 +541,26 @@ fun ChatItem(
                     modifier = Modifier
                         .padding(start = 10.dp)
                         .weight(1f),
-                    text = if (person.lastMessage.length > 24) "${person.lastMessage.substring(
-                        0,
-                        24
-                    )}..." else person.lastMessage,
+                    text = if (person.lastMessage.sender != sharedViewModel.auth.currentUser?.uid.toString()) {
+                        if (person.lastMessage.content.length > 24) "${
+                            person.lastMessage.content.substring(
+                                0,
+                                24
+                            )
+                        }..." else person.lastMessage.content
+                    } else {
+                        if (person.lastMessage.content.length > 24) "Me: ${
+                            person.lastMessage.content.substring(
+                                0,
+                                24
+                            )
+                        }..." else "Me: ${person.lastMessage.content}"
+                    },
                     maxLines = 1,
                     fontSize = 15.sp,
-                    color = if (person.read > 0) Color(0xFF00A0E8) else Color.LightGray,
+                    color = if (person.read > 0 && !person.lastMessage.read && person.lastMessage.sender != sharedViewModel.auth.currentUser?.uid) Color(
+                        0xFF00A0E8
+                    ) else Color.LightGray,
                 )
                 if (person.personList.mutedFriend) {
                     Icon(
@@ -675,7 +582,7 @@ fun ChatItem(
                         tint = Color.LightGray,
                     )
                 }
-                if (person.read > 0) {
+                if (person.read > 0 || person.markedAsUnread) {
                     Spacer(modifier = Modifier.padding(start = 4.dp))
                     Box(
                         modifier = Modifier
