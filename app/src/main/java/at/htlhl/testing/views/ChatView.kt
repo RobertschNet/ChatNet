@@ -89,12 +89,14 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
+import at.htlhl.testing.R
 import at.htlhl.testing.data.Chat
 import at.htlhl.testing.data.Message
 import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.data.ShownUsers
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.runBlocking
@@ -103,7 +105,7 @@ import java.time.format.DateTimeFormatter
 
 class ChatView : ViewModel() {
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    @RequiresApi(Build.VERSION_CODES.S)
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @Composable
     fun ChatScreen(
@@ -165,7 +167,7 @@ class ChatView : ViewModel() {
         clipboardManager.setPrimaryClip(clip)
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    @RequiresApi(Build.VERSION_CODES.S)
     @Composable
     fun MessageList(
         viewModel: SharedViewModel,
@@ -184,7 +186,7 @@ class ChatView : ViewModel() {
                     Message(
                         sender = message.sender,
                         type = "text",
-                        read = false,
+                        read = message.read,
                         content = message.content,
                         timestamp = message.timestamp,
                         visible = message.visible,
@@ -401,14 +403,14 @@ class ChatView : ViewModel() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    @RequiresApi(Build.VERSION_CODES.S)
     @Composable
     fun MessageItem(viewModel: SharedViewModel, message: Message, documentId: String) {
         val isUser = message.sender == viewModel.auth.currentUser?.uid
         val backgroundColor = if (isUser) {
-            if (isSystemInDarkTheme()) Color.DarkGray else Color.White
+            if (isSystemInDarkTheme()) Color.DarkGray else Color(0xFF00A0E8)
         } else {
-            if (isSystemInDarkTheme()) Color.Black else Color.LightGray
+            if (isSystemInDarkTheme()) Color.Black else Color.White
         }
         val alignment = if (isUser) Arrangement.End else Arrangement.Start
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -419,17 +421,8 @@ class ChatView : ViewModel() {
         var deleteDialog by remember { mutableStateOf(false) }
         val anchorPosition = remember { mutableStateOf<Offset?>(null) }
         val context = LocalContext.current
-        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-        } else {
-            TODO("VERSION.SDK_INT < S")
-        }
-
-
-
-
-
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        val vibrator = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+        Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = alignment,
@@ -459,13 +452,9 @@ class ChatView : ViewModel() {
                                 }
                             )
                         }
-                        .border(
-                            1.dp,
-                            if (isSystemInDarkTheme()) Color.White else Color.Black,
-                            RoundedCornerShape(24.dp)
-                        )
+                        .border( if (isUser) 0.dp else  0.5f.dp, if (isUser) Color.White else Color.Black, RoundedCornerShape(24.dp))
                         .background(backgroundColor, shape = RoundedCornerShape(24.dp))
-                        .padding(top=4.dp, start = 4.dp, end = 4.dp, bottom = 4.dp)
+                        .padding(top = 4.dp, start = 4.dp, end = 4.dp, bottom = 4.dp)
                 ) {
                     val messageContent = message.content
                     val maxLineLength = 30
@@ -506,37 +495,58 @@ class ChatView : ViewModel() {
                         lines.append(currentLine)
                     }
 
-                    Box(
-                        contentAlignment = Alignment.TopStart
-                    ) {
-                        Text(
-                            text = lines.toString(),
-                            fontSize = 14.sp,
-                            color = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                            modifier = Modifier
-                                .padding(8.dp)
-                                .background(backgroundColor, shape = RoundedCornerShape(24.dp)),
-                            textAlign = TextAlign.Start
-                        )
-                        Text(
-                            text = formattedTime,
-                            fontSize = 10.sp,
-                            color = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                            textAlign = TextAlign.End,
-                            modifier =
-                            Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(top = 30.dp, end = 10.dp)
-                        )
-                    }
+
+                    Text(
+                        text = lines.toString(),
+                        fontSize = 14.sp,
+                        color = if (isUser) Color.White else Color.Black,
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .background(backgroundColor, shape = RoundedCornerShape(24.dp)),
+                        textAlign = TextAlign.Start
+                    )
                 }
+
             }
 
-
-
-
-
-
+            Row(
+                horizontalArrangement = alignment,
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = CenterVertically
+            ) {
+                if (isUser) {
+                    Image(
+                        painter = rememberAsyncImagePainter(
+                            ImageRequest.Builder(LocalContext.current)
+                                .data(data = if (message.read) R.drawable.eye_1_svgrepo_com else R.drawable.eye_hide_1_svgrepo_com)
+                                .apply(block = fun ImageRequest.Builder.() {
+                                    placeholder(R.drawable.user_circle_svgrepo_com)
+                                }).build()
+                        ),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .padding(end = 5.dp),
+                    )
+                    Text(
+                        text = formattedTime,
+                        fontSize = 10.sp,
+                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                        textAlign = TextAlign.Start,
+                        modifier =
+                        Modifier.padding(end = 15.dp)
+                    )
+                } else {
+                    Text(
+                        text = formattedTime,
+                        fontSize = 10.sp,
+                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                        textAlign = TextAlign.Start,
+                        modifier =
+                        Modifier.padding(start = 15.dp)
+                    )
+                }
+            }
             if (deleteDialog) {
                 DeleteDialog(isUser = isUser, sharedViewModel = viewModel) { value ->
                     if (value == "delete") {
@@ -773,7 +783,7 @@ class ChatView : ViewModel() {
     }
 
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    @RequiresApi(Build.VERSION_CODES.S)
     @SuppressLint("MutableCollectionMutableState")
     @Composable
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
@@ -792,14 +802,15 @@ class ChatView : ViewModel() {
                 Message(
                     sender = message.sender,
                     type = "text",
-                    read = false,
+                    read = message.read,
                     content = message.content,
                     timestamp = message.timestamp,
                     visible = message.visible,
                 )
             }
         }
-        sharedViewModel.markMessagesAsRead(user)
+       sharedViewModel.markMessagesAsRead(user)
+        sharedViewModel.updateMarkAsReadStatus(true)
         val onMessageSent: (Message) -> Unit = { message ->
             runBlocking {
                 sharedViewModel.saveMessages(doc, message)

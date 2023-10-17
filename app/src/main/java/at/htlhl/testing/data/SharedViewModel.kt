@@ -697,7 +697,8 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
-    fun updateMarkAsReadStatus(isAlreadyUnread:Boolean){
+
+    fun updateMarkAsReadStatus(isAlreadyUnread: Boolean) {
         for (chat in chatData.value) {
             if (chat.members.contains(friend.value.personList.id) && chat.members.contains(auth.currentUser?.uid.toString())) {
                 val chatRef = getChatDocumentRef().document(chat.chatRoomID)
@@ -713,4 +714,36 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
+
+    fun deleteMessagesForUser() {
+        for (chat in chatData.value) {
+            if (chat.members.contains(friend.value.personList.id) && chat.members.contains(auth.currentUser?.uid.toString())) {
+                val chatRef =
+                    getChatDocumentRef().document(chat.chatRoomID).collection(MESSAGES_COLLECTION)
+                chatRef.get().addOnSuccessListener { querySnapshot ->
+                    for (document in querySnapshot.documents) {
+                        val sender = document.get("visible") as List<String>
+                        if (auth.currentUser?.uid.toString() in sender) {
+                            val updatedVisible = sender.toMutableList()
+                            updatedVisible.remove(auth.currentUser?.uid.toString())
+
+                            chatRef.document(document.id)
+                                .update("visible", updatedVisible)
+                                .addOnSuccessListener {
+                                    // Successfully removed the entry from the "visible" array
+                                }
+                                .addOnFailureListener { exception ->
+                                    exception.printStackTrace()
+                                    // Handle the failure here
+                                }
+                        }
+                    }
+                }.addOnFailureListener { exception ->
+                    exception.printStackTrace()
+                    // Handle the failure here
+                }
+            }
+        }
+    }
+
 }

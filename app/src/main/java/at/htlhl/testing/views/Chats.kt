@@ -35,18 +35,13 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.IconButton
 import androidx.compose.material.SnackbarHostState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.MarkChatUnread
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.VolumeMute
-import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.MarkChatUnread
-import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material.icons.outlined.VolumeMute
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -65,6 +60,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -100,6 +96,7 @@ class Chats {
         val lazyListState = rememberLazyListState()
         val coroutineScope = rememberCoroutineScope()
         var showUserIconPrompt by remember { mutableStateOf(false) }
+        var showClearChatPrompt by remember { mutableStateOf(false) }
         var largeUserIconUrl by remember { mutableStateOf("") }
         var largeUserIconName by remember { mutableStateOf("") }
         val friendListDataState = sharedViewModel.friendListData.collectAsState()
@@ -153,19 +150,23 @@ class Chats {
         Log.println(Log.INFO, "SortedPersonList", sortedPersonList.toString())
         val bottomSheetItems = listOf(
             BottomSheetItem(
-                title = if (sharedViewModel.friend.value.markedAsUnread) "Mark as Unread" else "Mark as Read",
-                icon = if (sharedViewModel.friend.value.markedAsUnread) Icons.Outlined.MarkChatUnread else Icons.Default.MarkChatUnread,
+                title = if (sharedViewModel.friend.value.markedAsUnread || sharedViewModel.friend.value.read > 0) "Mark as Read" else "Mark as Unread",
+                icon = if (sharedViewModel.friend.value.markedAsUnread || sharedViewModel.friend.value.read > 0) R.drawable.chat_bubble_svgrepo_com else R.drawable.chat_bubble_outline_badged_svgrepo_com,
                 tag = "unread"
             ),
-            BottomSheetItem(title = "Clear Chat", icon = Icons.Default.ClearAll, tag = "clear"),
+            BottomSheetItem(
+                title = "Clear Chat",
+                icon = R.drawable.comment_delete_svgrepo_com,
+                tag = "clear"
+            ),
             BottomSheetItem(
                 title = if (sharedViewModel.friend.value.personList.mutedFriend) "Unmute User" else "Mute User",
-                icon = if (sharedViewModel.friend.value.personList.mutedFriend) Icons.Default.VolumeOff else Icons.Outlined.VolumeMute,
+                icon = if (sharedViewModel.friend.value.personList.mutedFriend) R.drawable.speaker_none_svgrepo_com else R.drawable.speaker_svgrepo_com,
                 tag = "mute"
             ),
             BottomSheetItem(
                 title = if (sharedViewModel.friend.value.pinChat) "Unpin Chat" else "Pin Chat",
-                icon = if (sharedViewModel.friend.value.pinChat) Icons.Outlined.PushPin else Icons.Default.PushPin,
+                icon = if (sharedViewModel.friend.value.pinChat) R.drawable.pin_off_svgrepo_com else R.drawable.pin_svgrepo_com,
                 tag = "pin"
             ),
         )
@@ -177,6 +178,14 @@ class Chats {
                 onDismiss = { showUserIconPrompt = false }
             )
         }
+        if (showClearChatPrompt) {
+            ClearChatDialog(onDismiss = { clear ->
+                if (clear == "clear") {
+                    sharedViewModel.deleteMessagesForUser()
+                }
+                showClearChatPrompt = false
+            })
+        }
         BottomSheetScaffold(
             scaffoldState = bottomSheetScaffoldState,
             sheetGesturesEnabled = true,
@@ -187,20 +196,17 @@ class Chats {
                     onItemClicked = { item ->
                         when (item.tag) {
                             "unread" -> {
-                                if (sharedViewModel.friend.value.markedAsUnread) {
-                                    if (sharedViewModel.friend.value.read > 0) {
-                                        sharedViewModel.markMessagesAsRead(sharedViewModel.friend.value)
-                                    } else {
-                                        sharedViewModel.updateMarkAsReadStatus(false)
-                                    }
-                                } else {
+                                if (sharedViewModel.friend.value.read > 0) {
+                                    sharedViewModel.markMessagesAsRead(sharedViewModel.friend.value)
+                                } else if (sharedViewModel.friend.value.markedAsUnread && sharedViewModel.friend.value.read == 0) {
                                     sharedViewModel.updateMarkAsReadStatus(true)
+                                } else {
+                                    sharedViewModel.updateMarkAsReadStatus(false)
                                 }
                             }
 
                             "clear" -> {
-                                // TODO sharedViewModel.clearChat()
-
+                                showClearChatPrompt = true
                             }
 
                             "mute" -> {
@@ -266,6 +272,80 @@ class Chats {
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun ClearChatDialog(onDismiss: (String) -> Unit) {
+    Dialog(
+        onDismissRequest = { onDismiss.invoke("closed") },
+        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
+    ) {
+        Column(
+            modifier = Modifier
+                .background(Color.White, RoundedCornerShape(20.dp))
+                .width(250.dp)
+                .height(200.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Clear Chat?",
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = Color.Black,
+                modifier = Modifier.padding(top = 10.dp)
+            )
+            Text(
+                text = "All messages/images from both users will be deleted.",
+                fontWeight = FontWeight.Light,
+                textAlign = TextAlign.Center,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(
+                    top = 10.dp,
+                    bottom = 20.dp,
+                    start = 10.dp,
+                    end = 10.dp
+                )
+            )
+            Divider(
+                thickness = 0.3f.dp,
+                color = Color.LightGray,
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onDismiss.invoke("clear") }
+            ) {
+                Text(
+                    text = "Clear",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp,
+                    color = Color.Red,
+                    modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
+                )
+            }
+            Divider(
+                thickness = 0.3f.dp,
+                color = Color.LightGray,
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onDismiss.invoke("closed") }
+            ) {
+                Text(
+                    text = "Cancel",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp,
+                    modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
+                )
             }
         }
     }
@@ -381,6 +461,9 @@ fun ChatItem(
 ) {
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
     val formattedTime: String = formatter.format(person.timestampMessage.toDate())
+    if (person.read > 0) {
+        sharedViewModel.updateMarkAsReadStatus(true)
+    }
     Row(
         modifier = if (bottomSheetState.isAnimationRunning || bottomSheetState.isExpanded) {
             Modifier
@@ -411,7 +494,7 @@ fun ChatItem(
                 contentDescription = null,
 
                 painter = rememberAsyncImagePainter(
-                    ImageRequest.Builder(LocalContext.current)
+                    model = ImageRequest.Builder(LocalContext.current)
                         .data(data = person.personList.image)
                         .apply(block = fun ImageRequest.Builder.() {
                             placeholder(R.drawable.user_circle_svgrepo_com)
@@ -596,7 +679,7 @@ fun ChatItem(
                             )
                     ) {
                         Text(
-                            text = if (person.read < 100) person.read.toString() else "99+",
+                            text = if (person.markedAsUnread) "" else if (person.read < 100) person.read.toString() else "99+",
                             modifier = Modifier.align(Alignment.Center),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,

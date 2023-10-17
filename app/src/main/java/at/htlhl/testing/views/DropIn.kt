@@ -32,9 +32,6 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.IconButton
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.VolumeMute
 import androidx.compose.material.icons.outlined.GpsNotFixed
 import androidx.compose.material.icons.outlined.GpsOff
 import androidx.compose.material.rememberBottomSheetScaffoldState
@@ -58,12 +55,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily.Companion.Cursive
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
+import at.htlhl.testing.R
 import at.htlhl.testing.data.BottomSheetItem
 import at.htlhl.testing.data.Chat
 import at.htlhl.testing.data.FetchedUsers
@@ -72,6 +71,7 @@ import at.htlhl.testing.data.SharedViewModel
 import at.htlhl.testing.data.ShownUsers
 import at.htlhl.testing.navigation.Screens
 import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -101,14 +101,14 @@ class DropIn : ViewModel() {
             val lastVisibleMessage = matchingChat?.messages?.lastOrNull { message ->
                 sharedViewModel.auth.currentUser?.uid.toString() in message.visible
             }
-            val updatedStatus = lastVisibleMessage?: Message()
+            val updatedStatus = lastVisibleMessage ?: Message()
             if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != Message()) {
                 ShownUsers(
                     personList = person,
                     timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                         ?: Timestamp.now(),
                     lastMessage = updatedStatus,
-                    markedAsUnread= matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
+                    markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                     pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                     read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                         ?: 0
@@ -120,7 +120,7 @@ class DropIn : ViewModel() {
                         ?: Timestamp.now(),
                     lastMessage = updatedStatus,
                     pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
-                    markedAsUnread= matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
+                    markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                     read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                         ?: 0
                 )
@@ -135,8 +135,8 @@ class DropIn : ViewModel() {
                 personList = person,
                 timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                     ?: Timestamp.now(),
-                lastMessage = matchingChat?.messages?.lastOrNull()?: Message(),
-                markedAsUnread= matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
+                lastMessage = matchingChat?.messages?.lastOrNull() ?: Message(),
+                markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                 pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                 read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                     ?: 0
@@ -147,9 +147,9 @@ class DropIn : ViewModel() {
             user.messages.isEmpty()
         }
         val bottomSheetItems = listOf(
-            BottomSheetItem(title = "Delete", icon = Icons.Default.Delete, tag = "delete"),
-            BottomSheetItem(title = "Mute Messages", icon = Icons.Default.VolumeMute, tag = "mute"),
-            BottomSheetItem(title = "Pin Chat", icon = Icons.Default.PushPin, tag = "pin"),
+            BottomSheetItem(title = "Delete", icon = 2, tag = "delete"),
+            BottomSheetItem(title = "Mute Messages", icon = 2, tag = "mute"),
+            BottomSheetItem(title = "Pin Chat", icon = 2, tag = "pin"),
         )
         val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(
             bottomSheetState = BottomSheetState(BottomSheetValue.Collapsed)
@@ -216,10 +216,15 @@ class DropIn : ViewModel() {
                                             }
                                         },
                                 ) {
-                                    Icon(
-                                        bottomSheetItems[it].icon,
+                                    Image(
+                                        painter = rememberAsyncImagePainter(
+                                            ImageRequest.Builder(LocalContext.current)
+                                                .data(data = bottomSheetItems[it].icon)
+                                                .apply(block = fun ImageRequest.Builder.() {
+                                                    placeholder(R.drawable.user_circle_svgrepo_com)
+                                                }).build()
+                                        ),
                                         bottomSheetItems[it].title,
-                                        tint = Color.White,
                                         modifier = Modifier.padding(top = 14.dp, bottom = 14.dp)
                                     )
                                     Text(

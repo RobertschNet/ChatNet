@@ -1,7 +1,6 @@
 package at.htlhl.testing.data
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import com.google.firebase.Timestamp
 
 /**
@@ -15,10 +14,7 @@ import com.google.firebase.Timestamp
  * This enum class is used to represent the state of the loading process.
  */
 enum class LoadingState {
-    Loading,
-    Authenticated,
-    NotAuthenticated,
-    Error
+    Loading, Authenticated, NotAuthenticated, Error
 }
 
 /**
@@ -27,17 +23,14 @@ enum class LoadingState {
 data class BottomSheetItem(
     val tag: String,
     val title: String,
-    val icon: ImageVector
+    val icon: Int,
 )
 
 /**
  * This data class is used to represent the content of the bottom-navigation-bar.
  */
 data class BottomNavItem(
-    val name: String,
-    val route: String,
-    val icon: Int,
-    val color: Color
+    val name: String, val route: String, val icon: Int, val color: Color
 )
 
 /**
@@ -45,7 +38,7 @@ data class BottomNavItem(
  */
 data class FetchedUsers(
     val image: String,
-    val username: Map<String,String>,
+    val username: Map<String, String>,
     val status: String,
     val id: String,
     val email: String,
@@ -54,7 +47,7 @@ data class FetchedUsers(
     val mutedFriend: Boolean,
     val statusFriend: String,
 ) {
-    constructor() : this("", mapOf(), "","","", "", "", false, "")
+    constructor() : this("", mapOf(), "", "", "", "", "", false, "")
 
     fun doesMatch(query: String): Boolean {
         val matchingCombinations = listOf(
@@ -62,7 +55,7 @@ data class FetchedUsers(
             username["mixedcase"],
             "${username["lowercase"]} ${username["mixedcase"]}",
         )
-        return matchingCombinations.any { it?.contains(query, ignoreCase = true) ?: false}
+        return matchingCombinations.any { it?.contains(query, ignoreCase = true) ?: false }
     }
 }
 
@@ -73,7 +66,7 @@ data class ShownUsers(
     val pinChat: Boolean,
     val read: Int,
     val markedAsUnread: Boolean,
-    ) {
+) {
     constructor() : this(FetchedUsers(), Timestamp.now(), Message(), false, 0, false)
 }
 
