@@ -1,10 +1,9 @@
-package at.htlhl.testing.views
+package at.htlhl.testing.ui.views
 
 import android.annotation.SuppressLint
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -50,11 +49,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import at.htlhl.testing.data.Chat
-import at.htlhl.testing.data.FetchedUsers
-import at.htlhl.testing.data.SharedViewModel
+import at.htlhl.testing.data.FirebaseChats
+import at.htlhl.testing.data.FirebaseUsers
+import at.htlhl.testing.viewmodels.SharedViewModel
 import at.htlhl.testing.navigation.Screens
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.SubcomposeAsyncImage
 
 class SearchView : ViewModel() {
 
@@ -67,7 +66,7 @@ class SearchView : ViewModel() {
         val searchText by viewModel.searchText.collectAsState()
         val isSearching by viewModel.isSearching.collectAsState()
         val documentIdState = sharedViewModel.chatData.collectAsState()
-        val documentationId: List<Chat> = documentIdState.value
+        val documentationId: List<FirebaseChats> = documentIdState.value
         Scaffold(
             backgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
             modifier = Modifier.fillMaxSize(),
@@ -85,7 +84,7 @@ class SearchView : ViewModel() {
     }
 
     @Composable
-    fun TopBarSearchView(navController: NavController, persons: List<FetchedUsers>) {
+    fun TopBarSearchView(navController: NavController, persons: List<FirebaseUsers>) {
         val viewModel: SharedViewModel = viewModel()
         val searchText by viewModel.searchText.collectAsState()
         var search by rememberSaveable { mutableStateOf(true) }
@@ -159,10 +158,10 @@ class SearchView : ViewModel() {
     @Composable
     fun ContentSearchView(
         viewModel: SharedViewModel,
-        persons: List<FetchedUsers>,
+        persons: List<FirebaseUsers>,
         isSearching: Boolean,
         searchText: String,
-        documentId: List<Chat>,
+        documentId: List<FirebaseChats>,
         sharedViewModel: SharedViewModel
     ) {
         Divider(thickness = 0.25f.dp, color = Color.LightGray)
@@ -184,7 +183,7 @@ class SearchView : ViewModel() {
             )
         }
         persons.forEach {
-            if (it.doesMatch(searchText) && searchText.isNotEmpty()) {
+            if (it.doesMatchUsername(searchText) && searchText.isNotEmpty()) {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -195,14 +194,17 @@ class SearchView : ViewModel() {
                                 .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
                                 .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp),
                         ) {
-                            Image(
+                            SubcomposeAsyncImage(
                                 contentDescription = null,
-                                painter = rememberAsyncImagePainter(person.image),
+                                model = person.image,
                                 modifier = Modifier
                                     .clip(CircleShape)
                                     .size(50.dp),
                                 contentScale = ContentScale.Crop,
-                                alignment = Alignment.Center
+                                alignment = Alignment.Center,
+                                loading = {
+                                    CircularProgressIndicator()
+                                }
                             )
                             Text(
                                 text = person.username["mixedcase"].toString(),

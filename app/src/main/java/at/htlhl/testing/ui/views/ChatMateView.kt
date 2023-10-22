@@ -1,15 +1,18 @@
-package at.htlhl.testing.views
+package at.htlhl.testing.ui.views
 
 import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.net.Uri
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.VibratorManager
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,6 +39,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Scaffold
@@ -68,7 +72,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -87,32 +90,85 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.PopupProperties
-import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import at.htlhl.testing.R
-import at.htlhl.testing.data.Chat
-import at.htlhl.testing.data.Message
-import at.htlhl.testing.data.SharedViewModel
-import at.htlhl.testing.data.ShownUsers
+import at.htlhl.testing.data.FirebaseChats
+import at.htlhl.testing.data.FirebaseMessages
 import at.htlhl.testing.navigation.Screens
-import coil.compose.rememberAsyncImagePainter
-import coil.request.ImageRequest
+import at.htlhl.testing.viewmodels.SharedViewModel
+import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.runBlocking
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import org.json.JSONObject
+import java.io.IOException
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-class ChatView : ViewModel() {
+class ChatMateView {
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    @Composable
+    fun ChatMateScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+        val messageChatRoomDataState = sharedViewModel.chatData.collectAsState()
+        val messageChatRoomData: List<FirebaseChats> = messageChatRoomDataState.value
+        val chatmateData = messageChatRoomData.find { it.tab == "chatmate" }
+        ChatViewScreen(
+            navController = navController,
+            sharedViewModel = sharedViewModel,
+            chat = chatmateData!!
+        )
+        Log.println(Log.INFO, "Response", chatmateData.toString())
+    }
+
+    private fun sendDataToServer(data: String, onReceived: (String) -> Unit) {
+        val url = "https://getresponse-ie4mphraqq-uc.a.run.app/getResponse"
+        val client = OkHttpClient()
+        val requestData = ("{\"text\":\"$data\"}")
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val requestBody = requestData.toRequestBody(mediaType)
+
+        val request = Request.Builder()
+            .url(url)
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                // Handle failure
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string()
+                    val jsonObject = JSONObject(responseBody ?: "")
+                    val resultText = jsonObject.optString("result", "")
+                    onReceived.invoke(resultText)
+                    Log.println(Log.INFO, "Response", responseBody ?: "")
+                } else {
+                    Log.println(Log.INFO, "Response", response.toString())
+                }
+            }
+        })
+    }
+
 
     @RequiresApi(Build.VERSION_CODES.S)
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @Composable
     fun ChatScreen(
         navController: NavController,
-        messages: List<Message>,
-        onMessageSent: (Message) -> Unit,
-        personList: ShownUsers,
+        messages: List<FirebaseMessages>,
+        onMessageSent: (FirebaseMessages) -> Unit,
         viewModel: SharedViewModel,
         documentId: String,
     ) {
@@ -122,7 +178,7 @@ class ChatView : ViewModel() {
             message.visible.contains(viewModel.auth.currentUser?.uid.toString())
         }
         Scaffold(
-            topBar = { MessageTopBar(navController, personList) },
+            topBar = { MessageTopBar(navController) },
             content = {
                 Column(
                     modifier = Modifier
@@ -142,16 +198,15 @@ class ChatView : ViewModel() {
             }, bottomBar = {
                 InputField(
                     viewModel
-                ) { messageText ->
-                    val message = Message(
+                ) { messageText, image ->
+                    val message = FirebaseMessages(
                         sender = viewModel.auth.currentUser?.uid.toString(),
                         content = messageText,
                         timestamp = Timestamp.now(),
                         read = false,
-                        type = "text",
+                        type = image,
                         visible = listOf(
                             viewModel.auth.currentUser?.uid.toString(),
-                            personList.personList.id
                         )
                     )
                     onMessageSent(message)
@@ -171,7 +226,7 @@ class ChatView : ViewModel() {
     @Composable
     fun MessageList(
         viewModel: SharedViewModel,
-        messages: List<Message>,
+        messages: List<FirebaseMessages>,
         scrollState: LazyListState,
         coroutineScope: CoroutineScope,
         documentId: String
@@ -183,9 +238,9 @@ class ChatView : ViewModel() {
             items(messages) { message ->
                 MessageItem(
                     viewModel = viewModel,
-                    Message(
+                    FirebaseMessages(
                         sender = message.sender,
-                        type = "text",
+                        type = message.type,
                         read = message.read,
                         content = message.content,
                         timestamp = message.timestamp,
@@ -238,7 +293,7 @@ class ChatView : ViewModel() {
                     color = Color.LightGray,
                 )
                 Row(
-                    verticalAlignment = CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -258,7 +313,7 @@ class ChatView : ViewModel() {
                         color = Color.LightGray,
                     )
                     Row(
-                        verticalAlignment = CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -281,7 +336,7 @@ class ChatView : ViewModel() {
                     color = Color.LightGray,
                 )
                 Row(
-                    verticalAlignment = CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -322,7 +377,7 @@ class ChatView : ViewModel() {
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             "Reply",
@@ -350,7 +405,7 @@ class ChatView : ViewModel() {
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
 
                         Text(
@@ -380,7 +435,7 @@ class ChatView : ViewModel() {
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             "Delete",
@@ -405,7 +460,7 @@ class ChatView : ViewModel() {
 
     @RequiresApi(Build.VERSION_CODES.S)
     @Composable
-    fun MessageItem(viewModel: SharedViewModel, message: Message, documentId: String) {
+    fun MessageItem(viewModel: SharedViewModel, message: FirebaseMessages, documentId: String) {
         val isUser = message.sender == viewModel.auth.currentUser?.uid
         val backgroundColor = if (isUser) {
             if (isSystemInDarkTheme()) Color.DarkGray else Color(0xFF00A0E8)
@@ -426,35 +481,68 @@ class ChatView : ViewModel() {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = alignment,
-                verticalAlignment = CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
-                    modifier = Modifier
-                        .padding(
-                            start = if (isUser) 80.dp else 10.dp,
-                            end = if (isUser) 10.dp else 80.dp,
-                            top = 25.dp,
-                        )
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    if (isUser) {
-                                        anchorPosition.value = Offset(200f, 0f)
-                                    } else {
-                                        anchorPosition.value = Offset(20f, 0f)
-                                    }
-                                    val effect = VibrationEffect.createOneShot(
-                                        100,
-                                        VibrationEffect.DEFAULT_AMPLITUDE
-                                    )
-                                    vibrator.defaultVibrator.vibrate(effect)
-                                    menuDialog = true
-                                }
+                    modifier =
+                    if (message.type == "text") {
+                        Modifier
+                            .padding(
+                                start = if (isUser) 80.dp else 10.dp,
+                                end = if (isUser) 10.dp else 80.dp,
+                                top = 25.dp,
                             )
-                        }
-                        .border( if (isUser) 0.dp else  0.5f.dp, if (isUser) Color.White else Color.Black, RoundedCornerShape(24.dp))
-                        .background(backgroundColor, shape = RoundedCornerShape(24.dp))
-                        .padding(top = 4.dp, start = 4.dp, end = 4.dp, bottom = 4.dp)
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        if (isUser) {
+                                            anchorPosition.value = Offset(200f, 0f)
+                                        } else {
+                                            anchorPosition.value = Offset(20f, 0f)
+                                        }
+                                        val effect = VibrationEffect.createOneShot(
+                                            100,
+                                            VibrationEffect.DEFAULT_AMPLITUDE
+                                        )
+                                        vibrator.defaultVibrator.vibrate(effect)
+                                        menuDialog = true
+                                    }
+                                )
+                            }
+                            .border(
+                                if (isUser) 0.dp else 0.5f.dp,
+                                if (isUser) Color.White else Color.Black,
+                                RoundedCornerShape(24.dp)
+                            )
+                            .background(backgroundColor, shape = RoundedCornerShape(24.dp))
+                            .padding(top = 4.dp, start = 4.dp, end = 4.dp, bottom = 4.dp)
+                    } else {
+                        Modifier
+                            .padding(
+                                top = 25.dp,
+                            )
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        if (isUser) {
+                                            anchorPosition.value = Offset(200f, 0f)
+                                        } else {
+                                            anchorPosition.value = Offset(20f, 0f)
+                                        }
+                                        val effect = VibrationEffect.createOneShot(
+                                            100,
+                                            VibrationEffect.DEFAULT_AMPLITUDE
+                                        )
+                                        vibrator.defaultVibrator.vibrate(effect)
+                                        menuDialog = true
+                                    }
+                                )
+                            }
+                        //     .border( if (isUser) 0.dp else 0.5f.dp, if (isUser) Color.White else Color.Black, RoundedCornerShape(24.dp))
+                        //   .background(backgroundColor, shape = RoundedCornerShape(24.dp))
+                    }
+
+
                 ) {
                     val messageContent = message.content
                     val maxLineLength = 30
@@ -495,38 +583,45 @@ class ChatView : ViewModel() {
                         lines.append(currentLine)
                     }
 
-
-                    Text(
-                        text = lines.toString(),
-                        fontSize = 14.sp,
-                        color = if (isUser) Color.White else Color.Black,
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .background(backgroundColor, shape = RoundedCornerShape(24.dp)),
-                        textAlign = TextAlign.Start
-                    )
+                    if (message.type == "image") {
+                        SubcomposeAsyncImage(
+                            model = message.content,
+                            contentDescription = null,
+                            modifier = Modifier
+                                //   .clip(RoundedCornerShape(24.dp))
+                                .size(200.dp),
+                            loading = {
+                                CircularProgressIndicator()
+                            },
+                        )
+                    } else if (message.type == "text") {
+                        Text(
+                            text = lines.toString(),
+                            fontSize = 14.sp,
+                            color = if (isUser) Color.White else Color.Black,
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .background(backgroundColor, shape = RoundedCornerShape(24.dp)),
+                            textAlign = TextAlign.Start
+                        )
+                    }
                 }
-
             }
-
             Row(
                 horizontalArrangement = alignment,
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 if (isUser) {
-                    Image(
-                        painter = rememberAsyncImagePainter(
-                            ImageRequest.Builder(LocalContext.current)
-                                .data(data = if (message.read) R.drawable.eye_1_svgrepo_com else R.drawable.eye_hide_1_svgrepo_com)
-                                .apply(block = fun ImageRequest.Builder.() {
-                                    placeholder(R.drawable.user_circle_svgrepo_com)
-                                }).build()
-                        ),
+                    SubcomposeAsyncImage(
+                        model = if (message.read) R.drawable.eye_1_svgrepo_com else R.drawable.eye_hide_1_svgrepo_com,
                         contentDescription = null,
                         modifier = Modifier
                             .size(20.dp)
                             .padding(end = 5.dp),
+                        loading = {
+                            CircularProgressIndicator()
+                        },
                     )
                     Text(
                         text = formattedTime,
@@ -572,15 +667,43 @@ class ChatView : ViewModel() {
 
 
     @Composable
-    fun InputField(sharedViewModel: SharedViewModel, onMessageSent: (String) -> Unit) {
+    fun InputField(sharedViewModel: SharedViewModel, onMessageSent: (String, String) -> Unit) {
         var badgeCount by remember { mutableIntStateOf(0) }
         var text by remember { mutableStateOf("") }
+        var selectedImageUris by remember {
+            mutableStateOf<List<Uri>>(emptyList())
+        }
+
+        val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.PickMultipleVisualMedia(),
+            onResult = { uris ->
+                selectedImageUris = uris
+                selectedImageUris.forEach { image ->
+                    val storage = Firebase.storage
+                    val storageRef = storage.reference
+                    val imageRef =
+                        storageRef.child("${sharedViewModel.auth.currentUser?.uid.toString()}/messagePictures/${image.lastPathSegment}")
+                    val uploadTask = imageRef.putFile(image)
+                    uploadTask.addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            imageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
+                                Log.d("Image", downloadUrl.toString())
+                                onMessageSent(downloadUrl.toString(), "image")
+                            }.addOnFailureListener { exception ->
+                                Log.e("Image", exception.toString())
+                            }
+                        }
+                    }
+                }
+            }
+
+        )
         BasicTextField(
             keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
             keyboardActions = KeyboardActions(
                 onSend = {
                     if (text.isNotEmpty()) {
-                        onMessageSent(text)
+                        onMessageSent(text, "text")
                         text = ""
                     }
                 }
@@ -639,7 +762,7 @@ class ChatView : ViewModel() {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 12.dp, top = 6.dp),
-                        verticalAlignment = CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Icon(
@@ -670,7 +793,7 @@ class ChatView : ViewModel() {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(end = 12.dp, top = 6.dp),
-                        verticalAlignment = CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.End,
                     ) {
                         if (text.isEmpty()) {
@@ -678,7 +801,9 @@ class ChatView : ViewModel() {
                                 modifier = Modifier
                                     .size(30.dp)
                                     .clickable {
-                                        sharedViewModel.imageCall.value = true
+                                        multiplePhotoPickerLauncher.launch(
+                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                        )
                                     },
                                 imageVector = Icons.Outlined.CameraAlt,
                                 contentDescription = null,
@@ -693,7 +818,7 @@ class ChatView : ViewModel() {
                                     .padding(top = badgeCount.dp)
                                     .clickable {
                                         if (text.isNotEmpty()) {
-                                            onMessageSent(text)
+                                            onMessageSent(text, "text")
                                             text = ""
                                         }
                                     }
@@ -706,7 +831,7 @@ class ChatView : ViewModel() {
     }
 
     @Composable
-    fun MessageTopBar(navController: NavController, user: ShownUsers) {
+    fun MessageTopBar(navController: NavController) {
         var favorite by remember { mutableStateOf(false) }
         var comment by remember { mutableStateOf(false) }
         var pin by remember { mutableStateOf(false) }
@@ -714,7 +839,7 @@ class ChatView : ViewModel() {
             backgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
             title = {
                 Text(
-                    text = user.personList.username["mixedcase"].toString(),
+                    text = "ChatMate",
                     color = if (isSystemInDarkTheme()) Color.White else Color.Black,
                     fontSize = 22.sp,
                     fontFamily = FontFamily.SansSerif,
@@ -764,56 +889,67 @@ class ChatView : ViewModel() {
                         tint = if (isSystemInDarkTheme()) Color.White else Color.Black,
                         contentDescription = null,
                         modifier = Modifier
-                            .align(CenterVertically)
+                            .align(Alignment.CenterVertically)
                             .size(25.dp)
                             .clickable { navController.navigate(Screens.Chats.route) }
                     )
-                    Image(
+                    SubcomposeAsyncImage(
                         contentDescription = null,
-                        painter = rememberAsyncImagePainter(user.personList.image),
+                        model = "https://randomuser.me/api/portraits/women/84.jpg",
                         modifier = Modifier
                             .clip(CircleShape)
-                            .align(CenterVertically)
+                            .align(Alignment.CenterVertically)
                             .size(40.dp),
                         contentScale = ContentScale.Crop,
+                        loading = {
+                            CircularProgressIndicator()
+                        },
                     )
                 }
             },
         )
     }
 
-
     @RequiresApi(Build.VERSION_CODES.S)
     @SuppressLint("MutableCollectionMutableState")
     @Composable
-    fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
-        sharedViewModel.bottomBarState.value = false
-        val user = sharedViewModel.friend.value
-        val documentIdState = sharedViewModel.chatData.collectAsState(initial = emptyList())
-        val documentationId: List<Chat> = documentIdState.value
-        Log.println(Log.INFO, "ChatView", documentationId.toString())
-        val filteredChats = documentationId.filter { chat ->
-            chat.members.contains(user.personList.id) && chat.members.contains(sharedViewModel.auth.currentUser?.uid.toString())
-        }
-        val doc = filteredChats.firstOrNull()?.chatRoomID ?: ""
-        Log.println(Log.INFO, "ChatView", doc)
-        val messageList: List<Message> = filteredChats.flatMap { chat ->
+    fun ChatViewScreen(
+        navController: NavController,
+        sharedViewModel: SharedViewModel,
+        chat: FirebaseChats
+    ) {
+        val messageList: List<FirebaseMessages> =
             chat.messages.map { message ->
-                Message(
+                FirebaseMessages(
                     sender = message.sender,
-                    type = "text",
+                    type = message.type,
                     read = message.read,
                     content = message.content,
                     timestamp = message.timestamp,
                     visible = message.visible,
                 )
             }
-        }
-       sharedViewModel.markMessagesAsRead(user)
-        sharedViewModel.updateMarkAsReadStatus(true)
-        val onMessageSent: (Message) -> Unit = { message ->
+
+        val onMessageSent: (FirebaseMessages) -> Unit = { message ->
+            sendDataToServer(message.content) { response ->
+                runBlocking {
+                    sharedViewModel.saveMessages(
+                        documentId = chat.chatRoomID,
+                        message = FirebaseMessages(
+                            sender = "chatmate",
+                            content = response,
+                            timestamp = Timestamp.now(),
+                            read = false,
+                            type = "text",
+                            visible = listOf(
+                                sharedViewModel.auth.currentUser?.uid.toString(),
+                            )
+                        )
+                    )
+                }
+            }
             runBlocking {
-                sharedViewModel.saveMessages(doc, message)
+                sharedViewModel.saveMessages(chat.chatRoomID, message)
             }
         }
         ChatScreen(
@@ -821,10 +957,7 @@ class ChatView : ViewModel() {
             messages = messageList,
             onMessageSent = onMessageSent,
             navController = navController,
-            personList = user,
-            documentId = doc,
+            documentId = chat.chatRoomID,
         )
     }
 }
-
-

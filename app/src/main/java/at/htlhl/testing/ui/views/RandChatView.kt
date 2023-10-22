@@ -1,4 +1,4 @@
-package at.htlhl.testing.views
+package at.htlhl.testing.ui.views
 
 import android.annotation.SuppressLint
 import android.os.Build
@@ -9,7 +9,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -77,12 +76,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import at.htlhl.testing.data.Chat
-import at.htlhl.testing.data.FetchedUsers
-import at.htlhl.testing.data.Message
-import at.htlhl.testing.data.SharedViewModel
+import at.htlhl.testing.data.FirebaseChats
+import at.htlhl.testing.data.FirebaseUsers
+import at.htlhl.testing.data.FirebaseMessages
+import at.htlhl.testing.viewmodels.SharedViewModel
 import at.htlhl.testing.navigation.Screens
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -90,13 +89,13 @@ import kotlinx.coroutines.runBlocking
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-class RandChat {
+class RandChatView {
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun RandChatScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         sharedViewModel.pairWithRandomUser()
         val matchedUserState = sharedViewModel.matchedUser.collectAsState()
-        val matchedUser: FetchedUsers = matchedUserState.value
+        val matchedUser: FirebaseUsers = matchedUserState.value
         if (matchedUser.id.isNotEmpty()) {
             ChatViewScreen(
                 navController = navController,
@@ -163,9 +162,9 @@ class RandChat {
     @Composable
     fun ChatScreen(
         navController: NavController,
-        messages: List<Message>,
-        onMessageSent: (Message) -> Unit,
-        personList: FetchedUsers,
+        messages: List<FirebaseMessages>,
+        onMessageSent: (FirebaseMessages) -> Unit,
+        personList: FirebaseUsers,
         viewModel: SharedViewModel,
         documentId: String,
     ) {
@@ -193,7 +192,7 @@ class RandChat {
                 InputField(
                     viewModel
                 ) { messageText ->
-                    val message = Message(
+                    val message = FirebaseMessages(
                         sender = viewModel.auth.currentUser?.uid.toString(),
                         type = "text",
                         read = false,
@@ -211,7 +210,7 @@ class RandChat {
     @Composable
     fun MessageList(
         viewModel: SharedViewModel,
-        messages: List<Message>,
+        messages: List<FirebaseMessages>,
         scrollState: LazyListState,
         coroutineScope: CoroutineScope,
         documentId: String
@@ -221,7 +220,7 @@ class RandChat {
             items(messages) { message ->
                 MessageItem(
                     viewModel = viewModel,
-                    Message(
+                    FirebaseMessages(
                         sender = message.sender,
                         type = "text",
                         read = false,
@@ -236,7 +235,7 @@ class RandChat {
 
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
-    fun MessageItem(viewModel: SharedViewModel, message: Message, documentId: String) {
+    fun MessageItem(viewModel: SharedViewModel, message: FirebaseMessages, documentId: String) {
         val backgroundColor =
             if (message.sender == viewModel.auth.currentUser?.uid) if (isSystemInDarkTheme()) Color.DarkGray
             else Color.White else if (isSystemInDarkTheme()) Color.Black else Color.LightGray
@@ -435,7 +434,6 @@ class RandChat {
                                 modifier = Modifier
                                     .size(30.dp)
                                     .clickable {
-                                        sharedViewModel.imageCall.value = true
                                     },
                                 imageVector = Icons.Outlined.CameraAlt,
                                 contentDescription = null,
@@ -463,7 +461,7 @@ class RandChat {
     }
 
     @Composable
-    fun MessageTopBar(navController: NavController, user: FetchedUsers) {
+    fun MessageTopBar(navController: NavController, user: FirebaseUsers) {
         var favorite by remember { mutableStateOf(false) }
         var comment by remember { mutableStateOf(false) }
         var pin by remember { mutableStateOf(false) }
@@ -525,14 +523,17 @@ class RandChat {
                             .size(25.dp)
                             .clickable { navController.navigate(Screens.DropInScreen.route) }
                     )
-                    Image(
+                    SubcomposeAsyncImage(
                         contentDescription = null,
-                        painter = rememberAsyncImagePainter(user.image),
+                        model = user.image,
                         modifier = Modifier
                             .clip(CircleShape)
                             .align(Alignment.CenterVertically)
                             .size(40.dp),
                         contentScale = ContentScale.Crop,
+                        loading = {
+                            CircularProgressIndicator()
+                        }
                     )
                 }
             },
@@ -546,18 +547,18 @@ class RandChat {
     fun ChatViewScreen(
         navController: NavController,
         sharedViewModel: SharedViewModel,
-        matchedUser: FetchedUsers
+        matchedUser: FirebaseUsers
     ) {
         val documentIdState = sharedViewModel.chatData.collectAsState(initial = emptyList())
-        val documentationId: List<Chat> = documentIdState.value
+        val documentationId: List<FirebaseChats> = documentIdState.value
         Log.println(Log.INFO, "ChatView", documentationId.toString())
         val filteredChats = documentationId.filter { chat ->
             chat.members.contains(matchedUser.id) && chat.members.contains(sharedViewModel.auth.currentUser?.uid.toString())
         }
         val doc = filteredChats.firstOrNull()?.chatRoomID ?: ""
-        val messageList: List<Message> = filteredChats.flatMap { chat ->
+        val messageList: List<FirebaseMessages> = filteredChats.flatMap { chat ->
             chat.messages.map { message ->
-                Message(
+                FirebaseMessages(
                     sender = message.sender,
                     type = "text",
                     read = false,
@@ -567,7 +568,7 @@ class RandChat {
                 )
             }
         }
-        val onMessageSent: (Message) -> Unit = { message ->
+        val onMessageSent: (FirebaseMessages) -> Unit = { message ->
             runBlocking {
                 if (filteredChats.isEmpty()) {
                     sharedViewModel.saveChatRoom(person = matchedUser.id, tab = "randchat")

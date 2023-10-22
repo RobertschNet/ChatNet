@@ -1,4 +1,4 @@
-package at.htlhl.testing.service
+package at.htlhl.testing.services
 
 import android.Manifest
 import android.app.Notification
@@ -16,7 +16,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
-import at.htlhl.testing.data.FetchedUsers
+import at.htlhl.testing.data.FirebaseUsers
 import com.firebase.geofire.GeoFireUtils
 import com.firebase.geofire.GeoLocation
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -41,7 +41,7 @@ class LocationUpdateService : Service() {
     private lateinit var locationCallback: LocationCallback
     val auth: FirebaseAuth = Firebase.auth
     private var lastKnownLocation: Location? = null
-    val locationLiveData = MutableLiveData<List<FetchedUsers>>()
+    val locationLiveData = MutableLiveData<List<FirebaseUsers>>()
 
     override fun onCreate() {
         super.onCreate()
@@ -204,7 +204,7 @@ class LocationUpdateService : Service() {
                         val docLocation = GeoLocation(geolocation.latitude, geolocation.longitude)
                         val distanceInM = GeoFireUtils.getDistanceBetween(docLocation, center)
 
-                        FetchedUsers(
+                        FirebaseUsers(
                             id = dataMap["id"].toString(),
                             username =  dataMap["username"] as Map<String, String>,
                             image = dataMap["image"].toString(),

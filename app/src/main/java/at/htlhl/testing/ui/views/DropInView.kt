@@ -1,11 +1,10 @@
-package at.htlhl.testing.views
+package at.htlhl.testing.ui.views
 
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -28,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.BottomSheetScaffold
 import androidx.compose.material.BottomSheetState
 import androidx.compose.material.BottomSheetValue
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.IconButton
 import androidx.compose.material.TopAppBar
@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.GpsNotFixed
 import androidx.compose.material.icons.outlined.GpsOff
 import androidx.compose.material.rememberBottomSheetScaffoldState
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,23 +56,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily.Companion.Cursive
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
-import at.htlhl.testing.R
-import at.htlhl.testing.data.BottomSheetItem
-import at.htlhl.testing.data.Chat
-import at.htlhl.testing.data.FetchedUsers
-import at.htlhl.testing.data.Message
-import at.htlhl.testing.data.SharedViewModel
-import at.htlhl.testing.data.ShownUsers
+import at.htlhl.testing.data.BottomSheetItems
+import at.htlhl.testing.data.FirebaseChats
+import at.htlhl.testing.data.FirebaseUsers
+import at.htlhl.testing.data.FirebaseMessages
+import at.htlhl.testing.viewmodels.SharedViewModel
+import at.htlhl.testing.data.InternalChatInstances
 import at.htlhl.testing.navigation.Screens
-import coil.compose.rememberAsyncImagePainter
-import coil.request.ImageRequest
+import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -80,30 +78,29 @@ import java.util.Locale
 
 class DropIn : ViewModel() {
     @RequiresApi(Build.VERSION_CODES.O)
-    @OptIn(ExperimentalMaterialApi::class)
+    @OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
     @Composable
     fun DropInScreen(navController: NavController, sharedViewModel: SharedViewModel) {
-        sharedViewModel.bottomBarState.value = true
         val lazyListState = rememberLazyListState()
         var test by remember { mutableStateOf(false) }
         val coroutineScope = rememberCoroutineScope()
         val documentIdState = sharedViewModel.chatData.collectAsState(initial = emptyList())
-        val documentationId: List<Chat> = documentIdState.value
+        val documentationId: List<FirebaseChats> = documentIdState.value
         val friendIdState = sharedViewModel.personData.collectAsState(initial = emptyList())
-        val friendListData: List<FetchedUsers> = friendIdState.value
+        val friendListData: List<FirebaseUsers> = friendIdState.value
         val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
             localUser.id != sharedViewModel.auth.currentUser?.uid
         }
-        val updatedPersonList: List<ShownUsers> = friendListData.map { person ->
+        val updatedPersonList: List<InternalChatInstances> = friendListData.map { person ->
             val matchingChat = documentationId.find { chat ->
                 chat.members.contains(person.id) && chat.tab == "dropIn"
             }
             val lastVisibleMessage = matchingChat?.messages?.lastOrNull { message ->
                 sharedViewModel.auth.currentUser?.uid.toString() in message.visible
             }
-            val updatedStatus = lastVisibleMessage ?: Message()
-            if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != Message()) {
-                ShownUsers(
+            val updatedStatus = lastVisibleMessage ?: FirebaseMessages()
+            if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != FirebaseMessages()) {
+                InternalChatInstances(
                     personList = person,
                     timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                         ?: Timestamp.now(),
@@ -114,7 +111,7 @@ class DropIn : ViewModel() {
                         ?: 0
                 )
             } else {
-                ShownUsers(
+                InternalChatInstances(
                     personList = person,
                     timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                         ?: Timestamp.now(),
@@ -127,15 +124,15 @@ class DropIn : ViewModel() {
             }
         }
 
-        val updatedLocalChatUsers: List<ShownUsers> = localChatUsers.map { person ->
+        val updatedLocalChatUsers: List<InternalChatInstances> = localChatUsers.map { person ->
             val matchingChat = documentationId.find { chat ->
                 chat.members.contains(person.id)
             }
-            ShownUsers(
+            InternalChatInstances(
                 personList = person,
                 timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                     ?: Timestamp.now(),
-                lastMessage = matchingChat?.messages?.lastOrNull() ?: Message(),
+                lastMessage = matchingChat?.messages?.lastOrNull() ?: FirebaseMessages(),
                 markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                 pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                 read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
@@ -147,9 +144,9 @@ class DropIn : ViewModel() {
             user.messages.isEmpty()
         }
         val bottomSheetItems = listOf(
-            BottomSheetItem(title = "Delete", icon = 2, tag = "delete"),
-            BottomSheetItem(title = "Mute Messages", icon = 2, tag = "mute"),
-            BottomSheetItem(title = "Pin Chat", icon = 2, tag = "pin"),
+            BottomSheetItems(title = "Delete", icon = 2, tag = "delete"),
+            BottomSheetItems(title = "Mute Messages", icon = 2, tag = "mute"),
+            BottomSheetItems(title = "Pin Chat", icon = 2, tag = "pin"),
         )
         val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(
             bottomSheetState = BottomSheetState(BottomSheetValue.Collapsed)
@@ -176,9 +173,9 @@ class DropIn : ViewModel() {
                         }
                         Spacer(modifier = Modifier.padding(6.dp))
                         Row {
-                            Image(
+                            SubcomposeAsyncImage(
                                 contentDescription = null,
-                                painter = rememberAsyncImagePainter(sharedViewModel.friend.value.personList.image),
+                                model = sharedViewModel.friend.value.personList.image,
                                 modifier = Modifier
                                     .clip(CircleShape)
                                     .size(40.dp),
@@ -216,16 +213,13 @@ class DropIn : ViewModel() {
                                             }
                                         },
                                 ) {
-                                    Image(
-                                        painter = rememberAsyncImagePainter(
-                                            ImageRequest.Builder(LocalContext.current)
-                                                .data(data = bottomSheetItems[it].icon)
-                                                .apply(block = fun ImageRequest.Builder.() {
-                                                    placeholder(R.drawable.user_circle_svgrepo_com)
-                                                }).build()
-                                        ),
+                                    SubcomposeAsyncImage(
+                                        model = bottomSheetItems[it].icon,
                                         bottomSheetItems[it].title,
-                                        modifier = Modifier.padding(top = 14.dp, bottom = 14.dp)
+                                        modifier = Modifier.padding(top = 14.dp, bottom = 14.dp),
+                                        loading = {
+                                            CircularProgressIndicator()
+                                        }
                                     )
                                     Text(
                                         text = bottomSheetItems[it].title,
@@ -262,7 +256,7 @@ class DropIn : ViewModel() {
                         modifier = Modifier
                             .fillMaxSize()
                             .graphicsLayer(
-                                alpha = if (bottomSheetScaffoldState.bottomSheetState.isAnimationRunning ||
+                                alpha = if (
                                     bottomSheetScaffoldState.bottomSheetState.isExpanded
                                 ) 0.5f else 1f
                             )
@@ -306,7 +300,7 @@ class DropIn : ViewModel() {
                     .fillMaxSize()
                     .background(if (isSystemInDarkTheme()) Color.Black else Color.White)
                     .graphicsLayer(
-                        alpha = if (bottomSheetScaffoldState.bottomSheetState.isAnimationRunning ||
+                        alpha = if (
                             bottomSheetScaffoldState.bottomSheetState.isExpanded
                         ) 0.5f else 1f
                     )
@@ -359,20 +353,23 @@ class DropIn : ViewModel() {
                     )
                 }
                 items(sortedPersonList) { message ->
-                    ChatItem(
-                        person = message,
-                        sharedViewModel = sharedViewModel,
-                        navController = navController,
-                        onItemLongClicked = { person ->
-                            sharedViewModel.friend.value = person
-                            coroutineScope.launch {
-                                bottomSheetScaffoldState.bottomSheetState.expand()
-                            }
-                        },
-                        onUserIconClicked = { _, _ ->
-                        },
-                        bottomSheetState = bottomSheetScaffoldState.bottomSheetState
-                    )
+
+                    /*  ChatItem(
+                          person = message,
+                          sharedViewModel = sharedViewModel,
+                          navController = navController,
+                          onItemLongClicked = { person ->
+                              sharedViewModel.friend.value = person
+                              coroutineScope.launch {
+                                  bottomSheetScaffoldState.bottomSheetState.expand()
+                              }
+                          },
+                          onUserIconClicked = { _, _ ->
+                          },
+                          bottomSheetState = bottomSheetScaffoldState.bottomSheetState
+                      )
+
+                     */
                 }
             }
         }
@@ -383,11 +380,11 @@ class DropIn : ViewModel() {
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun ChatItemForDropIn(
-    person: ShownUsers,
+    person: InternalChatInstances,
     bottomSheetState: Boolean,
     navController: NavController,
     sharedViewModel: SharedViewModel,
-    documentationId: List<Chat>,
+    documentationId: List<FirebaseChats>,
     onItemClicked: () -> Unit
 ) {
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -412,7 +409,7 @@ fun ChatItemForDropIn(
                                 tab = "dropIn"
                             )
                         }
-                        navController.navigate(Screens.ChatScreen.route)
+                        navController.navigate(Screens.ChatViewScreen.route)
                     }
 
                 },
@@ -429,14 +426,17 @@ fun ChatItemForDropIn(
         Box(
             modifier = Modifier.size(50.dp)
         ) {
-            Image(
+            SubcomposeAsyncImage(
                 contentDescription = null,
-                painter = rememberAsyncImagePainter(person.personList.image),
+                model = person.personList.image,
                 modifier = Modifier
                     .clip(CircleShape)
                     .size(50.dp),
                 contentScale = ContentScale.Crop,
-                alignment = Alignment.Center
+                alignment = Alignment.Center,
+                loading = {
+                    CircularProgressIndicator()
+                }
             )
             Box(
                 modifier = Modifier

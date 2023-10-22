@@ -1,4 +1,4 @@
-package at.htlhl.testing.views
+package at.htlhl.testing.ui.views
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat

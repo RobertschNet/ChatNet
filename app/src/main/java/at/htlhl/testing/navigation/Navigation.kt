@@ -1,5 +1,6 @@
 package at.htlhl.testing.navigation
 
+import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.tween
@@ -11,24 +12,25 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import at.htlhl.testing.data.SharedViewModel
-import at.htlhl.testing.views.ChatMate
-import at.htlhl.testing.views.ChatView
-import at.htlhl.testing.views.Chats
-import at.htlhl.testing.views.DropIn
-import at.htlhl.testing.views.InboxView
-import at.htlhl.testing.views.LoadingView
-import at.htlhl.testing.views.LoginView
-import at.htlhl.testing.views.Profile
-import at.htlhl.testing.views.RandChat
-import at.htlhl.testing.views.RegisterView
-import at.htlhl.testing.views.SearchView
+import at.htlhl.testing.viewmodels.SharedViewModel
+import at.htlhl.testing.ui.views.ChatMateView
+import at.htlhl.testing.ui.views.ChatView
+import at.htlhl.testing.ui.views.Chats
+import at.htlhl.testing.ui.views.DropIn
+import at.htlhl.testing.ui.views.InboxView
+import at.htlhl.testing.ui.views.LoadingView
+import at.htlhl.testing.ui.views.LoginView
+import at.htlhl.testing.ui.views.ProfileView
+import at.htlhl.testing.ui.views.RandChatView
+import at.htlhl.testing.ui.views.RegisterView
+import at.htlhl.testing.ui.views.SearchView
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun Navigation(
     navController: NavHostController,
-    sharedViewModel: SharedViewModel
+    sharedViewModel: SharedViewModel,
+    lifecycleOwner: Context
 ) {
     NavHost(navController = navController, startDestination = "LoadingScreen") {
         composable("ChatsScreen",
@@ -41,10 +43,11 @@ fun Navigation(
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }
         ) {
+            sharedViewModel.bottomBarState.value = true
             DropIn().DropInScreen(navController = navController, sharedViewModel = sharedViewModel)
         }
         composable(
-            "ChatScreen",
+            "ChatViewScreen",
             enterTransition = {
                 slideInHorizontally(
                     initialOffsetX = { fullWidth -> fullWidth },
@@ -58,15 +61,18 @@ fun Navigation(
                 )
             }
         ) {
-            ChatView().ChatViewScreen(
-                navController = navController,
-                sharedViewModel = sharedViewModel
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                sharedViewModel.bottomBarState.value = false
+                ChatView().ChatViewScreen(
+                    navController = navController,
+                    sharedViewModel = sharedViewModel
+                )
+            }
         }
         composable("RandChatScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-            RandChat().RandChatScreen(navController, sharedViewModel)
+            RandChatView().RandChatScreen(navController, sharedViewModel)
         }
         composable("SearchViewScreen",
             enterTransition = {
@@ -81,17 +87,20 @@ fun Navigation(
                     animationSpec = tween(durationMillis = 500)
                 )
             }) {
+            sharedViewModel.bottomBarState.value = false
             SearchView().SearchViewScreen(navController, sharedViewModel)
         }
         composable("ChatMateScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-            ChatMate().ChatMateScreen()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                ChatMateView().ChatMateScreen(navController, sharedViewModel)
+            }
         }
         composable("ProfileScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-            Profile().ProfileScreen(navController, sharedViewModel)
+            ProfileView().ProfileScreen(navController, sharedViewModel)
         }
         composable("LoginScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
@@ -111,7 +120,7 @@ fun Navigation(
         composable("InboxScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-            InboxView().Inbox(sharedViewModel = sharedViewModel)
+            InboxView().Inbox(sharedViewModel = sharedViewModel, lifecycleOwner)
         }
     }
 }

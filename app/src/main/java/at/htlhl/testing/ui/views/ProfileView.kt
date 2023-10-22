@@ -1,6 +1,5 @@
-package at.htlhl.testing.views
+package at.htlhl.testing.ui.views
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.BottomSheetScaffold
 import androidx.compose.material.BottomSheetState
 import androidx.compose.material.BottomSheetValue
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
@@ -51,21 +51,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.htlhl.testing.R
-import at.htlhl.testing.data.FetchedUsers
-import at.htlhl.testing.data.SharedViewModel
+import at.htlhl.testing.data.FirebaseUsers
+import at.htlhl.testing.viewmodels.SharedViewModel
 import at.htlhl.testing.navigation.Screens
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.SubcomposeAsyncImage
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import kotlinx.coroutines.launch
 
-class Profile {
+class ProfileView {
 
     @OptIn(ExperimentalMaterialApi::class)
     @Composable
     fun ProfileScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val userState = sharedViewModel.user.collectAsState()
-        val userData: FetchedUsers = userState.value
+        val userData: FirebaseUsers = userState.value
         val context = LocalContext.current
         var otto: String by remember { mutableStateOf(userData.username["mixedcase"].toString()) }
         val scope = rememberCoroutineScope()
@@ -155,13 +155,16 @@ class Profile {
                         .padding(top = 30.dp)
                         .size(180.dp)
                 ) {
-                    Image(
-                        painter = rememberAsyncImagePainter(userData.image),
+                    SubcomposeAsyncImage(
+                        model = userData.image,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxSize()
-                            .clip(CircleShape)
+                            .clip(CircleShape),
+                        loading = {
+                            CircularProgressIndicator()
+                        }
                     )
                     Box(
                         modifier = Modifier
@@ -180,7 +183,7 @@ class Profile {
                             modifier = Modifier
                                 .size(40.dp)
                                 .clickable {
-                                    sharedViewModel.imageCall.value = true
+                                    // TODO: Change profile picture
                                 }
                                 .align(Alignment.Center)
                                 .clip(CircleShape)

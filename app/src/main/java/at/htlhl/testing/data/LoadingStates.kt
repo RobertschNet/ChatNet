@@ -1,0 +1,8 @@
+package at.htlhl.testing.data
+
+enum class LoadingStates {
+    Loading, // loading the current authenticated state of the user from Firebase
+    Authenticated, // user is logged in and authenticated with Firebase
+    NotAuthenticated, // user is not logged in and not authenticated with Firebase
+    Error // an error occurred while loading the current authenticated state of the user from Firebase
+}

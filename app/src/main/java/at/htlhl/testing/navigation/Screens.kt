@@ -3,7 +3,7 @@ package at.htlhl.testing.navigation
 sealed class Screens(val route: String) {
     object Chats : Screens("ChatsScreen")
     object DropInScreen : Screens("DropInScreen")
-    object ChatScreen : Screens("ChatScreen")
+    object ChatViewScreen : Screens("ChatViewScreen")
     object ChatMateScreen : Screens("ChatMateScreen")
     object RandChatScreen : Screens("RandChatScreen")
     object ProfileScreen : Screens("ProfileScreen")
