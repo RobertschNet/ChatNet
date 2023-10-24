@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace 'at.htlhl.testing'
+    namespace 'at.htlhl.chatnet'
     compileSdk 34
 
     defaultConfig {
-        applicationId "at.htlhl.testing"
+        applicationId "at.htlhl.chatnet"
         minSdk 24
         targetSdk 33
         versionCode 1
