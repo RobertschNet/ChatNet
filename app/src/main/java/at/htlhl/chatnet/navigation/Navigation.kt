@@ -12,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import at.htlhl.chatnet.ui.views.CameraPhotoView
+import at.htlhl.chatnet.ui.views.CameraView
 import at.htlhl.chatnet.ui.views.ChatMateView
 import at.htlhl.chatnet.ui.views.ChatView
 import at.htlhl.chatnet.ui.views.Chats
@@ -71,6 +73,14 @@ fun Navigation(
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             RandChatView().RandChatScreen(navController, sharedViewModel)
+        }
+        composable("CameraViewScreen",  enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
+            CameraView().CameraView(navController, sharedViewModel, lifecycleOwner)
+        }
+        composable("CameraPhotoScreen",  enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
+            CameraPhotoView().CameraPhotoScreen(navController, sharedViewModel)
         }
         composable("SearchViewScreen",
             enterTransition = {

@@ -22,10 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CameraAlt
-import androidx.compose.material.icons.outlined.EmojiEmotions
-import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,32 +33,38 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.text.font.FontWeight.Companion.Bold
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import at.htlhl.chatnet.data.FirebaseMessages
+import androidx.navigation.NavController
+import at.htlhl.chatnet.R
+import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
-import com.google.firebase.Timestamp
+import coil.compose.SubcomposeAsyncImage
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 
 @Composable
-fun InputField(sharedViewModel: SharedViewModel, onMessageSent: (String, String) -> Unit) {
+fun InputField(sharedViewModel: SharedViewModel, navController: NavController, onMessageSent: (String, String) -> Unit) {
     var badgeCount by remember { mutableIntStateOf(0) }
-    val text=sharedViewModel.text.value
+    val systemUiController = rememberSystemUiController()
+    val text = sharedViewModel.text.value
     var selectedImageUris by remember {
         mutableStateOf<List<Uri>>(emptyList())
     }
-
     val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(),
         onResult = { uris ->
             selectedImageUris = uris
             selectedImageUris.forEach { image ->
-                sharedViewModel.updatePhotoCount(FirebaseMessages(sharedViewModel.auth.currentUser?.uid.toString(), "load", false, uris.toString(), Timestamp.now(),
-                    listOf()))
                 val storage = Firebase.storage
                 val storageRef = storage.reference
                 val imageRef =
@@ -71,7 +74,6 @@ fun InputField(sharedViewModel: SharedViewModel, onMessageSent: (String, String)
                     if (task.isSuccessful) {
                         imageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
                             Log.d("Image", downloadUrl.toString())
-                            sharedViewModel.removePhotoCount()
                             onMessageSent(downloadUrl.toString(), "image")
                         }.addOnFailureListener { exception ->
                             Log.e("Image", exception.toString())
@@ -81,124 +83,142 @@ fun InputField(sharedViewModel: SharedViewModel, onMessageSent: (String, String)
             }
         }
     )
-    BasicTextField(
-        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
-        keyboardActions = KeyboardActions(
-            onSend = {
-                if (text.isNotEmpty()) {
-                    onMessageSent(text, "text")
-                    sharedViewModel.text.value = ""
+    Column {
+        BasicTextField(
+            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
+            keyboardActions = KeyboardActions(
+                onSend = {
+                    if (text.isNotEmpty()) {
+                        onMessageSent(text, "text")
+                        sharedViewModel.text.value = ""
+                    }
                 }
-            }
-        ),
-        value = text,
-        onTextLayout = { textLayoutResult ->
-            when (textLayoutResult.lineCount) {
-                1 -> {
-                    badgeCount = 0
-                }
-
-                2 -> {
-                    badgeCount = 12
-                }
-
-                3 -> {
-                    badgeCount = 24
-                }
-
-                4 -> {
-                    badgeCount = 36
-                }
-            }
-        },
-        maxLines = 4,
-        cursorBrush = Brush.verticalGradient(
-            0.00f to Color.White,
-            0.35f to Color.White,
-            0.35f to Color.White,
-            0.90f to Color.White,
-            0.90f to Color.White,
-            1.00f to Color.White
-        ),
-        onValueChange = { sharedViewModel.text.value = it },
-        textStyle = LocalTextStyle.current.copy(
-            fontSize = 20.sp,
-            color = if (isSystemInDarkTheme()) Color.White else Color.Black,
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 10.dp, start = 10.dp, end = 10.dp)
-            .background(
-                if (isSystemInDarkTheme()) Color.Black else Color.White,
-                RoundedCornerShape(26.dp)
-            )
-            .border(
-                width = 1.dp,
-                color = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                shape = RoundedCornerShape(26.dp),
             ),
-        decorationBox = { innerTextField ->
-            Column(
-                Modifier.fillMaxWidth()
-            ) {
+            value = text,
+            onTextLayout = { textLayoutResult ->
+                when {
+                    textLayoutResult.lineCount >= 4 -> {
+                        badgeCount = 36
+                    }
+
+                    textLayoutResult.lineCount == 3 -> {
+                        badgeCount = 24
+                    }
+
+                    textLayoutResult.lineCount == 2 -> {
+                        badgeCount = 12
+                    }
+
+                    textLayoutResult.lineCount == 1 -> {
+                        badgeCount = 0
+                    }
+                }
+            },
+            maxLines = 4,
+            cursorBrush = Brush.linearGradient(
+                listOf(
+                    Color(0xFF00A0E8), Color(0xFF00A0E8), Color(
+                        0xFF0CB0FA
+                    ), Color.White
+                ), Offset.Zero, Offset.Infinite, TileMode.Clamp
+            ),
+            onValueChange = { sharedViewModel.text.value = it },
+            textStyle = LocalTextStyle.current.copy(
+                fontSize = 18.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Default,
+                color = Color.Gray,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp + badgeCount.dp)
+                .padding(start = 10.dp, end = 10.dp)
+                .background(
+                    if (isSystemInDarkTheme()) Color.Black else Color.White,
+                    RoundedCornerShape(26.dp)
+                )
+                .border(
+                    width = 1.dp,
+                    color = Color.LightGray,
+                    shape = RoundedCornerShape(26.dp),
+                ),
+            decorationBox = { innerTextField ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 12.dp, top = 6.dp),
+                        .padding(start = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Icon(
+                    Box(
                         modifier = Modifier
-                            .size(30.dp)
-                            .clickable(onClick = {}),
-                        imageVector = Icons.Outlined.EmojiEmotions,
-                        contentDescription = null,
-                        tint = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                    )
+                            .size(40.dp)
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(
+                                        Color(0xFF00A0E8), Color(0xFF00A0E8), Color(
+                                            0xFF0CB0FA
+                                        ), Color.White
+                                    )
+                                ), RoundedCornerShape(24.dp)
+                            )
+                    ) {
 
-                    Box(Modifier.padding(end = 95.dp)) {
+                        if (text.isEmpty()) {
+                            IconButton(onClick = {
+                                systemUiController.setStatusBarColor(
+                                    color = Color.Black,
+                                    darkIcons = false
+                                )
+                                navController.navigate(Screens.CameraViewScreen.route) }) {
+                                SubcomposeAsyncImage(
+                                    model = R.drawable.camera_svgrepo_com_5_,
+                                    contentDescription = null,
+                                    colorFilter = ColorFilter.tint(Color.White),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        } else {
+                            IconButton(onClick = {
+                                multiplePhotoPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            }) {
+                                SubcomposeAsyncImage(
+                                    model = R.drawable.gallery_svgrepo_com,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(28.dp),
+                                    colorFilter = ColorFilter.tint(Color.White),
+                                )
+                            }
+                        }
+                    }
+                    Box(Modifier.padding(start = 10.dp, end = 70.dp)) {
                         if (text.isEmpty()) {
                             Text(
                                 text = "Message...",
-                                fontSize = 20.sp,
-                                color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                                textAlign = TextAlign.Start,
+                                fontSize = 18.sp,
+                                color = Color.Gray,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
                             )
                         }
                         innerTextField()
-
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-            Column(Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(end = 12.dp, top = 6.dp),
+                        .padding(if (text.isEmpty()) 6.dp else 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    if (text.isEmpty()) {
-                        Icon(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clickable {
-                                    multiplePhotoPickerLauncher.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                    )
-                                },
-                            imageVector = Icons.Outlined.CameraAlt,
-                            contentDescription = null,
-                            tint = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                        )
-                    } else {
+                    if (text.isNotEmpty()) {
                         Text(
                             text = "Send",
-                            fontSize = 20.sp,
-                            color = Color(0xFF00B1A9),
+                            fontSize = 18.sp,
+                            color = Color(0xFF00A0E8),
+                            fontWeight = Bold,
                             modifier = Modifier
-                                .padding(top = badgeCount.dp)
                                 .clickable {
                                     if (text.isNotEmpty()) {
                                         onMessageSent(text, "text")
@@ -206,9 +226,23 @@ fun InputField(sharedViewModel: SharedViewModel, onMessageSent: (String, String)
                                     }
                                 }
                         )
+                    } else {
+                        IconButton(onClick = {
+                            multiplePhotoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        }) {
+                            SubcomposeAsyncImage(
+                                model = R.drawable.gallery_svgrepo_com,
+                                contentDescription = null,
+                                modifier = Modifier.size(30.dp)
+                            )
+                        }
                     }
                 }
-            }
-        },
-    )
+
+            },
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+    }
 }

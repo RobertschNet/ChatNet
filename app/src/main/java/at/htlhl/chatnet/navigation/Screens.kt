@@ -2,6 +2,8 @@ package at.htlhl.chatnet.navigation
 
 sealed class Screens(val route: String) {
     object ChatsViewScreen : Screens("ChatsViewScreen")
+    object CameraViewScreen : Screens("CameraViewScreen")
+    object CameraPhotoScreen : Screens("CameraPhotoScreen")
     object DropInScreen : Screens("DropInScreen")
     object ChatViewScreen : Screens("ChatViewScreen")
     object ChatMateScreen : Screens("ChatMateScreen")

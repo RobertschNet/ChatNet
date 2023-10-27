@@ -9,8 +9,10 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Scaffold
@@ -20,11 +22,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -39,6 +43,7 @@ import at.htlhl.chatnet.ui.components.MessageTopBar
 import at.htlhl.chatnet.ui.components.OptionsDialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.firebase.Timestamp
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class ChatView : ViewModel() {
@@ -51,11 +56,16 @@ class ChatView : ViewModel() {
         sharedViewModel: SharedViewModel,
         chatRoomId: String,
     ) {
-
+        val coroutineScope = rememberCoroutineScope()
         val filteredMessages = messages.filter { message ->
             message.visible.contains(sharedViewModel.auth.currentUser?.uid.toString())
         }.toMutableList()
+        val lazyListState =
+            rememberLazyListState(initialFirstVisibleItemIndex = sharedViewModel.getMessageLengthForChat()!!)
         Scaffold(
+            modifier = Modifier
+                .imePadding()
+                .onSizeChanged { coroutineScope.launch { lazyListState.scrollToItem(messages.size) } },
             topBar = {
                 MessageTopBar(sharedViewModel.friend.value) {
                     navController.navigate(Screens.ChatsViewScreen.route)
@@ -66,36 +76,40 @@ class ChatView : ViewModel() {
                 ChatViewContentList(
                     sharedViewModel = sharedViewModel,
                     messages = filteredMessages,
+                    lazyListState = lazyListState,
                     chatRoomId = chatRoomId
                 )
             }, bottomBar = {
                 InputField(
-                    sharedViewModel
-                ) { messageText, image ->
-                    sharedViewModel.chatData.value + (FirebaseMessages(
-                        sender = sharedViewModel.auth.currentUser?.uid.toString(),
-                        content = messageText,
-                        timestamp = Timestamp.now(),
-                        read = false,
-                        type = image,
-                        visible = listOf(
-                            sharedViewModel.auth.currentUser?.uid.toString(),
-                            sharedViewModel.friend.value.personList.id
+                    sharedViewModel = sharedViewModel,
+                    navController = navController,
+                    onMessageSent = { messageText, image ->
+                        sharedViewModel.chatData.value + (FirebaseMessages(
+                            sender = sharedViewModel.auth.currentUser?.uid.toString(),
+                            content = messageText,
+                            timestamp = Timestamp.now(),
+                            read = false,
+                            type = image,
+                            visible = listOf(
+                                sharedViewModel.auth.currentUser?.uid.toString(),
+                                sharedViewModel.friend.value.personList.id
+                            )
+                        ))
+                        val message = FirebaseMessages(
+                            sender = sharedViewModel.auth.currentUser?.uid.toString(),
+                            content = messageText,
+                            timestamp = Timestamp.now(),
+                            read = false,
+                            type = image,
+                            visible = listOf(
+                                sharedViewModel.auth.currentUser?.uid.toString(),
+                                sharedViewModel.friend.value.personList.id
+                            )
                         )
-                    ))
-                    val message = FirebaseMessages(
-                        sender = sharedViewModel.auth.currentUser?.uid.toString(),
-                        content = messageText,
-                        timestamp = Timestamp.now(),
-                        read = false,
-                        type = image,
-                        visible = listOf(
-                            sharedViewModel.auth.currentUser?.uid.toString(),
-                            sharedViewModel.friend.value.personList.id
-                        )
-                    )
-                    onMessageSent(message)
-                }
+                        onMessageSent(message)
+                    },
+                )
+
             })
     }
 
@@ -103,15 +117,12 @@ class ChatView : ViewModel() {
     fun ChatViewContentList(
         sharedViewModel: SharedViewModel,
         messages: List<FirebaseMessages>,
+        lazyListState: LazyListState,
         chatRoomId: String
     ) {
-        val lazyListState =
-            rememberLazyListState(initialFirstVisibleItemIndex = sharedViewModel.getMessageLengthForChat()!!)
         LaunchedEffect(messages.size) {
             lazyListState.animateScrollToItem(messages.size)
         }
-        val photoState = sharedViewModel.photoCount.collectAsState(initial = emptyList())
-        val photoCount: List<FirebaseMessages> = photoState.value
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -120,7 +131,7 @@ class ChatView : ViewModel() {
             verticalArrangement = Arrangement.Bottom
         ) {
             LazyColumn(Modifier.padding(bottom = 70.dp), state = lazyListState) {
-                items(messages + photoCount) { message ->
+                items(messages) { message ->
                     MessageItem(
                         sharedViewModel = sharedViewModel,
                         FirebaseMessages(
@@ -227,7 +238,7 @@ class ChatView : ViewModel() {
             }
         } ?: emptyList()
         val onMessageSent: (FirebaseMessages) -> Unit = { message ->
-            if (filteredChats?.tab=="chatmate"){
+            if (filteredChats?.tab == "chatmate") {
                 sharedViewModel.sendDataToServer(message.content) { response ->
                     runBlocking {
                         sharedViewModel.saveMessages(

@@ -62,11 +62,11 @@ import java.util.Random
 class SharedViewModel(application: Application) : AndroidViewModel(application) {
     private val firebaseInstance = FirebaseFirestore.getInstance()
 
-    private val _bitmaps = MutableStateFlow<List<Bitmap>>(emptyList())
+    private val _bitmaps = MutableStateFlow(Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888))
     val bitmaps = _bitmaps.asStateFlow()
 
     fun onTakePhoto(bitmap: Bitmap) {
-        _bitmaps.value += bitmap
+        _bitmaps.value = bitmap
     }
 
     private companion object {
@@ -98,19 +98,10 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val localChatUserList = mutableStateOf<List<FirebaseUsers>>(emptyList())
     val searchtext = mutableStateOf("")
     val text = mutableStateOf("")
-    private val _photoCount = MutableStateFlow<List<FirebaseMessages>>(emptyList())
-    val photoCount: StateFlow<List<FirebaseMessages>> get() = _photoCount
+
 
     fun getMessageLengthForChat(): Int? {
         return _chatData.value.find { it.members.contains(friend.value.personList.id) && it.members.contains(auth.currentUser?.uid) }?.messages?.size
-    }
-
-    fun updatePhotoCount(message: FirebaseMessages) {
-        _photoCount.value += message
-    }
-
-    fun removePhotoCount() {
-        _photoCount.value = emptyList()
     }
 
     private fun getUserDocumentRef() = firebaseInstance.collection(USER_COLLECTION)
