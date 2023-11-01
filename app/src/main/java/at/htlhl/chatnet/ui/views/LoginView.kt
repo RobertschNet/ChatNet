@@ -95,7 +95,7 @@ class LoginView {
                             if (signInTask.isSuccessful) {
                                 println("Sign-in successful")
                                 sharedViewModel.startListeningForFriends()
-                                sharedViewModel.startListeningForMessagesForPairs(auth.currentUser?.uid.toString(),
+                                sharedViewModel.startListeningForMessagesForPairs(
                                     {},
                                     {})
                                 sharedViewModel.gpsState.value = false
@@ -221,7 +221,7 @@ class LoginView {
                                     Log.d(ContentValues.TAG, "createUserWithEmail:success")
                                     if (!isUserEmailVerified()) {
                                         sharedViewModel.startListeningForFriends()
-                                        sharedViewModel.startListeningForMessagesForPairs(auth.currentUser?.uid.toString(),
+                                        sharedViewModel.startListeningForMessagesForPairs(
                                             {},
                                             {})
                                         sharedViewModel.gpsState.value = false

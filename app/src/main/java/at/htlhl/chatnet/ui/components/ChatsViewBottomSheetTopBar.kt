@@ -2,12 +2,12 @@ package at.htlhl.chatnet.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -16,12 +16,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.BottomSheetScaffoldState
-import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.TopAppBar
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,78 +42,48 @@ import at.htlhl.chatnet.R
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterialApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ChatsViewBottomSheetTopBar(
-    bottomSheetScaffoldState: BottomSheetScaffoldState,
     coroutineScope: CoroutineScope,
     sharedViewModel: SharedViewModel,
     onClick: () -> Unit,
 ) {
-    val isSearchMode = remember {
-        mutableStateOf(false)
-    }
+    val isSearchMode = remember { mutableStateOf(false) }
     TopAppBar(
-        backgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
-        modifier =
-        if (bottomSheetScaffoldState.bottomSheetState.isExpanded) {
-            Modifier
-                .clickable { coroutineScope.launch { bottomSheetScaffoldState.bottomSheetState.collapse() } }
-                .height(55.dp)
-                .fillMaxWidth()
-        } else {
-            Modifier
-                .height(55.dp)
-                .fillMaxWidth()
-        }
+        backgroundColor = Color.White,
+        modifier = Modifier.fillMaxWidth()
     ) {
         if (!isSearchMode.value) {
             Text(
                 text = "ChatNet",
-                modifier = Modifier
-                    .padding(top = 5.dp, start = 20.dp),
                 fontWeight = FontWeight.Bold,
                 fontSize = 36.sp,
-                fontFamily = FontFamily.Cursive
+                fontFamily = FontFamily.Cursive,
+                modifier = Modifier.padding(start = 10.dp)
             )
+            Spacer(modifier = Modifier.fillMaxWidth().weight(1f))
             IconButton(
-                onClick = {
-                    isSearchMode.value = true
-
-                },
-                enabled = !(bottomSheetScaffoldState.bottomSheetState.isExpanded),
-                modifier = Modifier
-                    .padding(start = 110.dp, top = 5.dp)
+                onClick = { isSearchMode.value = true },
+                modifier = Modifier.padding(start = 110.dp, top = 5.dp)
             ) {
                 SubcomposeAsyncImage(
                     model = R.drawable.search_svgrepo_com_1_,
                     contentDescription = null,
                     modifier = Modifier.size(30.dp),
-                    loading = {
-                        CircularProgressIndicator()
-                    }
                 )
             }
             IconButton(
-                onClick = {
-                    onClick.invoke()
-                },
-                enabled = !(bottomSheetScaffoldState.bottomSheetState.isExpanded),
-                modifier = Modifier
-                    .padding(top = 5.dp, end = 10.dp)
+                onClick = { onClick.invoke() },
+                modifier = Modifier.padding(top = 5.dp, end = 10.dp)
             ) {
                 SubcomposeAsyncImage(
                     model = R.drawable.inbox_svgrepo_com,
                     contentDescription = null,
                     modifier = Modifier.size(30.dp),
-                    loading = {
-                        CircularProgressIndicator()
-                    }
                 )
             }
-
         } else {
             val (text, setText) = remember { mutableStateOf("") }
             val keyboardController = LocalSoftwareKeyboardController.current
@@ -126,11 +93,7 @@ fun ChatsViewBottomSheetTopBar(
                 .fillMaxWidth()
                 .height(40.dp)
                 .border(0.3f.dp, Color.DarkGray, RoundedCornerShape(36.dp))
-                .background(
-                    Color.White,
-                    RoundedCornerShape(36.dp)
-                )
-
+                .background(Color.White, RoundedCornerShape(36.dp))
             Box(
                 modifier = Modifier
                     .padding(start = 10.dp, end = 10.dp)
@@ -142,14 +105,8 @@ fun ChatsViewBottomSheetTopBar(
                         sharedViewModel.searchtext.value = it
                     },
                     interactionSource = interactionSource,
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        imeAction = ImeAction.Search
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onSearch = {
-                            keyboardController?.hide()
-                        }
-                    ),
+                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() }),
                     singleLine = true,
                     modifier = textFieldModifier.focusRequester(focusRequester),
                     textStyle = MaterialTheme.typography.body1.copy(color = Color.Black),
@@ -173,11 +130,7 @@ fun ChatsViewBottomSheetTopBar(
                                 SubcomposeAsyncImage(
                                     model = R.drawable.back_svgrepo_com_1_,
                                     contentDescription = null,
-                                    modifier = Modifier
-                                        .size(30.dp),
-                                    loading = {
-                                        CircularProgressIndicator()
-                                    }
+                                    modifier = Modifier.size(30.dp),
                                 )
                             }
                             Box(
@@ -188,7 +141,6 @@ fun ChatsViewBottomSheetTopBar(
                             ) {
                                 innerTextField()
                             }
-
                         }
                     }
                 )

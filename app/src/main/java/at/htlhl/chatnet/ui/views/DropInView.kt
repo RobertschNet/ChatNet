@@ -68,6 +68,7 @@ import at.htlhl.chatnet.data.FirebaseMessages
 import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.data.InternalChatInstances
 import at.htlhl.chatnet.navigation.Screens
+import at.htlhl.chatnet.ui.components.ChatViewChatItem
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
@@ -353,7 +354,7 @@ class DropIn : ViewModel() {
                     )
                 }
                 items(sortedPersonList) { message ->
-                    ChatItem(
+                    ChatViewChatItem(
                         person = message,
                         sharedViewModel = sharedViewModel,
                         navController = navController,
@@ -368,9 +369,7 @@ class DropIn : ViewModel() {
                             sharedViewModel.friend.value = message
 
                         },
-
-                        bottomSheetState = bottomSheetScaffoldState.bottomSheetState
-                    )
+                        )
                 }
             }
         }

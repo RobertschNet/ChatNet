@@ -1,6 +1,7 @@
 package at.htlhl.chatnet.ui.views
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,6 +26,7 @@ class ChatMateView {
     @RequiresApi(Build.VERSION_CODES.S)
     @Composable
     fun ChatMateScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+        Log.println(Log.INFO, "ChatMateView", "ChatMateScreen")
         val messageChatRoomDataState = sharedViewModel.chatData.collectAsState()
         val messageChatRoomData: List<FirebaseChats> = messageChatRoomDataState.value
         val chatmateData = messageChatRoomData.find { it.tab == "chatmate" }

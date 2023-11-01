@@ -50,6 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import at.htlhl.chatnet.MyApplication
 import at.htlhl.chatnet.R
 import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.viewmodels.SharedViewModel

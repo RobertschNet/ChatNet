@@ -46,7 +46,10 @@ fun Navigation(
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }
         ) {
             sharedViewModel.bottomBarState.value = true
-            DropIn().DropInScreen(navController = navController, sharedViewModel = sharedViewModel)
+            DropIn().DropInScreen(
+                navController = navController,
+                sharedViewModel = sharedViewModel
+            )
         }
         composable(
             "ChatViewScreen",
@@ -74,11 +77,13 @@ fun Navigation(
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             RandChatView().RandChatScreen(navController, sharedViewModel)
         }
-        composable("CameraViewScreen",  enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+        composable("CameraViewScreen",
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             CameraView().CameraView(navController, sharedViewModel, lifecycleOwner)
         }
-        composable("CameraPhotoScreen",  enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+        composable("CameraPhotoScreen",
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             CameraPhotoView().CameraPhotoScreen(navController, sharedViewModel)
         }

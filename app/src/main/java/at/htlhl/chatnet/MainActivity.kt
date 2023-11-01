@@ -14,7 +14,6 @@ import androidx.annotation.RequiresApi
 import androidx.compose.runtime.*
 import androidx.core.view.WindowCompat
 import androidx.navigation.compose.rememberNavController
-import at.htlhl.chatnet.data.LoadingStates
 import at.htlhl.chatnet.navigation.NavigationBarLayout
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.LocationUpdateService
@@ -31,42 +30,28 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val serviceIntent = Intent(this, LocationUpdateService::class.java)
         setContent {
-            val viewModel = (application as MyApplication).myViewModel
+            val viewModel = (application as MyApplication).sharedViewModel
             val navController = rememberNavController()
             TestingTheme {
-                val loadingState = viewModel.loadingState.value
-                LaunchedEffect(key1 = true) {
-                    viewModel.fetchAuthenticationStatus()
-                }
                 NavigationBarLayout(
                     navController = navController,
                     viewModel = viewModel,
                     lifecycleOwner = applicationContext
                 )
-                LaunchedEffect(key1 = loadingState) {
-                    when (loadingState) {
-                        LoadingStates.Authenticated -> {
-                            Log.println(Log.INFO, "Authentication", "User is logged in")
-                            viewModel.updateOnlineStatus("online")
-                            viewModel.getUserData()
-                            viewModel.startListeningForFriends()
-                            viewModel.startListeningForMessagesForPairs(
-                                viewModel.auth.currentUser!!.uid,
-                                {},
-                                {})
-                            navController.navigate(Screens.ChatsViewScreen.route)
-                        }
-
-                        LoadingStates.NotAuthenticated -> {
-                            Log.println(Log.INFO, "Authentication", "User is not logged in")
-                            navController.navigate(Screens.LoginScreen.route)
-                        }
-
-                        LoadingStates.Error -> {
-                            Log.println(Log.ERROR, "Authentication", "Error while loading")
-                        }
-
-                        else -> Unit
+                LaunchedEffect(Unit) {
+                    if (viewModel.checkIfUserIsLoggedIn()) {
+                        viewModel.updateOnlineStatus("online")
+                        viewModel.getUserData()
+                        viewModel.startListeningForFriends()
+                        viewModel.startListeningForMessagesForPairs(
+                            {
+                                if (navController.currentDestination?.route == Screens.LoadingScreen.route) navController.navigate(
+                                    Screens.ChatsViewScreen.route
+                                )
+                            },
+                            {})
+                    } else {
+                        navController.navigate(Screens.LoginScreen.route)
                     }
                 }
             }
@@ -80,19 +65,19 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         serviceConnection?.let { unbindService(it) }
         stopService(Intent(this, LocationUpdateService::class.java))
-        (application as MyApplication).myViewModel.updateOnlineStatus("offline")
-        (application as MyApplication).myViewModel.resetMatchedUser()
-        (application as MyApplication).myViewModel.reset()
+        (application as MyApplication).sharedViewModel.updateOnlineStatus("offline")
+        (application as MyApplication).sharedViewModel.resetMatchedUser()
+        (application as MyApplication).sharedViewModel.reset()
     }
 
     override fun onPause() {
         super.onPause()
-        (application as MyApplication).myViewModel.updateOnlineStatus("idle")
+        (application as MyApplication).sharedViewModel.updateOnlineStatus("idle")
     }
 
     override fun onResume() {
         super.onResume()
-        (application as MyApplication).myViewModel.updateOnlineStatus("online")
+        (application as MyApplication).sharedViewModel.updateOnlineStatus("online")
     }
 
     private fun manageLocationServiceStatus(viewModel: SharedViewModel, serviceIntent: Intent) {

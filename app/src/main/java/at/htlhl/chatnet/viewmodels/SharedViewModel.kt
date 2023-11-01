@@ -51,7 +51,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONObject
 import java.io.IOException
-import java.util.Random
 
 /**
  * Created by Tobias Brandl.
@@ -82,6 +81,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
      */
 
     val auth: FirebaseAuth = Firebase.auth
+    val finishedLoadingData = mutableStateOf(false)
     val friend =
         mutableStateOf(
             InternalChatInstances(
@@ -93,6 +93,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 false
             )
         )
+    val matchedUser = mutableStateOf(FirebaseUsers("", mapOf(), "", "", "", "", "", false, ""))
     val bottomBarState = mutableStateOf(true)
     val gpsState = mutableStateOf(false)
     val localChatUserList = mutableStateOf<List<FirebaseUsers>>(emptyList())
@@ -101,7 +102,11 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
 
     fun getMessageLengthForChat(): Int? {
-        return _chatData.value.find { it.members.contains(friend.value.personList.id) && it.members.contains(auth.currentUser?.uid) }?.messages?.size
+        return _chatData.value.find {
+            it.members.contains(friend.value.personList.id) && it.members.contains(
+                auth.currentUser?.uid
+            )
+        }?.messages?.size
     }
 
     private fun getUserDocumentRef() = firebaseInstance.collection(USER_COLLECTION)
@@ -190,6 +195,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                 completedCount++
                                 if (completedCount == totalFriends) {
                                     _friendListData.value = personListData
+                                    Log.println(Log.INFO, "FriendList", "of")
                                 }
                                 updateFriendsList(_friendListData, finalData)
                             }
@@ -212,6 +218,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             updatedList += data!!
         }
         list.value = updatedList
+        sortData {}
     }
 
     fun deleteFriendFromFriendList() {
@@ -230,6 +237,51 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private val _completeChatList = MutableStateFlow<List<InternalChatInstances>>(emptyList())
+    val completeChatList: StateFlow<List<InternalChatInstances>> get() = _completeChatList
+
+    fun sortData(onComplete: () -> Unit) {
+        val updatedPersonList: List<InternalChatInstances> = _friendListData.value.map { person ->
+            val matchingChat = _chatData.value.find { chat ->
+                chat.members.contains(person.id) && chat.tab == "chats"
+            }
+            val lastVisibleMessage = matchingChat?.messages?.lastOrNull { message ->
+                auth.currentUser?.uid.toString() in message.visible
+            }
+            val updatedStatus = lastVisibleMessage ?: FirebaseMessages()
+            if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != FirebaseMessages()) {
+                InternalChatInstances(personList = person,
+                    timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
+                        ?: Timestamp.now(),
+                    lastMessage = updatedStatus,
+                    markedAsUnread = matchingChat?.unread?.contains(auth.currentUser?.uid.toString()) == true,
+                    pinChat = matchingChat?.pinned?.contains(auth.currentUser?.uid.toString()) == true,
+                    read = matchingChat?.messages?.count { it.sender != auth.currentUser?.uid.toString() && !it.read }
+                        ?: 0)
+            } else {
+                InternalChatInstances(personList = person,
+                    timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
+                        ?: Timestamp.now(),
+                    lastMessage = updatedStatus,
+                    markedAsUnread = matchingChat?.unread?.contains(auth.currentUser?.uid.toString()) == true,
+                    pinChat = matchingChat?.pinned?.contains(auth.currentUser?.uid.toString()) == true,
+                    read = matchingChat?.messages?.count { it.sender != auth.currentUser?.uid.toString() && !it.read }
+                        ?: 0)
+            }
+        }
+        val finalPersonList =
+            updatedPersonList.filter { person -> person.personList.statusFriend == "accepted" }
+        val sortedPersonList =
+            finalPersonList.sortedWith(compareByDescending<InternalChatInstances> { it.pinChat }.thenByDescending { it.timestampMessage })
+        val completePersonList =
+            if (searchtext.value != "") sortedPersonList.filter {
+                it.personList.username["mixedcase"]?.contains(
+                    searchtext.value, ignoreCase = true
+                ) ?: false
+            } else sortedPersonList
+        onComplete.invoke()
+        _completeChatList.value = completePersonList
+    }
 
     /**
      * This section contains the logic for the Firebase communication, used for exchanging messages,
@@ -241,13 +293,15 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     @Suppress("UNCHECKED_CAST", "LABEL_NAME_CLASH")
     fun startListeningForMessagesForPairs(
-        docIds: String,
         onComplete: () -> Unit,
         onError: (Exception) -> Unit
     ) {
+        if (auth.currentUser == null) {
+            return
+        }
         val chatDataSet = mutableSetOf<FirebaseChats>()
         // Step 1: Listen for changes in the chats collection
-        getChatDocumentRef().whereArrayContains("members", docIds)
+        getChatDocumentRef().whereArrayContains("members", auth.currentUser!!.uid)
             .addSnapshotListener { querySnapshot, error ->
                 if (error != null) {
                     onError.invoke(error)
@@ -293,12 +347,12 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                 }
                                 chatDataSet.add(chat)
                                 _chatData.value = chatDataSet.toList()
+                                sortData { onComplete.invoke() }
                                 Log.println(Log.INFO, "ChatData", chatDataSet.toString())
                             }
                         }
                     }
                 }
-                onComplete.invoke()
             }
     }
 
@@ -512,6 +566,9 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         MutableStateFlow(FirebaseUsers("", mapOf(), "", "", "", "", "", false, ""))
     val user: StateFlow<FirebaseUsers> get() = _user
     fun getUserData() {
+        if (auth.currentUser == null) {
+            return
+        }
         getUserDocumentRef().document(auth.currentUser!!.uid)
             .addSnapshotListener { documentSnapshot, error ->
                 if (error != null) {
@@ -528,10 +585,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
      * This section contains the logic for the Firebase communication, for the randChat feature.
      */
 
-    private val _matchedUser =
-        MutableStateFlow(FirebaseUsers("", mapOf(), "", "", "", "", "", false, ""))
-    val matchedUser: StateFlow<FirebaseUsers> get() = _matchedUser
-
+    /*
     fun pairWithRandomUser() {
         if (_matchedUser.value.id.isNotEmpty()) {
             return
@@ -591,12 +645,17 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             }
     }
 
+
+     */
     /**
      * This section contains the logic for the Firebase communication,
      * for handling different user availability states, based on app state.
      */
 
     fun updateOnlineStatus(status: String) {
+        if (auth.currentUser == null) {
+            return
+        }
         try {
             val fieldUpdates = hashMapOf<String, Any>(
                 "status" to status,
@@ -626,7 +685,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         _personData.value = emptyList()
         _friendListData.value = emptyList()
         _user.value = FirebaseUsers("", mapOf(), "", "", "", "", "", false, "")
-        _matchedUser.value = FirebaseUsers("", mapOf(), "", "", "", "", "", false, "")
+        matchedUser.value = FirebaseUsers("", mapOf(), "", "", "", "", "", false, "")
     }
 
 
@@ -838,4 +897,36 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         clipboardManager.setPrimaryClip(clip)
     }
 
+    fun resetRandChat() {
+        val url = "https://disconnect-ie4mphraqq-uc.a.run.app/disconnect"
+        val client = OkHttpClient()
+        val requestData = "{\"user\":\"${auth.currentUser?.uid.toString()}\"}"
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val requestBody = requestData.toRequestBody(mediaType)
+
+        val request = Request.Builder()
+            .url(url)
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                // Handle failure
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string()
+                    Log.println(Log.INFO, "Response", responseBody ?: "")
+                    // Response is null, so schedule a retry after 5 seconds
+                } else {
+                    Log.println(Log.INFO, "Response", response.toString())
+                }
+            }
+        })
+    }
+
+    fun checkIfUserIsLoggedIn(): Boolean {
+        return auth.currentUser != null
+    }
 }
