@@ -2,8 +2,10 @@ package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
 import android.util.Log
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +14,7 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,7 +31,7 @@ import at.htlhl.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItems
 import at.htlhl.chatnet.data.InternalChatInstances
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.ChatViewChatItem
+import at.htlhl.chatnet.ui.components.ChatsViewChatItem
 import at.htlhl.chatnet.ui.components.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.components.ChatsViewBottomSheetTopBar
 import at.htlhl.chatnet.ui.components.ClearChatDialog
@@ -48,28 +51,26 @@ class Chats : ViewModel() {
         navController: NavController, sharedViewModel: SharedViewModel
     ) {
         Log.println(Log.INFO, "Chats", "ChatsScreen")
-        LaunchedEffect(Unit) {
-            sharedViewModel.bottomBarState.value = true
-        }
         val context = LocalContext.current
         val lazyListState = rememberLazyListState()
         val coroutineScope = rememberCoroutineScope()
-        val systemUiController = rememberSystemUiController()
         var showUserIconPrompt by remember { mutableStateOf(false) }
         var showClearChatPrompt by remember { mutableStateOf(false) }
         val modelSheetState = remember { mutableStateOf(false) }
         LaunchedEffect(modelSheetState.value){
             if (modelSheetState.value) {
-                coroutineScope.launch {
-                    delay(500)
-                    systemUiController.setStatusBarColor(
-                        color = Color.Black.copy(alpha = 0.32f)
-                    )
-                }
+
             }
         }
         val userDataInstanceState = sharedViewModel.completeChatList.collectAsState()
         val userDataInstance: List<InternalChatInstances> = userDataInstanceState.value
+        Log.println(Log.INFO, "Chats", "userDataInstance: $userDataInstance")
+        val completePersonList =
+            if (sharedViewModel.searchtext.value != "") userDataInstance.filter {
+                it.personList.username["mixedcase"]?.contains(
+                    sharedViewModel.searchtext.value, ignoreCase = true
+                ) ?: false
+            } else userDataInstance
         val bottomSheetItems = listOf(
             BottomSheetItems(
                 title = if (sharedViewModel.friend.value.markedAsUnread || sharedViewModel.friend.value.read > 0) "Mark as Read" else "Mark as Unread",
@@ -114,28 +115,27 @@ class Chats : ViewModel() {
                         .background(if (isSystemInDarkTheme()) Color.Black else Color.White),
                     state = lazyListState
                 ) {
-                    items(userDataInstance) { message ->
-                        ChatViewChatItem(
+                    items(completePersonList) { message ->
+                        ChatsViewChatItem(
                             person = message,
                             sharedViewModel = sharedViewModel,
                             navController = navController,
-                            onClick = { context ->
-                                when (context) {
-                                    "image" -> {
-                                        showUserIconPrompt = true
-                                    }
-
-                                    "message" -> {
-                                        modelSheetState.value = true
-                                    }
-
-                                    "navigate" -> {
-                                        navController.navigate(Screens.ChatViewScreen.route)
-                                    }
+                        ) { context ->
+                            when (context) {
+                                "image" -> {
+                                    showUserIconPrompt = true
                                 }
-                                sharedViewModel.friend.value = message
-                            },
-                        )
+
+                                "message" -> {
+                                    modelSheetState.value = true
+                                }
+
+                                "navigate" -> {
+                                    navController.navigate(Screens.ChatViewScreen.route)
+                                }
+                            }
+                            sharedViewModel.friend.value = message
+                        }
                     }
                 }
             }
@@ -177,17 +177,15 @@ class Chats : ViewModel() {
         }
         if (modelSheetState.value) {
             ModalBottomSheet(
+                windowInsets = WindowInsets(0,0,0,0),
                 onDismissRequest = {
-                    coroutineScope.launch {
-                        systemUiController.setStatusBarColor(
-                            color = Color.White
-                        )
-                    }
                     modelSheetState.value = false
                 }, dragHandle = null, content = {
                     ChatsViewBottomSheetContent(
                         bottomSheetItems,
                         onItemClicked = { item ->
+                            modelSheetState.value = false
+
                             when (item.tag) {
                                 "unread" -> {
                                     if (sharedViewModel.friend.value.read > 0) {

@@ -39,6 +39,7 @@ fun Navigation(
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }
         ) {
+            sharedViewModel.bottomBarState.value = true
             Chats().ChatsScreen(navController, sharedViewModel)
         }
         composable("DropInScreen",

@@ -47,6 +47,62 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class ChatView : ViewModel() {
+    @Composable
+    fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+        val chatDataState = sharedViewModel.chatData.collectAsState(initial = emptyList())
+        val chatData: List<FirebaseChats> = chatDataState.value
+        val filteredChats = chatData.find { chat ->
+            chat.members.contains(sharedViewModel.friend.value.personList.id) && chat.members.contains(
+                sharedViewModel.auth.currentUser?.uid.toString()
+            )
+        }
+        val chatRoomId = filteredChats?.chatRoomID ?: ""
+        val messageList: List<FirebaseMessages> = filteredChats?.let { chat ->
+            chat.messages.map { message ->
+                FirebaseMessages(
+                    sender = message.sender,
+                    type = message.type,
+                    read = message.read,
+                    content = message.content,
+                    timestamp = message.timestamp,
+                    visible = message.visible,
+                )
+            }
+        } ?: emptyList()
+        val onMessageSent: (FirebaseMessages) -> Unit = { message ->
+            if (filteredChats?.tab == "chatmate") {
+                sharedViewModel.sendDataToServer(message.content) { response ->
+                    runBlocking {
+                        sharedViewModel.saveMessages(
+                            documentId = chatRoomId,
+                            message = FirebaseMessages(
+                                sender = "chatmate",
+                                content = response,
+                                timestamp = Timestamp.now(),
+                                read = false,
+                                type = "text",
+                                visible = listOf(
+                                    sharedViewModel.auth.currentUser?.uid.toString(),
+                                )
+                            )
+                        )
+                    }
+                }
+            }
+            runBlocking {
+                sharedViewModel.saveMessages(chatRoomId, message)
+            }
+        }
+        sharedViewModel.markMessagesAsRead(sharedViewModel.friend.value)
+        sharedViewModel.updateMarkAsReadStatus(true)
+        ChatViewContentStructure(
+            sharedViewModel = sharedViewModel,
+            messages = messageList,
+            onMessageSent = onMessageSent,
+            navController = navController,
+            chatRoomId = chatRoomId,
+        )
+    }
 
     @Composable
     fun ChatViewContentStructure(
@@ -132,16 +188,21 @@ class ChatView : ViewModel() {
         ) {
             LazyColumn(Modifier.padding(bottom = 70.dp), state = lazyListState) {
                 items(messages) { message ->
+                    val messageIndex = messages.indexOf(message)
+                    val previousMessageIndex =
+                        if (messageIndex > 0) messages.getOrNull(messageIndex - 1) else null
+
                     MessageItem(
                         sharedViewModel = sharedViewModel,
-                        FirebaseMessages(
+                        previousMessage = previousMessageIndex,
+                        message = FirebaseMessages(
                             sender = message.sender,
                             type = message.type,
                             read = message.read,
                             content = message.content,
                             timestamp = message.timestamp,
                             visible = message.visible,
-                        ), chatRoomId
+                        ), chatRoomId = chatRoomId
                     )
                 }
             }
@@ -154,6 +215,7 @@ class ChatView : ViewModel() {
     fun MessageItem(
         sharedViewModel: SharedViewModel,
         message: FirebaseMessages,
+        previousMessage: FirebaseMessages?,
         chatRoomId: String
     ) {
         val context = LocalContext.current
@@ -169,20 +231,22 @@ class ChatView : ViewModel() {
         ChatViewMessageComponent(
             isUser = isUser,
             context = context,
+            previousMessage = previousMessage,
             message = message,
-        ) {
-            if (isUser) {
-                anchorPosition.value = Offset(200f, 0f)
-            } else {
-                anchorPosition.value = Offset(20f, 0f)
+            onLongPress = {
+                if (isUser) {
+                    anchorPosition.value = Offset(200f, 0f)
+                } else {
+                    anchorPosition.value = Offset(20f, 0f)
+                }
+                val effect = VibrationEffect.createOneShot(
+                    100,
+                    VibrationEffect.DEFAULT_AMPLITUDE
+                )
+                vibrator.defaultVibrator.vibrate(effect)
+                menuDialog = true
             }
-            val effect = VibrationEffect.createOneShot(
-                100,
-                VibrationEffect.DEFAULT_AMPLITUDE
-            )
-            vibrator.defaultVibrator.vibrate(effect)
-            menuDialog = true
-        }
+        )
         if (deleteDialog) {
             DeleteMessageDialog(isUser = isUser) { value ->
                 if (value == "delete") {
@@ -213,62 +277,5 @@ class ChatView : ViewModel() {
                 menuDialog = false
             }
         }
-    }
-
-    @Composable
-    fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
-        val chatDataState = sharedViewModel.chatData.collectAsState(initial = emptyList())
-        val chatData: List<FirebaseChats> = chatDataState.value
-        val filteredChats = chatData.find { chat ->
-            chat.members.contains(sharedViewModel.friend.value.personList.id) && chat.members.contains(
-                sharedViewModel.auth.currentUser?.uid.toString()
-            )
-        }
-        val chatRoomId = filteredChats?.chatRoomID ?: ""
-        val messageList: List<FirebaseMessages> = filteredChats?.let { chat ->
-            chat.messages.map { message ->
-                FirebaseMessages(
-                    sender = message.sender,
-                    type = message.type,
-                    read = message.read,
-                    content = message.content,
-                    timestamp = message.timestamp,
-                    visible = message.visible,
-                )
-            }
-        } ?: emptyList()
-        val onMessageSent: (FirebaseMessages) -> Unit = { message ->
-            if (filteredChats?.tab == "chatmate") {
-                sharedViewModel.sendDataToServer(message.content) { response ->
-                    runBlocking {
-                        sharedViewModel.saveMessages(
-                            documentId = chatRoomId,
-                            message = FirebaseMessages(
-                                sender = "chatmate",
-                                content = response,
-                                timestamp = Timestamp.now(),
-                                read = false,
-                                type = "text",
-                                visible = listOf(
-                                    sharedViewModel.auth.currentUser?.uid.toString(),
-                                )
-                            )
-                        )
-                    }
-                }
-            }
-            runBlocking {
-                sharedViewModel.saveMessages(chatRoomId, message)
-            }
-        }
-        sharedViewModel.markMessagesAsRead(sharedViewModel.friend.value)
-        sharedViewModel.updateMarkAsReadStatus(true)
-        ChatViewContentStructure(
-            sharedViewModel = sharedViewModel,
-            messages = messageList,
-            onMessageSent = onMessageSent,
-            navController = navController,
-            chatRoomId = chatRoomId,
-        )
     }
 }

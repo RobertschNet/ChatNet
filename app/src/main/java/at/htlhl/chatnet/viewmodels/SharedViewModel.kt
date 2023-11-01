@@ -93,8 +93,10 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 false
             )
         )
-    val matchedUser = mutableStateOf(FirebaseUsers("", mapOf(), "", "", "", "", "", false, ""))
-    val bottomBarState = mutableStateOf(true)
+    val matchedUser = mutableStateOf(
+        FirebaseUsers(listOf(), "", mapOf(), "", "", "", listOf(), "", "", false, "")
+    )
+    val bottomBarState = mutableStateOf(false)
     val gpsState = mutableStateOf(false)
     val localChatUserList = mutableStateOf<List<FirebaseUsers>>(emptyList())
     val searchtext = mutableStateOf("")
@@ -185,7 +187,9 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                     status = data.status,
                                     email = data.email,
                                     color = data.color,
+                                    blocked = data.blocked,
                                     connection = data.connection,
+                                    pinned= data.pinned,
                                     mutedFriend = friend.muted,
                                     statusFriend = friend.status,
                                 )
@@ -195,7 +199,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                 completedCount++
                                 if (completedCount == totalFriends) {
                                     _friendListData.value = personListData
-                                    Log.println(Log.INFO, "FriendList", "of")
+                                    Log.println(Log.INFO, "FriendList", personListData.toString())
                                 }
                                 updateFriendsList(_friendListData, finalData)
                             }
@@ -240,7 +244,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     private val _completeChatList = MutableStateFlow<List<InternalChatInstances>>(emptyList())
     val completeChatList: StateFlow<List<InternalChatInstances>> get() = _completeChatList
 
-    fun sortData(onComplete: () -> Unit) {
+    private fun sortData(onComplete: () -> Unit) {
         val updatedPersonList: List<InternalChatInstances> = _friendListData.value.map { person ->
             val matchingChat = _chatData.value.find { chat ->
                 chat.members.contains(person.id) && chat.tab == "chats"
@@ -250,12 +254,13 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             }
             val updatedStatus = lastVisibleMessage ?: FirebaseMessages()
             if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != FirebaseMessages()) {
-                InternalChatInstances(personList = person,
+                InternalChatInstances(
+                    personList = person,
                     timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                         ?: Timestamp.now(),
                     lastMessage = updatedStatus,
                     markedAsUnread = matchingChat?.unread?.contains(auth.currentUser?.uid.toString()) == true,
-                    pinChat = matchingChat?.pinned?.contains(auth.currentUser?.uid.toString()) == true,
+                    pinChat = _user.value.pinned.contains(matchingChat?.chatRoomID),
                     read = matchingChat?.messages?.count { it.sender != auth.currentUser?.uid.toString() && !it.read }
                         ?: 0)
             } else {
@@ -264,7 +269,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                         ?: Timestamp.now(),
                     lastMessage = updatedStatus,
                     markedAsUnread = matchingChat?.unread?.contains(auth.currentUser?.uid.toString()) == true,
-                    pinChat = matchingChat?.pinned?.contains(auth.currentUser?.uid.toString()) == true,
+                    pinChat = _user.value.pinned.contains(matchingChat?.chatRoomID),
                     read = matchingChat?.messages?.count { it.sender != auth.currentUser?.uid.toString() && !it.read }
                         ?: 0)
             }
@@ -273,14 +278,9 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             updatedPersonList.filter { person -> person.personList.statusFriend == "accepted" }
         val sortedPersonList =
             finalPersonList.sortedWith(compareByDescending<InternalChatInstances> { it.pinChat }.thenByDescending { it.timestampMessage })
-        val completePersonList =
-            if (searchtext.value != "") sortedPersonList.filter {
-                it.personList.username["mixedcase"]?.contains(
-                    searchtext.value, ignoreCase = true
-                ) ?: false
-            } else sortedPersonList
+
         onComplete.invoke()
-        _completeChatList.value = completePersonList
+        _completeChatList.value = sortedPersonList
     }
 
     /**
@@ -333,7 +333,6 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                     subSnapshot.toObjects(FirebaseMessages::class.java)
                                 val chat = FirebaseChats(
                                     members = documentChange.document.data["members"] as List<String>,
-                                    pinned = documentChange.document.data["pinned"] as List<String>,
                                     unread = documentChange.document.data["unread"] as List<String>,
                                     tab = documentChange.document.data["tab"] as String,
                                     chatRoomID = documentChange.document.id,
@@ -456,6 +455,8 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             val status = document.getString("status")
             val email = document.getString("email")
             val color = document.getString("color")
+            val blocked = document.get("blocked") as List<String>?
+            val pinned= document.get("pinned") as List<String>?
             val connection = document.getString("connection")
             FirebaseUsers(
                 image = image!!,
@@ -464,7 +465,9 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 status = status!!,
                 email = email!!,
                 color = color!!,
+                blocked = blocked!!,
                 connection = connection!!,
+                pinned = pinned!!,
                 mutedFriend = false,
                 statusFriend = "",
             )
@@ -490,7 +493,6 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         val fieldUpdates = hashMapOf(
             "members" to membersArray,
             "tab" to tab,
-            "pinned" to emptyList<String>(),
             "unread" to emptyList<String>(),
         )
         getChatDocumentRef().document().set(fieldUpdates).addOnSuccessListener {}
@@ -563,7 +565,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private val _user =
-        MutableStateFlow(FirebaseUsers("", mapOf(), "", "", "", "", "", false, ""))
+        MutableStateFlow(FirebaseUsers(listOf(), "", mapOf(), "", "", "", listOf(), "", "", false, ""))
     val user: StateFlow<FirebaseUsers> get() = _user
     fun getUserData() {
         if (auth.currentUser == null) {
@@ -577,6 +579,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 if (documentSnapshot != null && documentSnapshot.exists()) {
                     val personList = documentSnapshot.toObject(FirebaseUsers::class.java)
                     _user.value = personList!!
+                    sortData {}
                 }
             }
     }
@@ -684,10 +687,10 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         )
         _personData.value = emptyList()
         _friendListData.value = emptyList()
-        _user.value = FirebaseUsers("", mapOf(), "", "", "", "", "", false, "")
-        matchedUser.value = FirebaseUsers("", mapOf(), "", "", "", "", "", false, "")
+        _user.value = FirebaseUsers(listOf(), "", mapOf(), "", "", "", listOf(), "", "", false, "")
+        matchedUser.value = FirebaseUsers(listOf(), "", mapOf(), "", "", "",
+            listOf(), "", "", false, "")
     }
-
 
     private val _personData = MutableStateFlow<List<FirebaseUsers>>(emptyList())
     val personData: StateFlow<List<FirebaseUsers>> get() = _personData
@@ -759,14 +762,13 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     fun updatePinChatStatus(isAlreadyPinned: Boolean) {
         for (chat in chatData.value) {
             if (chat.members.contains(friend.value.personList.id) && chat.members.contains(auth.currentUser?.uid.toString())) {
-                val chatRef = getChatDocumentRef().document(chat.chatRoomID)
+                val userRef = getUserDocumentRef().document(auth.currentUser?.uid.toString())
                 val updateData = if (isAlreadyPinned) {
-                    mapOf("pinned" to FieldValue.arrayRemove(auth.currentUser?.uid.toString()))
+                    mapOf("pinned" to FieldValue.arrayRemove(chat.chatRoomID))
                 } else {
-                    mapOf("pinned" to FieldValue.arrayUnion(auth.currentUser?.uid.toString()))
+                    mapOf("pinned" to FieldValue.arrayUnion(chat.chatRoomID))
                 }
-
-                chatRef.update(updateData)
+                userRef.update(updateData)
                     .addOnSuccessListener {}
                     .addOnFailureListener { exception -> exception.printStackTrace() }
             }

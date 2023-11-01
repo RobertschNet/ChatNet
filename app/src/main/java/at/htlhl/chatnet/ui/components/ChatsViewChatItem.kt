@@ -40,7 +40,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ChatViewChatItem(
+fun ChatsViewChatItem(
     person: InternalChatInstances,
     navController: NavController,
     sharedViewModel: SharedViewModel,

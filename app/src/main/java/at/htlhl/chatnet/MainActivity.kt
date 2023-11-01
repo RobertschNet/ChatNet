@@ -13,6 +13,7 @@ import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.*
 import androidx.core.view.WindowCompat
+import androidx.navigation.NavOptions
 import androidx.navigation.compose.rememberNavController
 import at.htlhl.chatnet.navigation.NavigationBarLayout
 import at.htlhl.chatnet.navigation.Screens
@@ -45,9 +46,8 @@ class MainActivity : ComponentActivity() {
                         viewModel.startListeningForFriends()
                         viewModel.startListeningForMessagesForPairs(
                             {
-                                if (navController.currentDestination?.route == Screens.LoadingScreen.route) navController.navigate(
-                                    Screens.ChatsViewScreen.route
-                                )
+                                if (navController.currentDestination?.route == Screens.LoadingScreen.route)
+                                    navController.navigate(Screens.ChatsViewScreen.route)
                             },
                             {})
                     } else {

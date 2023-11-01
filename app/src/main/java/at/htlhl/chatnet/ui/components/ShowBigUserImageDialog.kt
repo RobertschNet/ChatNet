@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -59,6 +60,8 @@ fun ShowBigUserImageDialog(
                     text = userData.personList.username["mixedcase"].toString(),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Normal,
+                    maxLines= 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .zIndex(1f)
                         .padding(start = 5.dp, top = 5.dp, bottom = 5.dp),

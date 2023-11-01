@@ -124,10 +124,11 @@ fun ChatsViewBottomSheetContent(
 
                 })
             }
+            Spacer(modifier = Modifier.height(20.dp))
         },
         modifier = Modifier
             .fillMaxWidth()
-            .height(300.dp)
+            .height(320.dp)
             .background(
                 color = Color.White,
             )

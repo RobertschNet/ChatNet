@@ -1,6 +1,5 @@
 package at.htlhl.chatnet.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Row
@@ -20,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
@@ -66,7 +64,8 @@ fun MessageTopBar(chatInstance: InternalChatInstances, onClick: () -> Unit) {
                     contentDescription = null,
                     model = chatInstance.personList.image,
                     modifier = Modifier
-                        .clip(CircleShape),
+                        .clip(CircleShape)
+                        .size(45.dp),
                     contentScale = ContentScale.Crop,
                     loading = {
                         CircularProgressIndicator()

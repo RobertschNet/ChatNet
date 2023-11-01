@@ -68,7 +68,7 @@ import at.htlhl.chatnet.data.FirebaseMessages
 import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.data.InternalChatInstances
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.ChatViewChatItem
+import at.htlhl.chatnet.ui.components.ChatsViewChatItem
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
@@ -107,7 +107,7 @@ class DropIn : ViewModel() {
                         ?: Timestamp.now(),
                     lastMessage = updatedStatus,
                     markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
-                    pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
+                    pinChat =person.blocked.contains(matchingChat?.chatRoomID),
                     read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                         ?: 0
                 )
@@ -117,7 +117,7 @@ class DropIn : ViewModel() {
                     timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                         ?: Timestamp.now(),
                     lastMessage = updatedStatus,
-                    pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
+                    pinChat =person.blocked.contains(matchingChat?.chatRoomID),
                     markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                     read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                         ?: 0
@@ -135,7 +135,7 @@ class DropIn : ViewModel() {
                     ?: Timestamp.now(),
                 lastMessage = matchingChat?.messages?.lastOrNull() ?: FirebaseMessages(),
                 markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
-                pinChat = matchingChat?.pinned?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
+                pinChat = person.blocked.contains(matchingChat?.chatRoomID),
                 read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                     ?: 0
             )
@@ -354,22 +354,21 @@ class DropIn : ViewModel() {
                     )
                 }
                 items(sortedPersonList) { message ->
-                    ChatViewChatItem(
+                    ChatsViewChatItem(
                         person = message,
                         sharedViewModel = sharedViewModel,
                         navController = navController,
-                        onClick = { context ->
-                            if (context == "image") {
-                                //TODO: Show Big Image
-                            } else if (context == "message") {
-                                coroutineScope.launch {
-                                    bottomSheetScaffoldState.bottomSheetState.expand()
-                                }
+                    ) { context ->
+                        if (context == "image") {
+                            //TODO: Show Big Image
+                        } else if (context == "message") {
+                            coroutineScope.launch {
+                                bottomSheetScaffoldState.bottomSheetState.expand()
                             }
-                            sharedViewModel.friend.value = message
+                        }
+                        sharedViewModel.friend.value = message
 
-                        },
-                        )
+                    }
                 }
             }
         }

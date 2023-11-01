@@ -212,6 +212,8 @@ class LocationUpdateService : Service() {
                             status = dataMap["status"] as String,
                             email = dataMap["email"].toString(),
                             color = dataMap["color"].toString(),
+                            blocked = dataMap["blocked"] as List<String>,
+                            pinned = dataMap["pinned"] as List<String>,
                             mutedFriend = false,
                             statusFriend = "User is ${distanceInM.toInt()} meters away",
                         )
