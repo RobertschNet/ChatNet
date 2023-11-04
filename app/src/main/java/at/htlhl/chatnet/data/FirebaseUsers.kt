@@ -1,5 +1,8 @@
 package at.htlhl.chatnet.data
 
+import com.firebase.geofire.GeoLocation
+import com.google.firebase.firestore.GeoPoint
+
 data class FirebaseUsers(
     val blocked: List<String>, // list of ids of users that have been blocked by the user
     val image: String, // url of the users profile picture

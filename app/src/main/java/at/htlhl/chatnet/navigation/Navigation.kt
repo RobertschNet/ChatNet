@@ -18,13 +18,12 @@ import at.htlhl.chatnet.ui.views.ChatMateView
 import at.htlhl.chatnet.ui.views.ChatView
 import at.htlhl.chatnet.ui.views.Chats
 import at.htlhl.chatnet.ui.views.DropIn
-import at.htlhl.chatnet.ui.views.InboxView
 import at.htlhl.chatnet.ui.views.LoadingView
 import at.htlhl.chatnet.ui.views.LoginView
 import at.htlhl.chatnet.ui.views.ProfileView
 import at.htlhl.chatnet.ui.views.RandChatView
 import at.htlhl.chatnet.ui.views.RegisterView
-import at.htlhl.chatnet.ui.views.SearchView
+import at.htlhl.chatnet.ui.views.FindUserView
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -32,7 +31,7 @@ import at.htlhl.chatnet.viewmodels.SharedViewModel
 fun Navigation(
     navController: NavHostController,
     sharedViewModel: SharedViewModel,
-    lifecycleOwner: Context
+    context: Context
 ) {
     NavHost(navController = navController, startDestination = "LoadingScreen") {
         composable("ChatsViewScreen",
@@ -81,14 +80,14 @@ fun Navigation(
         composable("CameraViewScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-            CameraView().CameraView(navController, sharedViewModel, lifecycleOwner)
+            CameraView().CameraView(navController, sharedViewModel, context)
         }
         composable("CameraPhotoScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             CameraPhotoView().CameraPhotoScreen(navController, sharedViewModel)
         }
-        composable("SearchViewScreen",
+        composable("FindUserScreen",
             enterTransition = {
                 slideInHorizontally(
                     initialOffsetX = { fullWidth -> fullWidth },
@@ -102,7 +101,7 @@ fun Navigation(
                 )
             }) {
             sharedViewModel.bottomBarState.value = false
-            SearchView().SearchViewScreen(navController, sharedViewModel)
+            FindUserView().FindUserScreen(navController, sharedViewModel)
         }
         composable("ChatMateScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
@@ -130,11 +129,6 @@ fun Navigation(
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             LoadingView().LoadingScreen(navController)
-        }
-        composable("InboxScreen",
-            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
-            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-            InboxView().Inbox(sharedViewModel = sharedViewModel, lifecycleOwner)
         }
     }
 }

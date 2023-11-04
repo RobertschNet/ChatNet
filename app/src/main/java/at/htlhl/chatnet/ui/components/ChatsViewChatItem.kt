@@ -76,6 +76,7 @@ fun ChatsViewChatItem(
                 modifier = Modifier
                     .clip(CircleShape)
                     .size(50.dp)
+                    .shimmerEffect()
                     .clickable {
                         onClick.invoke("image")
                     },

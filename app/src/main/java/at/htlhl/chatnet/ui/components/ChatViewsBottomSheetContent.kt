@@ -69,7 +69,7 @@ fun ChatsViewBottomSheetContent(
                     contentScale = ContentScale.Crop,
                     alignment = Alignment.Center,
                     loading = {
-                        CircularProgressIndicator()
+
                     }
                 )
                 Text(

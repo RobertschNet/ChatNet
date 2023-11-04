@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -35,13 +34,12 @@ import at.htlhl.chatnet.data.BottomNavItems
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.rememberAsyncImagePainter
 
-@OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun NavigationBarLayout(
     navController: NavHostController,
     viewModel: SharedViewModel,
-    lifecycleOwner: Context
+    context: Context
 ) {
     Scaffold(bottomBar = {
         BottomNavigationBar(isBottomBarEnabled = viewModel.bottomBarState, items = listOf(
@@ -85,7 +83,7 @@ fun NavigationBarLayout(
             Navigation(
                 navController = navController,
                 sharedViewModel = viewModel,
-                lifecycleOwner = lifecycleOwner
+                context = context
             )
         }
     }

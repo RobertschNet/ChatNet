@@ -2,7 +2,6 @@ package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
 import android.util.Log
-import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
@@ -14,8 +13,6 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,18 +26,16 @@ import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import at.htlhl.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItems
+import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.data.InternalChatInstances
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.ChatsViewChatItem
 import at.htlhl.chatnet.ui.components.ChatsViewBottomSheetContent
-import at.htlhl.chatnet.ui.components.ChatsViewBottomSheetTopBar
+import at.htlhl.chatnet.ui.components.ChatsViewChatItem
+import at.htlhl.chatnet.ui.components.ChatsViewTopBar
 import at.htlhl.chatnet.ui.components.ClearChatDialog
 import at.htlhl.chatnet.ui.components.EmptyChatContent
 import at.htlhl.chatnet.ui.components.ShowBigUserImageDialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 class Chats : ViewModel() {
 
@@ -57,13 +52,11 @@ class Chats : ViewModel() {
         var showUserIconPrompt by remember { mutableStateOf(false) }
         var showClearChatPrompt by remember { mutableStateOf(false) }
         val modelSheetState = remember { mutableStateOf(false) }
-        LaunchedEffect(modelSheetState.value){
-            if (modelSheetState.value) {
-
-            }
-        }
         val userDataInstanceState = sharedViewModel.completeChatList.collectAsState()
         val userDataInstance: List<InternalChatInstances> = userDataInstanceState.value
+        val friendListDataState = sharedViewModel.friendListData.collectAsState()
+        val friendListData: List<FirebaseUsers> = friendListDataState.value
+        val availableUsers = friendListData.filter { friend -> friend.statusFriend == "pending" }
         Log.println(Log.INFO, "Chats", "userDataInstance: $userDataInstance")
         val completePersonList =
             if (sharedViewModel.searchtext.value != "") userDataInstance.filter {
@@ -96,17 +89,18 @@ class Chats : ViewModel() {
                 .fillMaxSize()
                 .background(Color.White),
             topBar = {
-                ChatsViewBottomSheetTopBar(
+                ChatsViewTopBar(
+                    availableUsers,
                     coroutineScope,
                     sharedViewModel
                 ) {
-                    navController.navigate(Screens.InboxScreen.route)
+                    navController.navigate(Screens.FindUserScreen.route)
                 }
             },
             content = {
                 if (userDataInstance.isEmpty()) {
                     EmptyChatContent(onClicked = {
-                        navController.navigate(Screens.SearchViewScreen.route)
+                        navController.navigate(Screens.FindUserScreen.route)
                     })
                 }
                 LazyColumn(
@@ -177,7 +171,7 @@ class Chats : ViewModel() {
         }
         if (modelSheetState.value) {
             ModalBottomSheet(
-                windowInsets = WindowInsets(0,0,0,0),
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 onDismissRequest = {
                     modelSheetState.value = false
                 }, dragHandle = null, content = {

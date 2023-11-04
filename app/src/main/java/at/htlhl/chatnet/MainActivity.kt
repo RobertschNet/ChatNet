@@ -13,7 +13,6 @@ import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.*
 import androidx.core.view.WindowCompat
-import androidx.navigation.NavOptions
 import androidx.navigation.compose.rememberNavController
 import at.htlhl.chatnet.navigation.NavigationBarLayout
 import at.htlhl.chatnet.navigation.Screens
@@ -37,19 +36,18 @@ class MainActivity : ComponentActivity() {
                 NavigationBarLayout(
                     navController = navController,
                     viewModel = viewModel,
-                    lifecycleOwner = applicationContext
+                    context = applicationContext
                 )
                 LaunchedEffect(Unit) {
                     if (viewModel.checkIfUserIsLoggedIn()) {
                         viewModel.updateOnlineStatus("online")
                         viewModel.getUserData()
                         viewModel.startListeningForFriends()
-                        viewModel.startListeningForMessagesForPairs(
-                            {
-                                if (navController.currentDestination?.route == Screens.LoadingScreen.route)
-                                    navController.navigate(Screens.ChatsViewScreen.route)
-                            },
-                            {})
+                        viewModel.startListeningForMessagesForPairs({
+                            viewModel.fetchFriendsFromFriend()
+                            if (navController.currentDestination?.route == Screens.LoadingScreen.route)
+                                navController.navigate(Screens.ChatsViewScreen.route)
+                        }, {})
                     } else {
                         navController.navigate(Screens.LoginScreen.route)
                     }

@@ -89,9 +89,7 @@ class RandChatView {
                     Log.println(Log.INFO, "Response", responseBody ?: "")
                     // Response is null, so schedule a retry after 5 seconds
                     if (responseBody == "{\"partner\":null}") {
-                        handler.postDelayed({
-                            getRandChat(sharedViewModel, false)
-                        }, delayMillis)
+                        handler.postDelayed({ getRandChat(sharedViewModel, false) }, delayMillis)
                     } else {
                         val partner =
                             responseBody?.substringAfter("partner\":\"")?.substringBefore("\"")
@@ -142,12 +140,12 @@ class RandChatView {
                     durationMillis = animationDuration,
                     easing = LinearEasing
                 )
-            ), label = ""
+            ),
+            label = ""
         )
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .fillMaxSize()
+            modifier = Modifier.fillMaxSize()
         ) {
             CircularProgressIndicator(
                 modifier = Modifier
