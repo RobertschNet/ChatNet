@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,18 +29,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import at.htlhl.chatnet.R
-import at.htlhl.chatnet.data.BottomSheetItems
-import at.htlhl.chatnet.data.InternalChatInstances
+import at.chatnet.R
+import at.htlhl.chatnet.data.BottomSheetItem
+import at.htlhl.chatnet.data.InternalChatInstance
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 
 @Composable
 fun ChatsViewBottomSheetContent(
-    bottomSheetItems: List<BottomSheetItems>,
-    onItemClicked: (BottomSheetItems) -> Unit,
-    friend: InternalChatInstances
+    bottomSheetItems: List<BottomSheetItem>,
+    onItemClicked: (BottomSheetItem) -> Unit,
+    friend: InternalChatInstance
 ) {
     Column(
         content = {
@@ -65,12 +64,10 @@ fun ChatsViewBottomSheetContent(
                     model = friend.personList.image,
                     modifier = Modifier
                         .clip(CircleShape)
-                        .size(40.dp),
+                        .size(40.dp)
+                        .shimmerEffect(),
                     contentScale = ContentScale.Crop,
                     alignment = Alignment.Center,
-                    loading = {
-
-                    }
                 )
                 Text(
                     text = friend.personList.username["mixedcase"].toString(),

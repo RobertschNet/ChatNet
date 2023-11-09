@@ -33,12 +33,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
-import at.htlhl.chatnet.data.InternalChatInstances
+import at.htlhl.chatnet.data.InternalChatInstance
 import coil.compose.SubcomposeAsyncImage
 
 @Composable
 fun ShowBigUserImageDialog(
-    userData: InternalChatInstances,
+    userData: InternalChatInstance,
     onDismiss: (String) -> Unit
 ) {
     Dialog(

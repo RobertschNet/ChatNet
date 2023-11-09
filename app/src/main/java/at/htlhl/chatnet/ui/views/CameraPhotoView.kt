@@ -38,8 +38,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import at.htlhl.chatnet.data.FirebaseChats
-import at.htlhl.chatnet.data.FirebaseMessages
+import at.htlhl.chatnet.data.FirebaseChat
+import at.htlhl.chatnet.data.FirebaseMessage
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
@@ -60,7 +60,7 @@ class CameraPhotoView {
         val coroutineScope = rememberCoroutineScope()
         val context = LocalContext.current
         val chatDataState = sharedViewModel.chatData.collectAsState(initial = emptyList())
-        val chatData: List<FirebaseChats> = chatDataState.value
+        val chatData: List<FirebaseChat> = chatDataState.value
         val filteredChats = chatData.find { chat ->
             chat.members.contains(sharedViewModel.friend.value.personList.id) && chat.members.contains(
                 sharedViewModel.auth.currentUser?.uid.toString()
@@ -151,12 +151,12 @@ class CameraPhotoView {
                                     val outputStream = FileOutputStream(cachePath)
                                     bitmap.value.compress(
                                         Bitmap.CompressFormat.JPEG,
-                                        100,
+                                        50,
                                         outputStream
                                     )
                                     outputStream.close()
                                     val imageRef =
-                                        storageRef.child("${sharedViewModel.auth.currentUser?.uid.toString()}/messagePictures/${bitmap.value.generationId}") // Not safe
+                                        storageRef.child("images/${bitmap.value.generationId}") // Not safe
                                     val uploadTask = imageRef.putFile(Uri.fromFile(cachePath))
                                     uploadTask.addOnCompleteListener { task ->
                                         if (task.isSuccessful) {
@@ -164,12 +164,12 @@ class CameraPhotoView {
                                                 Log.d("Image", downloadUrl.toString())
                                                 coroutineScope.launch {
                                                     sharedViewModel.saveMessages(
-                                                        chatRoomId, FirebaseMessages(
+                                                        chatRoomId, FirebaseMessage(
                                                             sender = sharedViewModel.auth.currentUser?.uid.toString(),
-                                                            content = downloadUrl.toString(),
+                                                            content = "",
                                                             timestamp = Timestamp.now(),
                                                             read = false,
-                                                            type = "image",
+                                                            image = downloadUrl.toString(),
                                                             visible = arrayListOf(
                                                                 sharedViewModel.friend.value.personList.id,
                                                                 sharedViewModel.auth.currentUser?.uid.toString()

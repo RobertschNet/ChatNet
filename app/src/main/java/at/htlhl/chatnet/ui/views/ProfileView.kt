@@ -51,7 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.htlhl.chatnet.MyApplication
-import at.htlhl.chatnet.R
+import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import at.htlhl.chatnet.navigation.Screens
@@ -343,7 +343,6 @@ class ProfileView {
                         sharedViewModel.updateOnlineStatus("offline")
                         logout()
                         sharedViewModel.reset()
-                        sharedViewModel.resetMatchedUser()
                         sharedViewModel.auth.signOut()
                         sharedViewModel.gpsState.value = true
                         navController.navigate(Screens.LoginScreen.route)

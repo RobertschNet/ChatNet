@@ -43,7 +43,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import at.htlhl.chatnet.R
+import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -143,7 +143,7 @@ fun ChatsViewTopBar(
                     value = text,
                     onValueChange = {
                         setText(it)
-                        sharedViewModel.searchtext.value = it
+                        sharedViewModel.searchValue.value = it
                     },
                     interactionSource = interactionSource,
                     keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
@@ -154,7 +154,7 @@ fun ChatsViewTopBar(
                     cursorBrush = SolidColor(if (isSystemInDarkTheme()) Color.White else Color.Black),
                     decorationBox = { innerTextField: @Composable () -> Unit ->
                         Text(
-                            text = if (sharedViewModel.searchtext.value != "") "" else "Search...",
+                            text = if (sharedViewModel.searchValue.value != "") "" else "Search...",
                             modifier = Modifier.padding(top = 9.dp, start = 50.dp)
                         )
                         Row(
@@ -165,7 +165,7 @@ fun ChatsViewTopBar(
                             IconButton(
                                 onClick = {
                                     isSearchMode.value = false
-                                    sharedViewModel.searchtext.value = ""
+                                    sharedViewModel.searchValue.value = ""
                                 },
                             ) {
                                 SubcomposeAsyncImage(

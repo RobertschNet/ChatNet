@@ -34,6 +34,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
@@ -58,7 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
-import at.htlhl.chatnet.R
+import at.chatnet.R
 import at.htlhl.chatnet.navigation.Screens
 import coil.compose.SubcomposeAsyncImage
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -78,7 +79,6 @@ class RegisterView {
     private val db = FirebaseFirestore.getInstance()
 
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun RegisterScreen(navController: NavController) {
         val authentication = FirebaseAuth.getInstance()
@@ -86,7 +86,7 @@ class RegisterView {
         val scope = rememberCoroutineScope()
         val googleSignInOptions = remember {
             GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken("967262210750-50ehlubm3783euk8ovqnjr0kf2mrcetb.apps.googleusercontent.com")
+                .requestIdToken("1077068573755-8dqkdh2upl4h7rgkeab8slnv5dlps6c5.apps.googleusercontent.com")
                 .requestEmail()
                 .build()
         }
@@ -201,10 +201,10 @@ class RegisterView {
             verticalArrangement = Arrangement.spacedBy(15.dp)
         ) {
             OutlinedTextField(
-                colors = TextFieldDefaults.outlinedTextFieldColors(
+                colors = OutlinedTextFieldDefaults.colors(
+                    cursorColor = usernameTexFieldColor,
                     focusedBorderColor = usernameTexFieldColor,
                     unfocusedBorderColor = usernameTexFieldColor,
-                    cursorColor = usernameTexFieldColor,
                     focusedLabelColor = usernameTexFieldColor,
                     unfocusedLabelColor = usernameTexFieldColor,
                 ),
@@ -237,10 +237,10 @@ class RegisterView {
                 label = { Text(text = "Username") },
             )
             OutlinedTextField(
-                colors = TextFieldDefaults.outlinedTextFieldColors(
+                colors = OutlinedTextFieldDefaults.colors(
+                    cursorColor = addressTexFieldColor,
                     focusedBorderColor = addressTexFieldColor,
                     unfocusedBorderColor = addressTexFieldColor,
-                    cursorColor = addressTexFieldColor,
                     focusedLabelColor = addressTexFieldColor,
                     unfocusedLabelColor = addressTexFieldColor,
                 ),
@@ -256,10 +256,10 @@ class RegisterView {
                 label = { Text(text = "Email") },
             )
             OutlinedTextField(
-                colors = TextFieldDefaults.outlinedTextFieldColors(
+                colors = OutlinedTextFieldDefaults.colors(
+                    cursorColor = addressTexFieldColor,
                     focusedBorderColor = addressTexFieldColor,
                     unfocusedBorderColor = addressTexFieldColor,
-                    cursorColor = addressTexFieldColor,
                     focusedLabelColor = addressTexFieldColor,
                     unfocusedLabelColor = addressTexFieldColor,
                 ),
@@ -552,17 +552,20 @@ class RegisterView {
     private fun createUserEntry(name: String) {
         val user = FirebaseAuth.getInstance().currentUser
         val db = FirebaseFirestore.getInstance()
-        val userRef = db.collection("user").document(user!!.uid)
+        val userRef = db.collection("users").document(user!!.uid)
         val userData = hashMapOf(
             "blocked" to emptyList<String>(),
+            "pinned" to emptyList<String>(),
             "color" to "",
-            "connection" to "",
+            "connected" to false,
             "email" to user.email,
             "id" to user.uid,
             "image" to "https://www.w3schools.com/howto/img_avatar2.png",
             "status" to "online",
-            "username.lowercase" to name.lowercase(Locale.ROOT),
-            "username.mixedcase" to name,
+            "username" to mapOf(
+                "lowercase" to name.lowercase(Locale.ROOT),
+                "mixedcase" to name,
+            ),
         )
         userRef.set(userData)
             .addOnSuccessListener {

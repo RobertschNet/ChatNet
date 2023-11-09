@@ -25,7 +25,6 @@ import androidx.compose.material.IconButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -51,9 +50,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import at.htlhl.chatnet.R
-import at.htlhl.chatnet.viewmodels.SharedViewModel
+import at.chatnet.R
 import at.htlhl.chatnet.navigation.Screens
+import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -69,7 +68,6 @@ class LoginView {
     private lateinit var auth: FirebaseAuth
 
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun LoginScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         sharedViewModel.bottomBarState.value = false
@@ -78,7 +76,7 @@ class LoginView {
         val scope = rememberCoroutineScope()
         val googleSignInOptions = remember {
             GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken("967262210750-50ehlubm3783euk8ovqnjr0kf2mrcetb.apps.googleusercontent.com")
+                .requestIdToken("1077068573755-8dqkdh2upl4h7rgkeab8slnv5dlps6c5.apps.googleusercontent.com")
                 .requestEmail()
                 .build()
         }
@@ -94,10 +92,8 @@ class LoginView {
                         .addOnCompleteListener { signInTask ->
                             if (signInTask.isSuccessful) {
                                 println("Sign-in successful")
-                                sharedViewModel.startListeningForFriends()
-                                sharedViewModel.startListeningForMessagesForPairs(
-                                    {},
-                                    {})
+                                sharedViewModel.fetchFriendsFromUser()
+                                sharedViewModel.fetchChatsWithMessages {}
                                 sharedViewModel.gpsState.value = false
                                 navController.navigate(Screens.ChatsViewScreen.route)
                             } else {
@@ -161,7 +157,7 @@ class LoginView {
     }
 
 
-    @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+    @OptIn(ExperimentalComposeUiApi::class)
     @Composable
     fun ContentView(
         navController: NavController,
@@ -220,10 +216,8 @@ class LoginView {
                                 if (task.isSuccessful) {
                                     Log.d(ContentValues.TAG, "createUserWithEmail:success")
                                     if (!isUserEmailVerified()) {
-                                        sharedViewModel.startListeningForFriends()
-                                        sharedViewModel.startListeningForMessagesForPairs(
-                                            {},
-                                            {})
+                                        sharedViewModel.fetchFriendsFromUser()
+                                        sharedViewModel.fetchChatsWithMessages {}
                                         sharedViewModel.gpsState.value = false
                                         navController.navigate(Screens.ChatsViewScreen.route)
                                     } else {

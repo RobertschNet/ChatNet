@@ -44,7 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import at.htlhl.chatnet.R
+import at.chatnet.R
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -53,7 +53,7 @@ import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 
 @Composable
-fun InputField(sharedViewModel: SharedViewModel, navController: NavController, onMessageSent: (String, String) -> Unit) {
+fun InputField(sharedViewModel: SharedViewModel, navController: NavController, chatMateChat:Boolean, onMessageSent: (String, String) -> Unit) {
     var badgeCount by remember { mutableIntStateOf(0) }
     val systemUiController = rememberSystemUiController()
     val text = sharedViewModel.text.value
@@ -68,13 +68,13 @@ fun InputField(sharedViewModel: SharedViewModel, navController: NavController, o
                 val storage = Firebase.storage
                 val storageRef = storage.reference
                 val imageRef =
-                    storageRef.child("${sharedViewModel.auth.currentUser?.uid.toString()}/messagePictures/${image.lastPathSegment}")
+                    storageRef.child("images/${image.lastPathSegment}")
                 val uploadTask = imageRef.putFile(image)
                 uploadTask.addOnCompleteListener { task ->
                     if (task.isSuccessful) {
                         imageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
                             Log.d("Image", downloadUrl.toString())
-                            onMessageSent(downloadUrl.toString(), "image")
+                            onMessageSent("", downloadUrl.toString())
                         }.addOnFailureListener { exception ->
                             Log.e("Image", exception.toString())
                         }
@@ -89,7 +89,7 @@ fun InputField(sharedViewModel: SharedViewModel, navController: NavController, o
             keyboardActions = KeyboardActions(
                 onSend = {
                     if (text.isNotEmpty()) {
-                        onMessageSent(text, "text")
+                        onMessageSent(text, "")
                         sharedViewModel.text.value = ""
                     }
                 }
@@ -164,7 +164,9 @@ fun InputField(sharedViewModel: SharedViewModel, navController: NavController, o
                     ) {
 
                         if (text.isEmpty()) {
-                            IconButton(onClick = {
+                            IconButton(
+                                enabled= !chatMateChat,
+                                onClick = {
                                 systemUiController.setStatusBarColor(
                                     color = Color.Black,
                                     darkIcons = false
@@ -178,7 +180,9 @@ fun InputField(sharedViewModel: SharedViewModel, navController: NavController, o
                                 )
                             }
                         } else {
-                            IconButton(onClick = {
+                            IconButton(
+                                enabled= !chatMateChat,
+                                onClick = {
                                 multiplePhotoPickerLauncher.launch(
                                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                                 )
@@ -221,13 +225,15 @@ fun InputField(sharedViewModel: SharedViewModel, navController: NavController, o
                             modifier = Modifier
                                 .clickable {
                                     if (text.isNotEmpty()) {
-                                        onMessageSent(text, "text")
+                                        onMessageSent(text, "")
                                         sharedViewModel.text.value = ""
                                     }
                                 }
                         )
                     } else {
-                        IconButton(onClick = {
+                        IconButton(
+                            enabled = !chatMateChat,
+                            onClick = {
                             multiplePhotoPickerLauncher.launch(
                                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )

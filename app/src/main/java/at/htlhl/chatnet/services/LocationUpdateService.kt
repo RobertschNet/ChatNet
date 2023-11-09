@@ -208,7 +208,7 @@ class LocationUpdateService : Service() {
                             id = dataMap["id"].toString(),
                             username =  dataMap["username"] as Map<String, String>,
                             image = dataMap["image"].toString(),
-                            connection = dataMap["connection"].toString(),
+                            connected = dataMap["connected"] as Boolean,
                             status = dataMap["status"] as String,
                             email = dataMap["email"].toString(),
                             color = dataMap["color"].toString(),

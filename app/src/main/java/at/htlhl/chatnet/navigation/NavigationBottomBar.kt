@@ -29,8 +29,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import at.htlhl.chatnet.R
-import at.htlhl.chatnet.data.BottomNavItems
+import at.chatnet.R
+import at.htlhl.chatnet.data.BottomNavItem
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.rememberAsyncImagePainter
 
@@ -43,31 +43,31 @@ fun NavigationBarLayout(
 ) {
     Scaffold(bottomBar = {
         BottomNavigationBar(isBottomBarEnabled = viewModel.bottomBarState, items = listOf(
-            BottomNavItems(
+            BottomNavItem(
                 name = "Chats",
                 route = Screens.ChatsViewScreen.route,
                 icon = R.drawable.chat_ui_web_svgrepo_com,
                 color = Color(0xFF00A0E8)
             ),
-            BottomNavItems(
+            BottomNavItem(
                 name = "Drop In",
                 route = Screens.DropInScreen.route,
                 icon = R.drawable.location_place_pin_svgrepo_com,
                 color = Color(0xFF00B1A9)
             ),
-            BottomNavItems(
+            BottomNavItem(
                 name = "RandChat",
                 route = Screens.RandChatScreen.route,
                 icon = R.drawable.chat_bubbles_question_svgrepo_com_1_,
                 color = Color(0xFFE21515)
             ),
-            BottomNavItems(
+            BottomNavItem(
                 name = "ChatMate",
                 route = Screens.ChatMateScreen.route,
                 icon = R.drawable.brain_illustration_12_svgrepo_com,
                 color = Color(0xFF15B625)
             ),
-            BottomNavItems(
+            BottomNavItem(
                 name = "Profile",
                 route = Screens.ProfileScreen.route,
                 icon = R.drawable.user_circle_svgrepo_com,
@@ -92,9 +92,9 @@ fun NavigationBarLayout(
 @Composable
 fun BottomNavigationBar(
     isBottomBarEnabled: MutableState<Boolean>,
-    items: List<BottomNavItems>,
+    items: List<BottomNavItem>,
     navController: NavController,
-    onItemClick: (BottomNavItems) -> Unit
+    onItemClick: (BottomNavItem) -> Unit
 ) {
     val backStackEntry = navController.currentBackStackEntryAsState()
     if (isBottomBarEnabled.value) {

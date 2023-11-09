@@ -43,7 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import at.htlhl.chatnet.data.FirebaseChats
+import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 
@@ -129,7 +129,7 @@ fun LoadingElement() {
 @Composable
 fun FindUserSearchedContent(
     friendList: List<FirebaseUsers>,
-    chatData: List<FirebaseChats>,
+    chatData: List<FirebaseChat>,
     persons: List<FirebaseUsers>,
     isSearching: Boolean,
     searchText: String,

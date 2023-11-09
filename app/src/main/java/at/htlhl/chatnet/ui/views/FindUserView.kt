@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
-import at.htlhl.chatnet.data.FirebaseChats
+import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.ui.components.FindUserPersonElement
 import at.htlhl.chatnet.ui.components.FindUserSearchedContent
@@ -70,7 +70,7 @@ class FindUserView : ViewModel() {
         val searchText by searchText.collectAsState()
         val isSearching by isSearching.collectAsState()
         val chatDataState = sharedViewModel.chatData.collectAsState()
-        val chatData: List<FirebaseChats> = chatDataState.value
+        val chatData: List<FirebaseChat> = chatDataState.value
         val friendListFriendsDataState = sharedViewModel.friendFriendsListData.collectAsState()
         val friendListFriendsData: List<FirebaseUsers> = friendListFriendsDataState.value
 
@@ -79,7 +79,7 @@ class FindUserView : ViewModel() {
         val finalFriendList =
             friendListData.filter { friend -> friend.statusFriend == "pending" }
         val finalFriendListFriends = friendListFriendsData.filter { friend ->
-            friendListData.none { it.id == friend.id} && friend.id != sharedViewModel.auth.currentUser?.uid.toString()
+            friendListData.none { it.id == friend.id } && friend.id != sharedViewModel.auth.currentUser?.uid.toString()
         }
         BackdropScaffold(
             scaffoldState = scaffoldState,
@@ -175,13 +175,15 @@ class FindUserView : ViewModel() {
                                 )
                             }
                         }
-                        item {
-                            Text(
-                                text = "Suggestions for you:",
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(start = 15.dp, top = 20.dp)
-                            )
+                        if (finalFriendListFriends.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "Suggestions for you:",
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(start = 15.dp, top = 20.dp)
+                                )
+                            }
                         }
                         items(finalFriendListFriends) { person ->
                             FindUserPersonElement(
@@ -226,36 +228,53 @@ class FindUserView : ViewModel() {
     private val _person = MutableStateFlow<List<FirebaseUsers>>(emptyList())
 
     private suspend fun retrieveMessages(): List<FirebaseUsers> {
-        val snapshot =
-            FirebaseFirestore.getInstance().collection("users")
+        try {
+            val snapshot = FirebaseFirestore.getInstance().collection("users")
                 .orderBy("username.lowercase")
                 .startAt(searchText.value.lowercase())
                 .endAt(searchText.value.lowercase() + '\uf8ff').get().await()
-        return snapshot.documents.mapNotNull { document ->
-            val usernameMap = document["username"] as? Map<String, String>
-            val image = document.getString("image")
-            val id = document.getString("id")
-            val status = document.getString("status")
-            val email = document.getString("email")
-            val color = document.getString("color")
-            val blocked = document.get("blocked") as? List<String>
-            val pinned = document.get("pinned") as? List<String>
-            val connection = document.getString("connection")
-            FirebaseUsers(
-                image = image!!,
-                username = usernameMap!!,
-                id = id!!,
-                status = status!!,
-                email = email!!,
-                color = color!!,
-                blocked = blocked!!,
-                connection = connection!!,
-                pinned = pinned!!,
-                mutedFriend = false,
-                statusFriend = "",
-            )
+
+            return snapshot.documents.mapNotNull { document ->
+                try {
+                    val usernameMap = document["username"] as? Map<String, String>
+                    val image = document.getString("image")
+                    val id = document.getString("id")
+                    val status = document.getString("status")
+                    val email = document.getString("email")
+                    val color = document.getString("color")
+                    val blocked = document.get("blocked") as? List<String>
+                    val pinned = document.get("pinned") as? List<String>
+                    val connected = document.getBoolean("connected")
+
+                    if (usernameMap != null && image != null && id != null && status != null
+                        && email != null && color != null && blocked != null && pinned != null && connected != null
+                    ) {
+                        return@mapNotNull FirebaseUsers(
+                            image = image,
+                            username = usernameMap,
+                            id = id,
+                            status = status,
+                            email = email,
+                            color = color,
+                            blocked = blocked,
+                            connected = connected,
+                            pinned = pinned,
+                            mutedFriend = false,
+                            statusFriend = ""
+                        )
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
+
+        return emptyList()
     }
+
 
     @OptIn(FlowPreview::class)
     private var person = searchText.debounce(750L)

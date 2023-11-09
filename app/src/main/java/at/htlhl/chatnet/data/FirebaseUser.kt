@@ -1,8 +1,5 @@
 package at.htlhl.chatnet.data
 
-import com.firebase.geofire.GeoLocation
-import com.google.firebase.firestore.GeoPoint
-
 data class FirebaseUsers(
     val blocked: List<String>, // list of ids of users that have been blocked by the user
     val image: String, // url of the users profile picture
@@ -12,7 +9,7 @@ data class FirebaseUsers(
     val email: String, // email of the user
     val pinned: List<String>, // list of ids of chats that have been pinned by the user
     val color: String, // color picked by the user for graphical elements
-    val connection: String, // the current connection-status for the randchat feature (matched, pending, offline)
+    val connected: Boolean, // the current connection-status for the randchat feature (matched, pending, offline)
     val mutedFriend: Boolean, // if the friend has been muted by the user (from FirebaseFriends)
     val statusFriend: String, // the current status of the friend request (from FirebaseFriends)
 ) {
@@ -25,7 +22,7 @@ data class FirebaseUsers(
         "",
         listOf(),
         "",
-        "",
+        false,
         false,
         ""
     ) // default constructor for Firebase

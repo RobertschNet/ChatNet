@@ -1,6 +1,7 @@
 package at.htlhl.chatnet.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,8 +33,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import at.htlhl.chatnet.R
-import at.htlhl.chatnet.data.InternalChatInstances
+import at.chatnet.R
+import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import java.text.SimpleDateFormat
@@ -41,14 +44,15 @@ import java.util.Locale
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatsViewChatItem(
-    person: InternalChatInstances,
+    chat: InternalChatInstance,
+    displayOnlineState: Boolean,
     navController: NavController,
     sharedViewModel: SharedViewModel,
     onClick: (String) -> Unit
 ) {
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
-    val formattedTime: String = formatter.format(person.timestampMessage.toDate())
-    if (person.read > 0) {
+    val formattedTime: String = formatter.format(chat.timestampMessage.toDate())
+    if (chat.read > 0) {
         sharedViewModel.updateMarkAsReadStatus(true)
     }
     Row(
@@ -67,12 +71,13 @@ fun ChatsViewChatItem(
             .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
 
     ) {
-        val isOnline = person.personList.status
+        val isOnline = chat.personList.status
         Box(
             modifier = Modifier.size(50.dp)
         ) {
-            SubcomposeAsyncImage(contentDescription = null,
-                model = person.personList.image,
+            SubcomposeAsyncImage(
+                contentDescription = null,
+                model = chat.personList.image,
                 modifier = Modifier
                     .clip(CircleShape)
                     .size(50.dp)
@@ -82,86 +87,86 @@ fun ChatsViewChatItem(
                     },
                 contentScale = ContentScale.Crop,
                 alignment = Alignment.Center,
-                loading = {
-                    CircularProgressIndicator()
-                })
-            Box(
-                modifier = Modifier
-                    .size(16.5f.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            colors = if (!isSystemInDarkTheme()) listOf(
-                                Color.White, Color.White
-                            ) else listOf(Color(0xF1161616), Color(0xF1161616)),
-                            start = Offset(0f, 0f),
-                            end = Offset(14.dp.value, 14.dp.value)
+            )
+            if (displayOnlineState) {
+                Box(
+                    modifier = Modifier
+                        .size(16.5f.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                colors = if (!isSystemInDarkTheme()) listOf(
+                                    Color.White, Color.White
+                                ) else listOf(Color(0xF1161616), Color(0xF1161616)),
+                                start = Offset(0f, 0f),
+                                end = Offset(14.dp.value, 14.dp.value)
+                            )
                         )
-                    )
-                    .align(Alignment.BottomEnd)
-            ) {
-                when (isOnline) {
-                    "online" -> {
-                        Box(
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
-                                        start = Offset(0f, 0f),
-                                        end = Offset(14.dp.value, 14.dp.value)
-                                    )
-                                )
-                                .align(Alignment.Center)
-                        )
-                    }
-
-                    "offline" -> {
-                        Box(
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(Color.Gray, Color(0xFF808080)),
-                                        start = Offset(0f, 0f),
-                                        end = Offset(14.dp.value, 14.dp.value)
-                                    )
-                                )
-                                .align(Alignment.Center)
-                        ) {
+                        .align(Alignment.BottomEnd)
+                ) {
+                    when (isOnline) {
+                        "online" -> {
                             Box(
                                 modifier = Modifier
-                                    .size(8.dp)
+                                    .size(14.dp)
                                     .clip(CircleShape)
-                                    .background(Color.DarkGray)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
+                                            start = Offset(0f, 0f),
+                                            end = Offset(14.dp.value, 14.dp.value)
+                                        )
+                                    )
                                     .align(Alignment.Center)
                             )
                         }
-                    }
 
-                    "idle" -> {
-                        Box(
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(Color(0xFFFFC107), Color(0xFFFFC107)),
-                                        start = Offset(0f, 0f),
-                                        end = Offset(14.dp.value, 14.dp.value)
-                                    )
-                                )
-                                .align(Alignment.Center)
-                        ) {
+                        "offline" -> {
                             Box(
                                 modifier = Modifier
-                                    .size(8.2f.dp)
+                                    .size(14.dp)
                                     .clip(CircleShape)
-                                    .background(Color.White)
-                                    .align(Alignment.TopStart)
-                            )
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(Color.Gray, Color(0xFF808080)),
+                                            start = Offset(0f, 0f),
+                                            end = Offset(14.dp.value, 14.dp.value)
+                                        )
+                                    )
+                                    .align(Alignment.Center)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.DarkGray)
+                                        .align(Alignment.Center)
+                                )
+                            }
+                        }
+
+                        "idle" -> {
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(Color(0xFFFFC107), Color(0xFFFFC107)),
+                                            start = Offset(0f, 0f),
+                                            end = Offset(14.dp.value, 14.dp.value)
+                                        )
+                                    )
+                                    .align(Alignment.Center)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.2f.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White)
+                                        .align(Alignment.TopStart)
+                                )
+                            }
                         }
                     }
                 }
@@ -175,7 +180,7 @@ fun ChatsViewChatItem(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = person.personList.username["mixedcase"].toString(),
+                    text = chat.personList.username["mixedcase"].toString(),
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .weight(1f)
@@ -188,37 +193,48 @@ fun ChatsViewChatItem(
                 Text(
                     text = formattedTime,
                     fontWeight = FontWeight.Light,
-                    fontSize = if (person.read > 0) 13.sp else 12.sp,
-                    color = if (person.read > 0) Color(0xFF00A0E8) else Color.Black
+                    fontSize = if (chat.read > 0) 13.sp else 12.sp,
+                    color = if (chat.read > 0) Color(0xFF00A0E8) else Color.Black
                 )
             }
             Row(
-                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.fillMaxWidth()
             ) {
+                val messageContent = if(chat.lastMessage.content.isEmpty()&&chat.lastMessage.image.isNotEmpty()) "Image" else chat.lastMessage.content
+                val senderPrefix = if (chat.lastMessage.sender != sharedViewModel.auth.currentUser?.uid.toString()) "" else "Me:"
                 Text(
                     modifier = Modifier
-                        .padding(start = 10.dp)
-                        .weight(1f),
-                    text = if (person.lastMessage.sender != sharedViewModel.auth.currentUser?.uid.toString()) {
-                        if (person.lastMessage.content.length > 24) "${
-                            person.lastMessage.content.substring(
-                                0, 24
-                            )
-                        }..." else person.lastMessage.content
-                    } else {
-                        if (person.lastMessage.content.length > 24) "Me: ${
-                            person.lastMessage.content.substring(
-                                0, 24
-                            )
-                        }..." else "Me: ${person.lastMessage.content}"
-                    },
+                        .align(Alignment.CenterVertically)
+                        .padding(start = 10.dp),
+                    text = if (messageContent == "Image") senderPrefix else "$senderPrefix ",
+                    overflow = TextOverflow.Ellipsis,
                     maxLines = 1,
                     fontSize = 15.sp,
-                    color = if (person.read > 0 && !person.lastMessage.read && person.lastMessage.sender != sharedViewModel.auth.currentUser?.uid) Color(
+                    color = if (chat.read > 0 && !chat.lastMessage.read && chat.lastMessage.sender != sharedViewModel.auth.currentUser?.uid) Color(0xFF00A0E8) else Color.LightGray,
+                )
+                if (messageContent == "Image") {
+                    Image(
+                        imageVector = Icons.Default.Image,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .align(Alignment.CenterVertically),
+                        colorFilter = ColorFilter.tint(Color.Gray)
+                    )
+                }
+                Text(
+                    modifier = Modifier
+                        .align(Alignment.CenterVertically)
+                        .weight(1f),
+                    text = messageContent,
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                    fontSize = 15.sp,
+                    color = if (chat.read > 0 && !chat.lastMessage.read && chat.lastMessage.sender != sharedViewModel.auth.currentUser?.uid) Color(
                         0xFF00A0E8
                     ) else Color.LightGray,
                 )
-                if (person.personList.mutedFriend) {
+                if (chat.personList.mutedFriend) {
                     SubcomposeAsyncImage(
                         modifier = Modifier
                             .size(20.dp)
@@ -231,7 +247,7 @@ fun ChatsViewChatItem(
                         },
                     )
                 }
-                if (person.pinChat) {
+                if (chat.pinChat) {
                     SubcomposeAsyncImage(
                         modifier = Modifier
                             .align(Alignment.CenterVertically)
@@ -244,11 +260,11 @@ fun ChatsViewChatItem(
                         },
                     )
                 }
-                if (person.read > 0 || person.markedAsUnread) {
+                if (chat.read > 0 || chat.markedAsUnread) {
                     Spacer(modifier = Modifier.padding(start = 4.dp))
                     Box(
                         modifier = Modifier
-                            .size(if (person.read > 99) 24.dp else if (person.read > 9) 20.dp else 16.dp)
+                            .size(if (chat.read > 99) 24.dp else if (chat.read > 9) 20.dp else 16.dp)
                             .clip(CircleShape)
                             .align(Alignment.CenterVertically)
                             .background(
@@ -258,7 +274,7 @@ fun ChatsViewChatItem(
                             )
                     ) {
                         Text(
-                            text = if (person.markedAsUnread) "" else if (person.read < 100) person.read.toString() else "99+",
+                            text = if (chat.markedAsUnread) "" else if (chat.read < 100) chat.read.toString() else "99+",
                             modifier = Modifier.align(Alignment.Center),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,

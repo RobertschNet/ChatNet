@@ -48,7 +48,7 @@ fun FindUserPersonElement(
     deleteAble: Boolean,
     sharedViewModel: SharedViewModel,
     searchedUser: String,
-    onClick: (FirebaseUsers,Boolean) -> Unit
+    onClick: (FirebaseUsers, Boolean) -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -67,12 +67,10 @@ fun FindUserPersonElement(
                 model = person.image,
                 modifier = Modifier
                     .clip(CircleShape)
+                    .shimmerEffect()
                     .size(50.dp),
                 contentScale = ContentScale.Crop,
                 alignment = Alignment.Center,
-                loading = {
-                    CircularProgressIndicator()
-                }
             )
             if (searchedUser != "searchedUser") {
                 Box(

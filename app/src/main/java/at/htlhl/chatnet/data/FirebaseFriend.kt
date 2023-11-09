@@ -1,6 +1,6 @@
 package at.htlhl.chatnet.data
 
-data class FirebaseFriends(
+data class FirebaseFriend(
     val id: String, // id of the friend
     val muted: Boolean, // if the friend has been muted by the user
     val status: String, // the current status of the friend request (accepted, pending, initiated, declined)

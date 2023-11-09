@@ -8,7 +8,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import at.htlhl.chatnet.R
+import at.chatnet.R
 import coil.compose.SubcomposeAsyncImage
 
 class LoadingView {

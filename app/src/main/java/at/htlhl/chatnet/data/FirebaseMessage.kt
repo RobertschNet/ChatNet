@@ -2,9 +2,9 @@ package at.htlhl.chatnet.data
 
 import com.google.firebase.Timestamp
 
-data class FirebaseMessages(
+data class FirebaseMessage(
     val sender: String, // id of the sender (FirebaseUsers id)
-    val type: String, // type of the message (text, image)
+    val image: String, // type of the message (text, image)
     val read: Boolean, // if the message has been read by the receiver
     val content: String, // content of the message (text, url of the image)
     val timestamp: Timestamp, // timestamp when the message was sent

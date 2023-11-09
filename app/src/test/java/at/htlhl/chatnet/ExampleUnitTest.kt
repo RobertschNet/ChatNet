@@ -1,4 +1,4 @@
-package at.htlhl.chatnet
+package at.chatnet
 
 import org.junit.Test
 

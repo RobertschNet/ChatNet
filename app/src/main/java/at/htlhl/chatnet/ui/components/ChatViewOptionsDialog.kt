@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.PopupProperties
-import at.htlhl.chatnet.R
+import at.chatnet.R
 import coil.compose.SubcomposeAsyncImage
 
 @Composable

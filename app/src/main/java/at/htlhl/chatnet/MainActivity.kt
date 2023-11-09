@@ -42,12 +42,12 @@ class MainActivity : ComponentActivity() {
                     if (viewModel.checkIfUserIsLoggedIn()) {
                         viewModel.updateOnlineStatus("online")
                         viewModel.getUserData()
-                        viewModel.startListeningForFriends()
-                        viewModel.startListeningForMessagesForPairs({
+                        viewModel.fetchFriendsFromUser()
+                        viewModel.fetchChatsWithMessages {
                             viewModel.fetchFriendsFromFriend()
                             if (navController.currentDestination?.route == Screens.LoadingScreen.route)
                                 navController.navigate(Screens.ChatsViewScreen.route)
-                        }, {})
+                        }
                     } else {
                         navController.navigate(Screens.LoginScreen.route)
                     }
@@ -64,7 +64,6 @@ class MainActivity : ComponentActivity() {
         serviceConnection?.let { unbindService(it) }
         stopService(Intent(this, LocationUpdateService::class.java))
         (application as MyApplication).sharedViewModel.updateOnlineStatus("offline")
-        (application as MyApplication).sharedViewModel.resetMatchedUser()
         (application as MyApplication).sharedViewModel.reset()
     }
 

@@ -24,10 +24,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
-import at.htlhl.chatnet.R
-import at.htlhl.chatnet.data.BottomSheetItems
+import at.chatnet.R
+import at.htlhl.chatnet.data.BottomSheetItem
 import at.htlhl.chatnet.data.FirebaseUsers
-import at.htlhl.chatnet.data.InternalChatInstances
+import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.components.ChatsViewChatItem
@@ -53,32 +53,32 @@ class Chats : ViewModel() {
         var showClearChatPrompt by remember { mutableStateOf(false) }
         val modelSheetState = remember { mutableStateOf(false) }
         val userDataInstanceState = sharedViewModel.completeChatList.collectAsState()
-        val userDataInstance: List<InternalChatInstances> = userDataInstanceState.value
+        val userDataInstance: List<InternalChatInstance> = userDataInstanceState.value
         val friendListDataState = sharedViewModel.friendListData.collectAsState()
         val friendListData: List<FirebaseUsers> = friendListDataState.value
         val availableUsers = friendListData.filter { friend -> friend.statusFriend == "pending" }
         Log.println(Log.INFO, "Chats", "userDataInstance: $userDataInstance")
         val completePersonList =
-            if (sharedViewModel.searchtext.value != "") userDataInstance.filter {
+            if (sharedViewModel.searchValue.value != "") userDataInstance.filter {
                 it.personList.username["mixedcase"]?.contains(
-                    sharedViewModel.searchtext.value, ignoreCase = true
+                    sharedViewModel.searchValue.value, ignoreCase = true
                 ) ?: false
             } else userDataInstance
         val bottomSheetItems = listOf(
-            BottomSheetItems(
+            BottomSheetItem(
                 title = if (sharedViewModel.friend.value.markedAsUnread || sharedViewModel.friend.value.read > 0) "Mark as Read" else "Mark as Unread",
                 icon = if (sharedViewModel.friend.value.markedAsUnread || sharedViewModel.friend.value.read > 0) R.drawable.chat_bubble_svgrepo_com else R.drawable.chat_bubble_outline_badged_svgrepo_com,
                 tag = "unread"
             ),
-            BottomSheetItems(
+            BottomSheetItem(
                 title = "Clear Chat", icon = R.drawable.comment_delete_svgrepo_com, tag = "clear"
             ),
-            BottomSheetItems(
+            BottomSheetItem(
                 title = if (sharedViewModel.friend.value.personList.mutedFriend) "Unmute User" else "Mute User",
                 icon = if (sharedViewModel.friend.value.personList.mutedFriend) R.drawable.speaker_none_svgrepo_com else R.drawable.speaker_svgrepo_com,
                 tag = "mute"
             ),
-            BottomSheetItems(
+            BottomSheetItem(
                 title = if (sharedViewModel.friend.value.pinChat) "Unpin Chat" else "Pin Chat",
                 icon = if (sharedViewModel.friend.value.pinChat) R.drawable.pin_off_svgrepo_com else R.drawable.pin_svgrepo_com,
                 tag = "pin"
@@ -111,7 +111,8 @@ class Chats : ViewModel() {
                 ) {
                     items(completePersonList) { message ->
                         ChatsViewChatItem(
-                            person = message,
+                            chat = message,
+                            displayOnlineState = true,
                             sharedViewModel = sharedViewModel,
                             navController = navController,
                         ) { context ->

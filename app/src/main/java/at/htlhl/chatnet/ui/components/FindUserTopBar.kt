@@ -33,7 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import at.htlhl.chatnet.R
+import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.navigation.Screens
 import coil.compose.SubcomposeAsyncImage

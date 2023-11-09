@@ -62,11 +62,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
-import at.htlhl.chatnet.data.BottomSheetItems
-import at.htlhl.chatnet.data.FirebaseChats
-import at.htlhl.chatnet.data.FirebaseMessages
+import at.htlhl.chatnet.data.BottomSheetItem
+import at.htlhl.chatnet.data.FirebaseChat
+import at.htlhl.chatnet.data.FirebaseMessage
 import at.htlhl.chatnet.data.FirebaseUsers
-import at.htlhl.chatnet.data.InternalChatInstances
+import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.ChatsViewChatItem
 import at.htlhl.chatnet.viewmodels.SharedViewModel
@@ -86,38 +86,40 @@ class DropIn : ViewModel() {
         var test by remember { mutableStateOf(false) }
         val coroutineScope = rememberCoroutineScope()
         val documentIdState = sharedViewModel.chatData.collectAsState(initial = emptyList())
-        val documentationId: List<FirebaseChats> = documentIdState.value
+        val documentationId: List<FirebaseChat> = documentIdState.value
         val friendIdState = sharedViewModel.personData.collectAsState(initial = emptyList())
         val friendListData: List<FirebaseUsers> = friendIdState.value
         val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
             localUser.id != sharedViewModel.auth.currentUser?.uid
         }
-        val updatedPersonList: List<InternalChatInstances> = friendListData.map { person ->
+        val updatedPersonList: List<InternalChatInstance> = friendListData.map { person ->
             val matchingChat = documentationId.find { chat ->
                 chat.members.contains(person.id) && chat.tab == "dropIn"
             }
             val lastVisibleMessage = matchingChat?.messages?.lastOrNull { message ->
                 sharedViewModel.auth.currentUser?.uid.toString() in message.visible
             }
-            val updatedStatus = lastVisibleMessage ?: FirebaseMessages()
-            if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != FirebaseMessages()) {
-                InternalChatInstances(
+            val updatedStatus = lastVisibleMessage ?: FirebaseMessage()
+            if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != FirebaseMessage()) {
+                InternalChatInstance(
                     personList = person,
                     timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                         ?: Timestamp.now(),
                     lastMessage = updatedStatus,
                     markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                     pinChat =person.blocked.contains(matchingChat?.chatRoomID),
+                    chatRoomID= matchingChat?.chatRoomID ?: "",
                     read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                         ?: 0
                 )
             } else {
-                InternalChatInstances(
+                InternalChatInstance(
                     personList = person,
                     timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                         ?: Timestamp.now(),
                     lastMessage = updatedStatus,
                     pinChat =person.blocked.contains(matchingChat?.chatRoomID),
+                    chatRoomID= matchingChat?.chatRoomID ?: "",
                     markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                     read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                         ?: 0
@@ -125,17 +127,18 @@ class DropIn : ViewModel() {
             }
         }
 
-        val updatedLocalChatUsers: List<InternalChatInstances> = localChatUsers.map { person ->
+        val updatedLocalChatUsers: List<InternalChatInstance> = localChatUsers.map { person ->
             val matchingChat = documentationId.find { chat ->
                 chat.members.contains(person.id)
             }
-            InternalChatInstances(
+            InternalChatInstance(
                 personList = person,
                 timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                     ?: Timestamp.now(),
-                lastMessage = matchingChat?.messages?.lastOrNull() ?: FirebaseMessages(),
+                lastMessage = matchingChat?.messages?.lastOrNull() ?: FirebaseMessage(),
                 markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                 pinChat = person.blocked.contains(matchingChat?.chatRoomID),
+                chatRoomID= matchingChat?.chatRoomID ?: "",
                 read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                     ?: 0
             )
@@ -145,9 +148,9 @@ class DropIn : ViewModel() {
             user.messages.isEmpty()
         }
         val bottomSheetItems = listOf(
-            BottomSheetItems(title = "Delete", icon = 2, tag = "delete"),
-            BottomSheetItems(title = "Mute Messages", icon = 2, tag = "mute"),
-            BottomSheetItems(title = "Pin Chat", icon = 2, tag = "pin"),
+            BottomSheetItem(title = "Delete", icon = 2, tag = "delete"),
+            BottomSheetItem(title = "Mute Messages", icon = 2, tag = "mute"),
+            BottomSheetItem(title = "Pin Chat", icon = 2, tag = "pin"),
         )
         val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(
             bottomSheetState = BottomSheetState(BottomSheetValue.Collapsed)
@@ -355,7 +358,8 @@ class DropIn : ViewModel() {
                 }
                 items(sortedPersonList) { message ->
                     ChatsViewChatItem(
-                        person = message,
+                        chat = message,
+                        displayOnlineState=true,
                         sharedViewModel = sharedViewModel,
                         navController = navController,
                     ) { context ->
@@ -379,11 +383,11 @@ class DropIn : ViewModel() {
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun ChatItemForDropIn(
-    person: InternalChatInstances,
+    person: InternalChatInstance,
     bottomSheetState: Boolean,
     navController: NavController,
     sharedViewModel: SharedViewModel,
-    documentationId: List<FirebaseChats>,
+    documentationId: List<FirebaseChat>,
     onItemClicked: () -> Unit
 ) {
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())

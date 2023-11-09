@@ -33,9 +33,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
-import at.htlhl.chatnet.data.FirebaseChats
-import at.htlhl.chatnet.data.FirebaseMessages
-import at.htlhl.chatnet.navigation.Screens
+import at.htlhl.chatnet.data.ChatMateResponseState
+import at.htlhl.chatnet.data.FirebaseChat
+import at.htlhl.chatnet.data.FirebaseMessage
 import at.htlhl.chatnet.ui.components.ChatViewMessageComponent
 import at.htlhl.chatnet.ui.components.DeleteMessageDialog
 import at.htlhl.chatnet.ui.components.InputField
@@ -43,6 +43,7 @@ import at.htlhl.chatnet.ui.components.MessageTopBar
 import at.htlhl.chatnet.ui.components.OptionsDialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.firebase.Timestamp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -50,18 +51,17 @@ class ChatView : ViewModel() {
     @Composable
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val chatDataState = sharedViewModel.chatData.collectAsState(initial = emptyList())
-        val chatData: List<FirebaseChats> = chatDataState.value
-        val filteredChats = chatData.find { chat ->
-            chat.members.contains(sharedViewModel.friend.value.personList.id) && chat.members.contains(
-                sharedViewModel.auth.currentUser?.uid.toString()
-            )
+        val chatData: List<FirebaseChat> = chatDataState.value
+        val matchingChat = chatData.find { chat ->
+            chat.chatRoomID == sharedViewModel.friend.value.chatRoomID
         }
-        val chatRoomId = filteredChats?.chatRoomID ?: ""
-        val messageList: List<FirebaseMessages> = filteredChats?.let { chat ->
+        val chatMateChat = matchingChat?.tab == "chatmate"
+        val chatRoomId = matchingChat?.chatRoomID ?: ""
+        val messageListFromMatchingChat: List<FirebaseMessage> = matchingChat?.let { chat ->
             chat.messages.map { message ->
-                FirebaseMessages(
+                FirebaseMessage(
                     sender = message.sender,
-                    type = message.type,
+                    image = message.image,
                     read = message.read,
                     content = message.content,
                     timestamp = message.timestamp,
@@ -69,18 +69,19 @@ class ChatView : ViewModel() {
                 )
             }
         } ?: emptyList()
-        val onMessageSent: (FirebaseMessages) -> Unit = { message ->
-            if (filteredChats?.tab == "chatmate") {
+        val onMessageSent: (FirebaseMessage) -> Unit = { message ->
+            if (chatMateChat) {
+                sharedViewModel.chatMateResponseState.value = ChatMateResponseState.Loading
                 sharedViewModel.sendDataToServer(message.content) { response ->
                     runBlocking {
                         sharedViewModel.saveMessages(
                             documentId = chatRoomId,
-                            message = FirebaseMessages(
+                            message = FirebaseMessage(
                                 sender = "chatmate",
                                 content = response,
                                 timestamp = Timestamp.now(),
                                 read = false,
-                                type = "text",
+                                image = "",
                                 visible = listOf(
                                     sharedViewModel.auth.currentUser?.uid.toString(),
                                 )
@@ -90,30 +91,32 @@ class ChatView : ViewModel() {
                 }
             }
             runBlocking {
-                sharedViewModel.saveMessages(chatRoomId, message)
+                sharedViewModel.saveMessages(documentId = chatRoomId, message = message)
             }
         }
-        sharedViewModel.markMessagesAsRead(sharedViewModel.friend.value)
-        sharedViewModel.updateMarkAsReadStatus(true)
+        sharedViewModel.markMessagesAsRead(user = sharedViewModel.friend.value)
+        sharedViewModel.updateMarkAsReadStatus(isAlreadyUnread = true)
         ChatViewContentStructure(
             sharedViewModel = sharedViewModel,
-            messages = messageList,
+            messagesForChat = messageListFromMatchingChat,
             onMessageSent = onMessageSent,
             navController = navController,
             chatRoomId = chatRoomId,
+            chatMateChat = chatMateChat
         )
     }
 
     @Composable
     fun ChatViewContentStructure(
         navController: NavController,
-        messages: List<FirebaseMessages>,
-        onMessageSent: (FirebaseMessages) -> Unit,
+        messagesForChat: List<FirebaseMessage>,
+        onMessageSent: (FirebaseMessage) -> Unit,
         sharedViewModel: SharedViewModel,
         chatRoomId: String,
+        chatMateChat: Boolean
     ) {
         val coroutineScope = rememberCoroutineScope()
-        val filteredMessages = messages.filter { message ->
+        val filteredMessages = messagesForChat.filter { message ->
             message.visible.contains(sharedViewModel.auth.currentUser?.uid.toString())
         }.toMutableList()
         val lazyListState =
@@ -121,16 +124,20 @@ class ChatView : ViewModel() {
         Scaffold(
             modifier = Modifier
                 .imePadding()
-                .onSizeChanged { coroutineScope.launch { lazyListState.scrollToItem(messages.size) } },
+                .onSizeChanged { coroutineScope.launch { lazyListState.scrollToItem(messagesForChat.size) } },
             topBar = {
-                MessageTopBar(sharedViewModel.friend.value) {
-                    navController.navigate(Screens.ChatsViewScreen.route)
+                MessageTopBar(
+                    chatInstance = sharedViewModel.friend.value,
+                    sharedViewModel = sharedViewModel
+                ) {
+                    navController.popBackStack()
                 }
             },
             content = {
                 it.calculateBottomPadding()
                 ChatViewContentList(
                     sharedViewModel = sharedViewModel,
+                    chatMateChat = chatMateChat,
                     messages = filteredMessages,
                     lazyListState = lazyListState,
                     chatRoomId = chatRoomId
@@ -139,43 +146,48 @@ class ChatView : ViewModel() {
                 InputField(
                     sharedViewModel = sharedViewModel,
                     navController = navController,
+                    chatMateChat = chatMateChat,
                     onMessageSent = { messageText, image ->
-                        sharedViewModel.chatData.value + (FirebaseMessages(
-                            sender = sharedViewModel.auth.currentUser?.uid.toString(),
-                            content = messageText,
-                            timestamp = Timestamp.now(),
-                            read = false,
-                            type = image,
-                            visible = listOf(
-                                sharedViewModel.auth.currentUser?.uid.toString(),
-                                sharedViewModel.friend.value.personList.id
-                            )
-                        ))
-                        val message = FirebaseMessages(
-                            sender = sharedViewModel.auth.currentUser?.uid.toString(),
-                            content = messageText,
-                            timestamp = Timestamp.now(),
-                            read = false,
-                            type = image,
-                            visible = listOf(
-                                sharedViewModel.auth.currentUser?.uid.toString(),
-                                sharedViewModel.friend.value.personList.id
+                        onMessageSent(
+                            FirebaseMessage(
+                                sender = sharedViewModel.auth.currentUser?.uid.toString(),
+                                content = messageText,
+                                timestamp = Timestamp.now(),
+                                read = false,
+                                image = image,
+                                visible = listOf(
+                                    sharedViewModel.auth.currentUser?.uid.toString(),
+                                    sharedViewModel.friend.value.personList.id
+                                )
                             )
                         )
-                        onMessageSent(message)
                     },
                 )
-
-            })
+            }
+        )
     }
 
     @Composable
     fun ChatViewContentList(
         sharedViewModel: SharedViewModel,
-        messages: List<FirebaseMessages>,
+        chatMateChat: Boolean,
+        messages: List<FirebaseMessage>,
         lazyListState: LazyListState,
         chatRoomId: String
     ) {
+        var animatedText by remember { mutableStateOf("Robert is writing") }
+        LaunchedEffect(sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
+            while (true) {
+                delay(750)
+                animatedText = "ChatMate is thinking."
+                delay(750)
+                animatedText = "ChatMate is thinking.."
+                delay(750)
+                animatedText = "ChatMate is thinking..."
+                delay(750)
+                animatedText = "ChatMate is thinking..."
+            }
+        }
         LaunchedEffect(messages.size) {
             lazyListState.animateScrollToItem(messages.size)
         }
@@ -186,18 +198,18 @@ class ChatView : ViewModel() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Bottom
         ) {
-            LazyColumn(Modifier.padding(bottom = 70.dp), state = lazyListState) {
+            LazyColumn(modifier = Modifier.padding(bottom = 70.dp), state = lazyListState) {
                 items(messages) { message ->
                     val messageIndex = messages.indexOf(message)
                     val previousMessageIndex =
                         if (messageIndex > 0) messages.getOrNull(messageIndex - 1) else null
-
                     MessageItem(
                         sharedViewModel = sharedViewModel,
+                        chatMateChat = chatMateChat,
                         previousMessage = previousMessageIndex,
-                        message = FirebaseMessages(
+                        message = FirebaseMessage(
                             sender = message.sender,
-                            type = message.type,
+                            image = message.image,
                             read = message.read,
                             content = message.content,
                             timestamp = message.timestamp,
@@ -214,8 +226,9 @@ class ChatView : ViewModel() {
     @Composable
     fun MessageItem(
         sharedViewModel: SharedViewModel,
-        message: FirebaseMessages,
-        previousMessage: FirebaseMessages?,
+        chatMateChat: Boolean,
+        message: FirebaseMessage,
+        previousMessage: FirebaseMessage?,
         chatRoomId: String
     ) {
         val context = LocalContext.current
@@ -231,6 +244,7 @@ class ChatView : ViewModel() {
         ChatViewMessageComponent(
             isUser = isUser,
             context = context,
+            chatMateChat = chatMateChat,
             previousMessage = previousMessage,
             message = message,
             onLongPress = {
@@ -258,7 +272,7 @@ class ChatView : ViewModel() {
             }
         }
         if (menuDialog) {
-            OptionsDialog(anchorPosition.value) { value ->
+            OptionsDialog(offset = anchorPosition.value) { value ->
                 when (value) {
                     "delete" -> {
                         deleteDialog = true

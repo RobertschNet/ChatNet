@@ -106,6 +106,7 @@ fun Navigation(
         composable("ChatMateScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
+            sharedViewModel.bottomBarState.value = true
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 ChatMateView().ChatMateScreen(navController, sharedViewModel)
             }

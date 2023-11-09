@@ -16,10 +16,9 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
 
     <application
-        android:name=".MyApplication"
+        android:name="at.htlhl.chatnet.MyApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -30,11 +29,11 @@
         android:theme="@style/Theme.Testing"
         tools:targetApi="31">
         <service
-            android:name=".services.LocationUpdateService"
+            android:name="at.htlhl.chatnet.services.LocationUpdateService"
             android:enabled="true"
             android:exported="false" />
         <activity
-            android:name=".MainActivity"
+            android:name="at.htlhl.chatnet.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.Testing"
             android:windowSoftInputMode="adjustResize">

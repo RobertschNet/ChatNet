@@ -11,11 +11,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.GenericShape
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material3.Text
@@ -23,27 +23,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import at.htlhl.chatnet.R
-import at.htlhl.chatnet.data.FirebaseMessages
+import at.chatnet.R
+import at.htlhl.chatnet.data.FirebaseMessage
 import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Calendar
 import java.util.Locale
 
 @RequiresApi(Build.VERSION_CODES.S)
@@ -51,9 +45,10 @@ import java.util.Locale
 fun ChatViewMessageComponent(
     isUser: Boolean,
     context: Context,
-    message: FirebaseMessages,
+    message: FirebaseMessage,
+    chatMateChat:Boolean,
     onLongPress: () -> Unit,
-    previousMessage: FirebaseMessages?
+    previousMessage: FirebaseMessage?
 ) {
     val formatter = DateTimeFormatter.ofPattern("HH:mm")
     val formattedTime =
@@ -85,7 +80,6 @@ fun ChatViewMessageComponent(
                     color = Color.DarkGray
                 )
             }
-
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -94,7 +88,7 @@ fun ChatViewMessageComponent(
         ) {
             Box(
                 modifier =
-                if (message.type == "text") {
+                if (message.image.isEmpty()) {
                     Modifier
                         .padding(
                             start = if (isUser) 80.dp else 10.dp,
@@ -118,8 +112,8 @@ fun ChatViewMessageComponent(
                 } else {
                     Modifier
                         .padding(
-                            start = if (isUser) 80.dp else 10.dp,
-                            end = if (isUser) 10.dp else 80.dp,
+                            start = if (isUser) 90.dp else 10.dp,
+                            end = if (isUser) 10.dp else 90.dp,
                             top = 25.dp,
                         )
                         .pointerInput(Unit) {
@@ -165,12 +159,10 @@ fun ChatViewMessageComponent(
                         currentLine = StringBuilder(word)
                     }
                 }
-
                 if (currentLine.isNotEmpty()) {
                     lines.append(currentLine)
                 }
-
-                if (message.type == "text") {
+                if (message.image.isEmpty()) {
                     Text(
                         text = lines.toString(),
                         fontSize = 14.sp,
@@ -181,20 +173,19 @@ fun ChatViewMessageComponent(
                         textAlign = TextAlign.Start
                     )
                 }
+                if (message.image.isNotEmpty()) {
+                    SubcomposeAsyncImage(
+                        model = message.image,
+                        alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(24.dp))
+                            .heightIn(min = 50.dp, max = 250.dp)
+                            .widthIn(min = 75.dp, max = 250.dp)
+                            .shimmerEffect()
+                    )
+                }
             }
-        }
-        if (message.type == "image") {
-            SubcomposeAsyncImage(
-                model = message.content,
-                alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
-                contentDescription = null,
-                modifier = Modifier
-                    .padding(start = if (isUser) 0.dp else 10.dp, end = if (isUser) 10.dp else 0.dp)
-                    .aspectRatio(1024f / 720f),
-                loading = {
-                    CircularProgressIndicator()
-                },
-            )
         }
     }
 
@@ -204,16 +195,18 @@ fun ChatViewMessageComponent(
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (isUser) {
-            SubcomposeAsyncImage(
-                model = if (message.read) R.drawable.eye_1_svgrepo_com else R.drawable.eye_hide_1_svgrepo_com,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(20.dp)
-                    .padding(end = 5.dp),
-                loading = {
-                    CircularProgressIndicator()
-                },
-            )
+            if (!chatMateChat) {
+                SubcomposeAsyncImage(
+                    model = if (message.read) R.drawable.eye_1_svgrepo_com else R.drawable.eye_hide_1_svgrepo_com,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .padding(end = 5.dp),
+                    loading = {
+                        CircularProgressIndicator()
+                    },
+                )
+            }
             Text(
                 text = formattedTime,
                 fontSize = 10.sp,
@@ -235,25 +228,25 @@ fun ChatViewMessageComponent(
     }
 }
 
-// Function to check if a date separator is needed
 private fun isDateSeparatorNeeded(
-    currentMessage: FirebaseMessages,
-    previousMessage: FirebaseMessages?
+    currentMessage: FirebaseMessage,
+    previousMessage: FirebaseMessage?
 ): Boolean {
     if (previousMessage == null) {
-        return false
+        return true
     }
 
-    val currentTime = currentMessage.timestamp.toDate().time
-    val previousTime = previousMessage.timestamp.toDate().time
-    val timeDifference = currentTime - previousTime
+    val currentCalendar = Calendar.getInstance().apply {
+        timeInMillis = currentMessage.timestamp.toDate().time
+    }
 
-    // Check if the time difference is more than 24 hours (in milliseconds)
-    val oneDayInMillis = 24 * 60 * 60 * 1000
-    return timeDifference > oneDayInMillis
+    val previousCalendar = Calendar.getInstance().apply {
+        timeInMillis = previousMessage.timestamp.toDate().time
+    }
+
+    return currentCalendar.get(Calendar.YEAR) != previousCalendar.get(Calendar.YEAR) ||
+            currentCalendar.get(Calendar.DAY_OF_YEAR) != previousCalendar.get(Calendar.DAY_OF_YEAR)
 }
-
-// Function to format the date for the separator
 @RequiresApi(Build.VERSION_CODES.O)
 private fun formatDateForSeparator(timestamp: Timestamp): String {
     val currentInstant = Instant.now()
@@ -261,8 +254,12 @@ private fun formatDateForSeparator(timestamp: Timestamp): String {
     val messageInstant = timestamp.toDate().toInstant()
 
     return when {
-        messageInstant.atZone(currentZone).toLocalDate() == currentInstant.atZone(currentZone).toLocalDate() -> "Today"
-        messageInstant.atZone(currentZone).toLocalDate() == currentInstant.atZone(currentZone).toLocalDate().minusDays(1) -> "Yesterday"
+        messageInstant.atZone(currentZone).toLocalDate() == currentInstant.atZone(currentZone)
+            .toLocalDate() -> "Today"
+
+        messageInstant.atZone(currentZone).toLocalDate() == currentInstant.atZone(currentZone)
+            .toLocalDate().minusDays(1) -> "Yesterday"
+
         else -> {
             val formatter = DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale.ENGLISH)
             formatter.format(messageInstant.atZone(currentZone))

@@ -2,7 +2,7 @@ package at.htlhl.chatnet.data
 
 import androidx.compose.ui.graphics.Color
 
-data class BottomNavItems(
+data class BottomNavItem(
     val name: String, // name of the item
     val route: String, // route the item leads to
     val icon: Int, // icon of the item
