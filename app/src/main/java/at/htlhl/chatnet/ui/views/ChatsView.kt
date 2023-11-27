@@ -9,9 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.Scaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material.Scaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,17 +30,17 @@ import at.htlhl.chatnet.data.BottomSheetItem
 import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.ChatsViewBottomSheetContent
-import at.htlhl.chatnet.ui.components.ChatsViewChatItem
-import at.htlhl.chatnet.ui.components.ChatsViewTopBar
-import at.htlhl.chatnet.ui.components.ClearChatDialog
-import at.htlhl.chatnet.ui.components.EmptyChatContent
-import at.htlhl.chatnet.ui.components.ShowBigUserImageDialog
+import at.htlhl.chatnet.ui.components.chats.ChatsViewTopBar
+import at.htlhl.chatnet.ui.components.chats.EmptyChatContent
+import at.htlhl.chatnet.ui.components.chats.ShowBigUserImageDialog
+import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
+import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
+import at.htlhl.chatnet.ui.components.mixed.ClearChatDialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 
 class Chats : ViewModel() {
 
-    @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
+    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "UnusedMaterialScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun ChatsScreen(
@@ -56,6 +57,7 @@ class Chats : ViewModel() {
         val userDataInstance: List<InternalChatInstance> = userDataInstanceState.value
         val friendListDataState = sharedViewModel.friendListData.collectAsState()
         val friendListData: List<FirebaseUsers> = friendListDataState.value
+        Log.println(Log.INFO, "Chats", "friendListData: $friendListData")
         val availableUsers = friendListData.filter { friend -> friend.statusFriend == "pending" }
         Log.println(Log.INFO, "Chats", "userDataInstance: $userDataInstance")
         val completePersonList =
@@ -86,8 +88,7 @@ class Chats : ViewModel() {
         )
         Scaffold(
             modifier = Modifier
-                .fillMaxSize()
-                .background(Color.White),
+                .fillMaxSize(),
             topBar = {
                 ChatsViewTopBar(
                     availableUsers,
@@ -106,7 +107,7 @@ class Chats : ViewModel() {
                 LazyColumn(
                     Modifier
                         .fillMaxSize()
-                        .background(if (isSystemInDarkTheme()) Color.Black else Color.White),
+                        .background(MaterialTheme.colorScheme.tertiary),
                     state = lazyListState
                 ) {
                     items(completePersonList) { message ->

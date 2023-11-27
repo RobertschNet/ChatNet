@@ -18,12 +18,13 @@ import at.htlhl.chatnet.ui.views.ChatMateView
 import at.htlhl.chatnet.ui.views.ChatView
 import at.htlhl.chatnet.ui.views.Chats
 import at.htlhl.chatnet.ui.views.DropIn
+import at.htlhl.chatnet.ui.views.FindUserView
 import at.htlhl.chatnet.ui.views.LoadingView
 import at.htlhl.chatnet.ui.views.LoginView
 import at.htlhl.chatnet.ui.views.ProfileView
+import at.htlhl.chatnet.ui.views.RandChatStartView
 import at.htlhl.chatnet.ui.views.RandChatView
 import at.htlhl.chatnet.ui.views.RegisterView
-import at.htlhl.chatnet.ui.views.FindUserView
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -75,6 +76,7 @@ fun Navigation(
         composable("RandChatScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
+            sharedViewModel.bottomBarState.value = false
             RandChatView().RandChatScreen(navController, sharedViewModel)
         }
         composable("CameraViewScreen",
@@ -130,6 +132,12 @@ fun Navigation(
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             LoadingView().LoadingScreen(navController)
+        }
+        composable("RandChatStartScreen",
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
+            sharedViewModel.bottomBarState.value = true
+            RandChatStartView().RandChatStartScreen(navController, sharedViewModel)
         }
     }
 }

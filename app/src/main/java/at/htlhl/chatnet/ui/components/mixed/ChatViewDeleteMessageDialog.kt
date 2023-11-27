@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.components
+package at.htlhl.chatnet.ui.components.mixed
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,61 +24,95 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
 @Composable
-fun ClearChatDialog(onDismiss: (String) -> Unit) {
+fun DeleteMessageDialog(
+    isUser: Boolean,
+    onClose: (String) -> Unit = {}
+) {
     Dialog(
-        onDismissRequest = { onDismiss.invoke("closed") },
+        onDismissRequest = { onClose.invoke("closed") },
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
     ) {
         Column(
             modifier = Modifier
                 .background(Color.White, RoundedCornerShape(20.dp))
                 .width(250.dp)
-                .height(200.dp),
+                .height(if (isUser) 240.dp else 200.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Clear Chat?",
+                text = "Delete Message?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 color = Color.Black,
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                text = "All messages/images from both users will be deleted.",
+                text = if (!isUser) "This message can be deleted only for you, and not for everyone." else "This message can be deleted only for you, or for everyone in the chat.",
                 fontWeight = FontWeight.Light,
                 textAlign = TextAlign.Center,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(
-                    top = 10.dp, bottom = 20.dp, start = 10.dp, end = 10.dp
+                    top = 10.dp,
+                    bottom = 20.dp,
+                    start = 10.dp,
+                    end = 10.dp
                 )
             )
             Divider(
                 thickness = 0.3f.dp,
                 color = Color.LightGray,
             )
-            Row(verticalAlignment = Alignment.CenterVertically,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onDismiss.invoke("clear") }) {
+                    .clickable { onClose.invoke("change") }
+            ) {
                 Text(
-                    text = "Clear",
+                    text = "Delete for me",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
                     color = Color.Red,
                     modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
                 )
             }
+            if (isUser) {
+                Divider(
+                    thickness = 0.3f.dp,
+                    color = Color.LightGray,
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onClose.invoke("delete")
+                        }
+                ) {
+                    Text(
+                        text = "Delete for everyone",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp,
+                        color = Color.Red,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
+                    )
+                }
+            }
             Divider(
                 thickness = 0.3f.dp,
                 color = Color.LightGray,
             )
-            Row(verticalAlignment = Alignment.CenterVertically,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onDismiss.invoke("closed") }) {
+                    .clickable { onClose.invoke("closed") }
+            ) {
                 Text(
                     text = "Cancel",
                     fontWeight = FontWeight.SemiBold,

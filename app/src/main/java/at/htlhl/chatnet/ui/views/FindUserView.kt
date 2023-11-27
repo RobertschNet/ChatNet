@@ -39,9 +39,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUsers
-import at.htlhl.chatnet.ui.components.FindUserPersonElement
-import at.htlhl.chatnet.ui.components.FindUserSearchedContent
-import at.htlhl.chatnet.ui.components.FindUserTopBar
+import at.htlhl.chatnet.ui.components.finduser.FindUserPersonElement
+import at.htlhl.chatnet.ui.components.finduser.FindUserSearchedContent
+import at.htlhl.chatnet.ui.components.finduser.FindUserTopBar
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.FlowPreview
@@ -200,7 +200,6 @@ class FindUserView : ViewModel() {
                                     person = clickedPerson,
                                     status = "requested"
                                 )
-
                             }
                         }
                     }
@@ -232,7 +231,9 @@ class FindUserView : ViewModel() {
             val snapshot = FirebaseFirestore.getInstance().collection("users")
                 .orderBy("username.lowercase")
                 .startAt(searchText.value.lowercase())
-                .endAt(searchText.value.lowercase() + '\uf8ff').get().await()
+                .endAt(searchText.value.lowercase() + '\uf8ff')
+                .get()
+                .await()
 
             return snapshot.documents.mapNotNull { document ->
                 try {
@@ -291,7 +292,7 @@ class FindUserView : ViewModel() {
                 person.filter { it.doesMatchUsername(text) }
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _person.value)
-        .onEach { _isSearching.update { false } }
+            .onEach { _isSearching.update { false } }
 
     private fun onSearchTextChanged(text: String) {
         _person.value = emptyList()
@@ -301,5 +302,4 @@ class FindUserView : ViewModel() {
             _isSearching.value = false
         }
     }
-
 }

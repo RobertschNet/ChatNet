@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -41,7 +43,8 @@ fun NavigationBarLayout(
     viewModel: SharedViewModel,
     context: Context
 ) {
-    Scaffold(bottomBar = {
+    Scaffold(
+        bottomBar = {
         BottomNavigationBar(isBottomBarEnabled = viewModel.bottomBarState, items = listOf(
             BottomNavItem(
                 name = "Chats",
@@ -57,7 +60,7 @@ fun NavigationBarLayout(
             ),
             BottomNavItem(
                 name = "RandChat",
-                route = Screens.RandChatScreen.route,
+                route = Screens.RandChatStartScreen.route,
                 icon = R.drawable.chat_bubbles_question_svgrepo_com_1_,
                 color = Color(0xFFE21515)
             ),
@@ -99,7 +102,7 @@ fun BottomNavigationBar(
     val backStackEntry = navController.currentBackStackEntryAsState()
     if (isBottomBarEnabled.value) {
         NavigationBar(
-            containerColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
+            containerColor = MaterialTheme.colorScheme.background,
             modifier = Modifier
                 .navigationBarsPadding()
                 .fillMaxWidth()
@@ -127,14 +130,15 @@ fun BottomNavigationBar(
                                 Image(
                                     painter = rememberAsyncImagePainter(item.icon),
                                     contentDescription = item.name,
-                                    modifier = Modifier.size(30.dp)
+                                    modifier = Modifier.size(30.dp),
+                                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
                                 )
                             }
                         }
                     },
                     selected = selected,
                     colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
+                        indicatorColor = MaterialTheme.colorScheme.background,
                     ),
                     onClick = {
                         onItemClick(item)

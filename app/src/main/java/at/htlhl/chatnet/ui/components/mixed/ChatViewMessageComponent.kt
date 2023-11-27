@@ -1,10 +1,11 @@
-package at.htlhl.chatnet.ui.components
+package at.htlhl.chatnet.ui.components.mixed
 
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,6 +27,7 @@ import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -32,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseMessage
+import at.htlhl.chatnet.ui.theme.shimmerEffect
 import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
 import java.time.Instant
@@ -48,16 +52,17 @@ fun ChatViewMessageComponent(
     message: FirebaseMessage,
     chatMateChat:Boolean,
     onLongPress: () -> Unit,
-    previousMessage: FirebaseMessage?
+    previousMessage: FirebaseMessage?,
+    onClick: (String) -> Unit
 ) {
     val formatter = DateTimeFormatter.ofPattern("HH:mm")
     val formattedTime =
         message.timestamp.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalTime()
             .format(formatter)
     val backgroundColor = if (isUser) {
-        if (isSystemInDarkTheme()) Color.DarkGray else Color(0xFF00A0E8)
+        if (isSystemInDarkTheme()) Color(0xFF00A0E8) else Color(0xFF00A0E8)
     } else {
-        if (isSystemInDarkTheme()) Color.Black else Color.White
+        if (isSystemInDarkTheme()) Color.DarkGray else Color.White
     }
     val alignment = if (isUser) Arrangement.End else Arrangement.Start
     Column {
@@ -65,7 +70,7 @@ fun ChatViewMessageComponent(
             Box(
                 contentAlignment = Alignment.Center, modifier = Modifier
                     .background(
-                        Color(0xFFF5F5F5),
+                        if(isSystemInDarkTheme()) Color.DarkGray else Color(0xFFF5F5F5),
                         RoundedCornerShape(30)
                     )
                     .align(CenterHorizontally)
@@ -77,7 +82,7 @@ fun ChatViewMessageComponent(
                         .padding(6.dp),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.DarkGray
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
         }
@@ -105,9 +110,9 @@ fun ChatViewMessageComponent(
                         .border(
                             if (isUser) 0.dp else 0.5f.dp,
                             if (isUser) Color.White else Color.Black,
-                            RoundedCornerShape(24.dp)
+                            RoundedCornerShape(20.dp)
                         )
-                        .background(backgroundColor, shape = RoundedCornerShape(24.dp))
+                        .background(backgroundColor, shape = RoundedCornerShape(20.dp))
                         .padding(top = 4.dp, start = 4.dp, end = 4.dp, bottom = 4.dp)
                 } else {
                     Modifier
@@ -182,6 +187,7 @@ fun ChatViewMessageComponent(
                             .clip(RoundedCornerShape(24.dp))
                             .heightIn(min = 50.dp, max = 250.dp)
                             .widthIn(min = 75.dp, max = 250.dp)
+                            .clickable { onClick.invoke(message.image) }
                             .shimmerEffect()
                     )
                 }
@@ -199,18 +205,16 @@ fun ChatViewMessageComponent(
                 SubcomposeAsyncImage(
                     model = if (message.read) R.drawable.eye_1_svgrepo_com else R.drawable.eye_hide_1_svgrepo_com,
                     contentDescription = null,
+                    colorFilter=ColorFilter.tint(MaterialTheme.colorScheme.primary),
                     modifier = Modifier
                         .size(20.dp)
                         .padding(end = 5.dp),
-                    loading = {
-                        CircularProgressIndicator()
-                    },
                 )
             }
             Text(
                 text = formattedTime,
                 fontSize = 10.sp,
-                color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Start,
                 modifier =
                 Modifier.padding(end = 15.dp)
@@ -219,7 +223,7 @@ fun ChatViewMessageComponent(
             Text(
                 text = formattedTime,
                 fontSize = 10.sp,
-                color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Start,
                 modifier =
                 Modifier.padding(start = 15.dp)

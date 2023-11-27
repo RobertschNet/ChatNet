@@ -5,18 +5,19 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
-import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavController
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseFriend
 import at.htlhl.chatnet.data.FirebaseMessage
 import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.data.InternalChatInstance
-import at.htlhl.chatnet.data.LoadingState
+import at.htlhl.chatnet.navigation.Screens
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
@@ -29,13 +30,10 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
@@ -56,13 +54,6 @@ import java.util.concurrent.TimeUnit
 class SharedViewModel(application: Application) : AndroidViewModel(application) {
     private val firebaseInstance = FirebaseFirestore.getInstance()
 
-    private val _bitmaps = MutableStateFlow(Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888))
-    val bitmaps = _bitmaps.asStateFlow()
-
-    fun onTakePhoto(bitmap: Bitmap) {
-        _bitmaps.value = bitmap
-    }
-
     private companion object {
         const val USER_COLLECTION = "users"
         const val CHATS_COLLECTION = "chats"
@@ -78,13 +69,18 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val auth: FirebaseAuth = Firebase.auth
     val chatMateResponseState = mutableStateOf(ChatMateResponseState.Success)
     val friend = mutableStateOf(InternalChatInstance())
-    val matchedUser = mutableStateOf(FirebaseUsers())
     val bottomBarState = mutableStateOf(false)
     val gpsState = mutableStateOf(false)
     val localChatUserList = mutableStateOf<List<FirebaseUsers>>(emptyList())
     val searchValue = mutableStateOf("")
     val text = mutableStateOf("")
+    val randState = mutableStateOf(false)
+    val isConnected = mutableStateOf(false)
 
+
+    private fun getUserDocumentRef() = firebaseInstance.collection(USER_COLLECTION)
+
+    private fun getChatDocumentRef() = firebaseInstance.collection(CHATS_COLLECTION)
 
     fun getMessageLengthForChat(): Int? {
         return _chatData.value.find {
@@ -94,36 +90,13 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         }?.messages?.size
     }
 
-    private fun getUserDocumentRef() = firebaseInstance.collection(USER_COLLECTION)
+    private val _bitmaps = MutableStateFlow(Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888))
+    val bitmaps = _bitmaps.asStateFlow()
 
-    private fun getChatDocumentRef() = firebaseInstance.collection(CHATS_COLLECTION)
-
-    /**
-     * This section contains the logic for the authentication process.
-     */
-
-    private val _loadingState = mutableStateOf(LoadingState.Loading)
-    val loadingState: State<LoadingState> = _loadingState
-
-    fun fetchAuthenticationStatus() {
-        viewModelScope.launch {
-            try {
-                val user = withContext(Dispatchers.IO) {
-                    auth.currentUser
-                }
-                _loadingState.value = if (user != null) {
-                    LoadingState.Authenticated
-                } else {
-                    LoadingState.NotAuthenticated
-                }
-            } catch (e: Exception) {
-                _loadingState.value = LoadingState.Error
-            }
-            chatData.collect {
-                getDropInContactUsers()
-            }
-        }
+    fun onTakePhoto(bitmap: Bitmap) {
+        _bitmaps.value = bitmap
     }
+
 
     /**
      * This section contains the logic for the Firebase communication,
@@ -268,20 +241,15 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun sortDataChats(onComplete: () -> Unit) {
+        Log.println(Log.INFO, "1", _friendListData.value.toString())
         val updatedPersonList: List<InternalChatInstance> = _friendListData.value.map { person ->
             val matchingChat = _chatData.value.find { chat ->
                 chat.members.contains(person.id) && chat.tab == "chats"
             }
-
-            val senderIsCurrentUser = matchingChat?.messages?.lastOrNull()?.sender == person.id
-
             val internalChatInstance = createInternalChatInstance(matchingChat ?: FirebaseChat())
 
-            if (senderIsCurrentUser && internalChatInstance.lastMessage != FirebaseMessage()) {
-                internalChatInstance
-            } else {
                 internalChatInstance.copy(personList = person)
-            }
+
         }
 
         val finalPersonList =
@@ -289,6 +257,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         val sortedPersonList = finalPersonList.sortedWith(
             compareByDescending<InternalChatInstance> { it.pinChat }.thenByDescending { it.timestampMessage }
         )
+        Log.println(Log.INFO, "5", sortedPersonList.toString())
         _completeChatList.value = sortedPersonList
         sortDataChatMate { onComplete.invoke() }
 
@@ -356,14 +325,16 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                             // Step 4: For each change in the messages subcollection, update the chatDataSet
                             Log.println(Log.INFO, "2", subQuerySnapshot?.documents.toString())
                             subQuerySnapshot?.let { subSnapshot ->
-                                val subCollectionData =
-                                    subSnapshot.toObjects(FirebaseMessage::class.java)
+                                val subCollectionData = subSnapshot.documents.map { messageDocument ->
+                                    val message = messageDocument.toObject(FirebaseMessage::class.java)
+                                    message?.copy(id = messageDocument.id)
+                                }
                                 val chat = FirebaseChat(
                                     members = documentChange.document.data["members"] as List<String>,
                                     unread = documentChange.document.data["unread"] as List<String>,
                                     tab = documentChange.document.data["tab"] as String,
                                     chatRoomID = documentChange.document.id,
-                                    messages = subCollectionData
+                                    messages = subCollectionData.filterNotNull()
                                 )
                                 // Step 5: Update the chatDataSet
                                 val existingChat =
@@ -387,67 +358,74 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     fun deleteMessage(
         documentId: String,
-        timestamp: Timestamp,
+        messageId: String,
     ) {
         getChatDocumentRef().document(documentId).collection("/$MESSAGES_COLLECTION")
-            .whereEqualTo("timestamp", timestamp).get()
-            .addOnSuccessListener { querySnapshot ->
-                for (document in querySnapshot) {
-                    document.reference.delete().addOnSuccessListener {}
-                        .addOnFailureListener { exception ->
-                            exception.printStackTrace()
-                        }
-                }
-            }.addOnFailureListener { exception ->
+            .document(messageId)
+            .delete()
+            .addOnSuccessListener {
+            }
+            .addOnFailureListener { exception ->
                 exception.printStackTrace()
             }
     }
 
+
     fun changeMessageVisibility(
         documentId: String,
-        timestamp: Timestamp
+        messageId: String
     ) {
         getChatDocumentRef().document(documentId)
             .collection("/$MESSAGES_COLLECTION")
-            .whereEqualTo("timestamp", timestamp).get()
-            .addOnSuccessListener { querySnapshot ->
-                for (document in querySnapshot) {
-                    document.reference.update(
-                        "visible",
-                        FieldValue.arrayRemove(auth.currentUser?.uid.toString())
-                    ).addOnSuccessListener {}
-                        .addOnFailureListener { exception ->
-                            exception.printStackTrace()
-                        }
-                }
-            }.addOnFailureListener { exception ->
+            .document(messageId)
+            .update(
+                "visible",
+                FieldValue.arrayRemove(auth.currentUser?.uid.toString())
+            )
+            .addOnSuccessListener {
+                // Handle success
+            }
+            .addOnFailureListener { exception ->
                 exception.printStackTrace()
             }
     }
+
 
     fun deleteChatRoom() {
         for (chat in chatData.value) {
             if (chat.chatRoomID == friend.value.chatRoomID) {
                 val subCollectionRef =
                     getChatDocumentRef().document(chat.chatRoomID).collection(MESSAGES_COLLECTION)
-                subCollectionRef.get().addOnSuccessListener { querySnapshot ->
-                    for (document in querySnapshot.documents) {
-                        subCollectionRef.document(document.id).delete().addOnSuccessListener {
-                            getChatDocumentRef().document(chat.chatRoomID).delete()
-                                .addOnSuccessListener {
-                                }.addOnFailureListener { exception ->
+
+                // Delete messages
+                subCollectionRef.get().addOnCompleteListener { messagesTask ->
+                    if (messagesTask.isSuccessful) {
+                        for (document in messagesTask.result!!) {
+                            subCollectionRef.document(document.id).delete()
+                                .addOnFailureListener { exception ->
                                     exception.printStackTrace()
                                 }
-                        }.addOnFailureListener { exception ->
-                            exception.printStackTrace()
                         }
+
+                        // After deleting messages, delete the chat
+                        getChatDocumentRef().document(chat.chatRoomID).delete()
+                            .addOnCompleteListener { chatDeleteTask ->
+                                if (chatDeleteTask.isSuccessful) {
+                                    // Handle successful chat deletion
+                                } else {
+                                    // Handle chat deletion failure
+                                    chatDeleteTask.exception?.printStackTrace()
+                                }
+                            }
+                    } else {
+                        // Handle messages fetch failure
+                        messagesTask.exception?.printStackTrace()
                     }
-                }.addOnFailureListener { exception ->
-                    exception.printStackTrace()
                 }
             }
         }
     }
+
 
     fun deleteChatRoomForLocal(person: String) {
         getChatDocumentRef().document(person).delete()
@@ -541,77 +519,13 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 if (documentSnapshot != null && documentSnapshot.exists()) {
                     val personList = documentSnapshot.toObject(FirebaseUsers::class.java)
                     _user.value = personList!!
+                    isConnected.value = personList.connected
+                    Log.println(Log.INFO, "User", personList.toString())
                     sortDataChats {}
                 }
             }
     }
 
-    /**
-     * This section contains the logic for the Firebase communication, for the randChat feature.
-     */
-
-    /*
-    fun pairWithRandomUser() {
-        if (_matchedUser.value.id.isNotEmpty()) {
-            return
-        }
-        viewModelScope.launch(Dispatchers.IO) {
-            val pendingUsers = mutableListOf<FirebaseUsers>()
-            // Step 1: Check if any user has connection value as "pending"
-            getUserDocumentRef().whereEqualTo("connection", "pending").limit(1).get()
-                .addOnSuccessListener { querySnapshot ->
-                    for (document in querySnapshot.documents) {
-                        val user = document.toObject(FirebaseUsers::class.java)
-                        if (user != null && user.id != auth.currentUser!!.uid) {
-                            pendingUsers.add(user)
-                        }
-                    }
-                    // Step 2: Pair with a random user from the pendingUsers list
-                    if (pendingUsers.isNotEmpty()) {
-                        val randomUser = pendingUsers[Random().nextInt(pendingUsers.size)]
-                        auth.currentUser?.let {
-                            getUserDocumentRef().document(it.uid)
-                                .update("connection", randomUser.id)
-                        }
-                        getUserDocumentRef().document(randomUser.id)
-                            .update("connection", auth.currentUser!!.uid)
-                        _matchedUser.value = randomUser
-                    } else {
-                        // Step 3: Set connection value for current user to "pending"
-                        getUserDocumentRef().document(auth.currentUser!!.uid)
-                            .update("connection", "pending")
-                    }
-                }.addOnFailureListener { exception ->
-                    exception.printStackTrace()
-                }
-        }
-    }
-
-    fun checkForMatches() {
-        getUserDocumentRef().whereEqualTo("connection", auth.currentUser!!.uid)
-            .addSnapshotListener { querySnapshot, error ->
-                if (error != null) {
-                    return@addSnapshotListener
-                }
-                querySnapshot?.documentChanges?.forEach { document ->
-
-                    val user = document.document.toObject(FirebaseUsers::class.java)
-                    Log.println(Log.INFO, "MatchFound", user.toString())
-                    if ((document.type == DocumentChange.Type.MODIFIED || document.type == DocumentChange.Type.ADDED) && (user.connection == auth.currentUser!!.uid || user.connection == "pending")) {
-                        if (user.id != auth.currentUser!!.uid) {
-                            _matchedUser.value = user
-                        }
-                    } else {
-                        _matchedUser.value =
-                            FirebaseUsers("", mapOf(), "", "", "", "", "", false, "")
-                        resetMatchedUser()
-                    }
-                }
-            }
-    }
-
-
-     */
     /**
      * This section contains the logic for the Firebase communication,
      * for handling different user availability states, based on app state.
@@ -633,7 +547,6 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-
     fun reset() {
         _chatData.value = emptyList()
         friend.value = InternalChatInstance(
@@ -648,7 +561,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         _personData.value = emptyList()
         _friendListData.value = emptyList()
         _user.value = FirebaseUsers()
-        matchedUser.value = FirebaseUsers()
+        randState.value = false
     }
 
     private val _personData = MutableStateFlow<List<FirebaseUsers>>(emptyList())
@@ -864,9 +777,10 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun resetRandChat() {
-        val url = "https://disconnect-ie4mphraqq-uc.a.run.app/disconnect"
+        val url = "https://randchat-ie4mphraqq-uc.a.run.app/randChat"
         val client = OkHttpClient()
-        val requestData = "{\"user\":\"${auth.currentUser?.uid.toString()}\"}"
+        val requestData =
+            "{\"user\":\"${auth.currentUser?.uid.toString()}\", \"newUser\":${false},\"action\":\"disconnect\"}"
         val mediaType = "application/json; charset=utf-8".toMediaType()
         val requestBody = requestData.toRequestBody(mediaType)
 
@@ -928,7 +842,8 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                 .document(friend.id)
                                 .get().addOnSuccessListener { userDocumentSnapshot ->
                                     try {
-                                        val data = userDocumentSnapshot?.toObject(FirebaseUsers::class.java)
+                                        val data =
+                                            userDocumentSnapshot?.toObject(FirebaseUsers::class.java)
                                         if (data != null) {
                                             val finalData = FirebaseUsers(
                                                 image = data.image,
@@ -967,6 +882,81 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }.addOnFailureListener { exception ->
                 exception.printStackTrace()
+            }
+    }
+
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val delayMillis = 5000L
+    fun getRandChat(
+        sharedViewModel: SharedViewModel,
+        state: Boolean,
+        navController: NavController,
+        onComplete: () -> Unit
+    ) {
+        val url = "https://randchat-ie4mphraqq-uc.a.run.app/randChat"
+        val client = OkHttpClient()
+        val requestData =
+            "{\"user\":\"${sharedViewModel.auth.currentUser?.uid.toString()}\", \"newUser\":${state}}"
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val requestBody = requestData.toRequestBody(mediaType)
+
+        val request = Request.Builder()
+            .url(url)
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                // Handle failure
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string()
+                    Log.println(Log.INFO, "Response", responseBody ?: "")
+                    // Response is null, so schedule a retry after 5 seconds
+                    if (navController.currentDestination?.route != Screens.RandChatScreen.route) {
+                        Log.println(Log.INFO, "Response", "Not on RandChatScreen")
+                    } else if (responseBody == "{\"partner\":null}") {
+                        handler.postDelayed(
+                            { getRandChat(sharedViewModel, false, navController) {} },
+                            delayMillis
+                        )
+                    } else {
+                        val partner =
+                            responseBody?.substringAfter("partner\":\"")?.substringBefore("\"")
+                        Log.println(Log.INFO, "Response", partner ?: "")
+                        if (partner != null) {
+                            randState.value = true
+                            fetchUsers(partner, sharedViewModel) { onComplete.invoke() }
+                        }
+                    }
+                } else {
+                    Log.println(Log.INFO, "Response", response.toString())
+                }
+            }
+        })
+    }
+
+    fun fetchUsers(uID: String, sharedViewModel: SharedViewModel, onComplete: () -> Unit) {
+        FirebaseFirestore.getInstance().collection("users").document(uID).get()
+            .addOnSuccessListener { documentSnapshot ->
+                if (documentSnapshot.exists()) {
+                    Log.println(Log.INFO, "Response", sharedViewModel.chatData.value.toString())
+                    val personList = documentSnapshot.toObject(FirebaseUsers::class.java)
+                    val specificChat = sharedViewModel.chatData.value.find { it.tab == "randchat" && it.members.contains(uID) && it.members.contains(auth.currentUser?.uid.toString()) }
+                    sharedViewModel.friend.value = InternalChatInstance(
+                        personList = personList!!,
+                        timestampMessage = Timestamp.now(),
+                        lastMessage = FirebaseMessage(),
+                        pinChat = false,
+                        read = 0,
+                        markedAsUnread = false,
+                        chatRoomID = specificChat?.chatRoomID ?: "",
+                    )
+                    onComplete.invoke()
+                }
             }
     }
 }

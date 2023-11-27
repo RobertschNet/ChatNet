@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.components
+package at.htlhl.chatnet.ui.components.chats
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -18,9 +19,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
 import androidx.compose.material.TopAppBar
 import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -35,6 +36,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontFamily
@@ -59,7 +61,7 @@ fun ChatsViewTopBar(
 ) {
     val isSearchMode = remember { mutableStateOf(false) }
     TopAppBar(
-        backgroundColor = Color.White,
+        backgroundColor = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxWidth()
     ) {
         if (!isSearchMode.value) {
@@ -67,6 +69,7 @@ fun ChatsViewTopBar(
                 text = "ChatNet",
                 fontWeight = FontWeight.Bold,
                 fontSize = 36.sp,
+                color = MaterialTheme.colorScheme.primary,
                 fontFamily = FontFamily.Cursive,
                 modifier = Modifier.padding(start = 10.dp)
             )
@@ -83,6 +86,7 @@ fun ChatsViewTopBar(
                     model = R.drawable.search_svgrepo_com_1_,
                     contentDescription = null,
                     modifier = Modifier.size(30.dp),
+                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                 )
             }
             IconButton(
@@ -96,6 +100,7 @@ fun ChatsViewTopBar(
                         modifier = Modifier
                             .size(35.dp)
                             .align(Alignment.Center),
+                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                     )
                     if (availableUsers.isNotEmpty()) {
                         Box(
@@ -106,9 +111,7 @@ fun ChatsViewTopBar(
                                 .clip(CircleShape)
                                 .background(
                                     Brush.linearGradient(
-                                        colors = if (!isSystemInDarkTheme()) listOf(
-                                            Color.Red, Color.Red
-                                        ) else listOf(Color(0xF1161616), Color(0xF1161616)),
+                                        colors = listOf(Color.Red,Color.Red),
                                         start = Offset(0f, 0f),
                                         end = Offset(0.dp.value, 0.dp.value)
                                     )
@@ -118,7 +121,7 @@ fun ChatsViewTopBar(
                             Text(
                                 text = availableUsers.size.toString(),
                                 fontSize = 8.sp,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.background,
                                 modifier = Modifier.align(Alignment.Center)
                             )
                         }
@@ -130,62 +133,63 @@ fun ChatsViewTopBar(
             val keyboardController = LocalSoftwareKeyboardController.current
             val interactionSource = remember { MutableInteractionSource() }
             val focusRequester = remember { FocusRequester() }
-            val textFieldModifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp)
-                .border(0.3f.dp, Color.DarkGray, RoundedCornerShape(36.dp))
-                .background(Color.White, RoundedCornerShape(36.dp))
-            Box(
-                modifier = Modifier
-                    .padding(start = 10.dp, end = 10.dp)
-            ) {
-                BasicTextField(
-                    value = text,
-                    onValueChange = {
-                        setText(it)
-                        sharedViewModel.searchValue.value = it
-                    },
-                    interactionSource = interactionSource,
-                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() }),
-                    singleLine = true,
-                    modifier = textFieldModifier.focusRequester(focusRequester),
-                    textStyle = MaterialTheme.typography.body1.copy(color = Color.Black),
-                    cursorBrush = SolidColor(if (isSystemInDarkTheme()) Color.White else Color.Black),
-                    decorationBox = { innerTextField: @Composable () -> Unit ->
-                        Text(
-                            text = if (sharedViewModel.searchValue.value != "") "" else "Search...",
-                            modifier = Modifier.padding(top = 9.dp, start = 50.dp)
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Start,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    isSearchMode.value = false
-                                    sharedViewModel.searchValue.value = ""
-                                },
+                Box(
+                    modifier = Modifier
+                        .padding(start = 10.dp, end = 10.dp)
+                ) {
+                    BasicTextField(
+                        value = text,
+                        onValueChange = {
+                            setText(it)
+                            sharedViewModel.searchValue.value = it
+                        },
+                        interactionSource = interactionSource,
+                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() }),
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp)
+                            .border(0.3f.dp, MaterialTheme.colorScheme.secondary, RoundedCornerShape(36.dp))
+                            .background(MaterialTheme.colorScheme.background, RoundedCornerShape(36.dp))
+                            .focusRequester(focusRequester),
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.primary),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        decorationBox = { innerTextField: @Composable () -> Unit ->
+                            Text(
+                                text = if (sharedViewModel.searchValue.value != "") "" else "Search...",
+                                modifier = Modifier.padding(top = 9.dp, start = 50.dp)
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Start,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                SubcomposeAsyncImage(
-                                    model = R.drawable.back_svgrepo_com_1_,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(30.dp),
-                                )
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 8.dp, end = 8.dp, start = 0.dp)
-                                    .height(30.dp)
-                            ) {
-                                innerTextField()
+                                IconButton(
+                                    onClick = {
+                                        isSearchMode.value = false
+                                        sharedViewModel.searchValue.value = ""
+                                    },
+                                ) {
+                                    SubcomposeAsyncImage(
+                                        model = R.drawable.back_svgrepo_com_1_,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(30.dp),
+                                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 8.dp, end = 8.dp, start = 0.dp)
+                                        .height(30.dp)
+                                ) {
+                                    innerTextField()
+                                }
                             }
                         }
-                    }
-                )
-            }
+                    )
+                }
             DisposableEffect(Unit) {
                 if (isSearchMode.value) {
                     keyboardController?.show()
@@ -195,8 +199,4 @@ fun ChatsViewTopBar(
             }
         }
     }
-    Divider(
-        thickness = 1.dp,
-        color = if (isSystemInDarkTheme()) Color.DarkGray else Color.Transparent
-    )
 }

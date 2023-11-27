@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.components
+package at.htlhl.chatnet.ui.components.finduser
 
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -37,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.htlhl.chatnet.data.FirebaseUsers
+import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 
@@ -187,7 +187,7 @@ fun FindUserPersonElement(
         }
         Row {
             Button(
-                onClick = { onClick.invoke(person, searchedUser=="pending") },
+                onClick = { onClick.invoke(person, searchedUser == "pending") },
                 enabled = if (searchedUser == "searchedUser") true else searchedUser == "pending",
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -202,7 +202,7 @@ fun FindUserPersonElement(
                     fontWeight = FontWeight.Bold,
                 )
             }
-            if (deleteAble){
+            if (deleteAble) {
                 IconButton(onClick = {
                     sharedViewModel.deleteFriendFromFriendList()
                 }) {
@@ -213,7 +213,7 @@ fun FindUserPersonElement(
                         modifier = Modifier.size(20.dp)
                     )
                 }
-            }else{
+            } else {
                 Spacer(modifier = Modifier.width(20.dp))
             }
         }

@@ -36,8 +36,8 @@ import androidx.compose.material.icons.outlined.GpsNotFixed
 import androidx.compose.material.icons.outlined.GpsOff
 import androidx.compose.material.rememberBottomSheetScaffoldState
 import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -68,7 +68,7 @@ import at.htlhl.chatnet.data.FirebaseMessage
 import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.ChatsViewChatItem
+import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
@@ -79,7 +79,7 @@ import java.util.Locale
 
 class DropIn : ViewModel() {
     @RequiresApi(Build.VERSION_CODES.O)
-    @OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
+    @OptIn(ExperimentalMaterialApi::class)
     @Composable
     fun DropInScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val lazyListState = rememberLazyListState()
@@ -107,8 +107,8 @@ class DropIn : ViewModel() {
                         ?: Timestamp.now(),
                     lastMessage = updatedStatus,
                     markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
-                    pinChat =person.blocked.contains(matchingChat?.chatRoomID),
-                    chatRoomID= matchingChat?.chatRoomID ?: "",
+                    pinChat = person.blocked.contains(matchingChat?.chatRoomID),
+                    chatRoomID = matchingChat?.chatRoomID ?: "",
                     read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                         ?: 0
                 )
@@ -118,8 +118,8 @@ class DropIn : ViewModel() {
                     timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                         ?: Timestamp.now(),
                     lastMessage = updatedStatus,
-                    pinChat =person.blocked.contains(matchingChat?.chatRoomID),
-                    chatRoomID= matchingChat?.chatRoomID ?: "",
+                    pinChat = person.blocked.contains(matchingChat?.chatRoomID),
+                    chatRoomID = matchingChat?.chatRoomID ?: "",
                     markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                     read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                         ?: 0
@@ -138,7 +138,7 @@ class DropIn : ViewModel() {
                 lastMessage = matchingChat?.messages?.lastOrNull() ?: FirebaseMessage(),
                 markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                 pinChat = person.blocked.contains(matchingChat?.chatRoomID),
-                chatRoomID= matchingChat?.chatRoomID ?: "",
+                chatRoomID = matchingChat?.chatRoomID ?: "",
                 read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                     ?: 0
             )
@@ -194,7 +194,7 @@ class DropIn : ViewModel() {
                                     .weight(1f),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 20.sp,
-                                color = Color.White
+                                color = Color.Black
                             )
                         }
                         Spacer(modifier = Modifier.padding(6.dp))
@@ -251,7 +251,7 @@ class DropIn : ViewModel() {
             sheetPeekHeight = 0.dp,
             topBar = {
                 TopAppBar(
-                    backgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
+                    backgroundColor = MaterialTheme.colorScheme.background,
                     modifier = Modifier
                         .height(70.dp)
                         .fillMaxWidth(),
@@ -271,6 +271,7 @@ class DropIn : ViewModel() {
                                 .align(Alignment.CenterStart)
                                 .padding(start = 20.dp),
                             fontWeight = FontWeight.Bold,
+                            color=MaterialTheme.colorScheme.primary,
                             fontSize = 36.sp,
                             fontFamily = Cursive
                         )
@@ -288,15 +289,12 @@ class DropIn : ViewModel() {
                             Icon(
                                 imageVector = if (!sharedViewModel.gpsState.value) Icons.Outlined.GpsNotFixed else Icons.Outlined.GpsOff,
                                 contentDescription = "GPS",
+                                tint=MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(30.dp)
                             )
                         }
                     }
                 }
-                Divider(
-                    thickness = 1.dp,
-                    color = if (isSystemInDarkTheme()) Color.DarkGray else Color.Transparent
-                )
             },
         ) {
             LazyColumn(
@@ -319,14 +317,6 @@ class DropIn : ViewModel() {
                 state = lazyListState
             ) {
                 if (!sharedViewModel.gpsState.value) {
-                    item {
-                        Text(
-                            text = "Users in your area",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp)
-                        )
-                    }
                     items(updatedLocalChatUsers) { message ->
                         ChatItemForDropIn(
                             person = message,
@@ -347,19 +337,10 @@ class DropIn : ViewModel() {
                         )
                     }
                 }
-
-                item {
-                    Text(
-                        text = "User you are in contact with",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp)
-                    )
-                }
                 items(sortedPersonList) { message ->
                     ChatsViewChatItem(
                         chat = message,
-                        displayOnlineState=true,
+                        displayOnlineState = true,
                         sharedViewModel = sharedViewModel,
                         navController = navController,
                     ) { context ->

@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.components
+package at.htlhl.chatnet.ui.components.mixed
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.InternalChatInstance
+import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import java.text.SimpleDateFormat
@@ -200,40 +201,46 @@ fun ChatsViewChatItem(
             Row(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                val messageContent = if(chat.lastMessage.content.isEmpty()&&chat.lastMessage.image.isNotEmpty()) "Image" else chat.lastMessage.content
-                val senderPrefix = if (chat.lastMessage.sender != sharedViewModel.auth.currentUser?.uid.toString()) "" else "Me:"
-                Text(
-                    modifier = Modifier
-                        .align(Alignment.CenterVertically)
-                        .padding(start = 10.dp),
-                    text = if (messageContent == "Image") senderPrefix else "$senderPrefix ",
-                    overflow = TextOverflow.Ellipsis,
-                    maxLines = 1,
-                    fontSize = 15.sp,
-                    color = if (chat.read > 0 && !chat.lastMessage.read && chat.lastMessage.sender != sharedViewModel.auth.currentUser?.uid) Color(0xFF00A0E8) else Color.LightGray,
-                )
-                if (messageContent == "Image") {
-                    Image(
-                        imageVector = Icons.Default.Image,
-                        contentDescription = null,
+                if (chat.lastMessage.visible.contains(sharedViewModel.auth.currentUser?.uid.toString())) {
+                    val messageContent =
+                        if (chat.lastMessage.content.isEmpty() && chat.lastMessage.image.isNotEmpty()) "Image" else chat.lastMessage.content
+                    val senderPrefix =
+                        if (chat.lastMessage.sender != sharedViewModel.auth.currentUser?.uid.toString()) "" else "Me: "
+                    Text(
                         modifier = Modifier
-                            .size(18.dp)
-                            .align(Alignment.CenterVertically),
-                        colorFilter = ColorFilter.tint(Color.Gray)
+                            .align(Alignment.CenterVertically)
+                            .padding(start = 10.dp),
+                        text = senderPrefix,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 1,
+                        fontSize = 15.sp,
+                        color = if (chat.read > 0 && !chat.lastMessage.read && chat.lastMessage.sender != sharedViewModel.auth.currentUser?.uid) Color(
+                            0xFF00A0E8
+                        ) else Color.LightGray,
+                    )
+                    if (messageContent == "Image") {
+                        Image(
+                            imageVector = Icons.Default.Image,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .align(Alignment.CenterVertically),
+                            colorFilter = ColorFilter.tint(Color.Gray)
+                        )
+                    }
+                    Text(
+                        modifier = Modifier
+                            .align(Alignment.CenterVertically)
+                            .weight(1f),
+                        text = messageContent,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 1,
+                        fontSize = 15.sp,
+                        color = if (chat.read > 0 && !chat.lastMessage.read && chat.lastMessage.sender != sharedViewModel.auth.currentUser?.uid) Color(
+                            0xFF00A0E8
+                        ) else Color.LightGray,
                     )
                 }
-                Text(
-                    modifier = Modifier
-                        .align(Alignment.CenterVertically)
-                        .weight(1f),
-                    text = messageContent,
-                    overflow = TextOverflow.Ellipsis,
-                    maxLines = 1,
-                    fontSize = 15.sp,
-                    color = if (chat.read > 0 && !chat.lastMessage.read && chat.lastMessage.sender != sharedViewModel.auth.currentUser?.uid) Color(
-                        0xFF00A0E8
-                    ) else Color.LightGray,
-                )
                 if (chat.personList.mutedFriend) {
                     SubcomposeAsyncImage(
                         modifier = Modifier

@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.components
+package at.htlhl.chatnet.ui.components.mixed
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import at.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItem
 import at.htlhl.chatnet.data.InternalChatInstance
+import at.htlhl.chatnet.ui.theme.shimmerEffect
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest

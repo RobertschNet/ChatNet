@@ -1,5 +1,7 @@
-package at.htlhl.chatnet.ui.components
+package at.htlhl.chatnet.ui.components.mixed
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,12 +16,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FileCopy
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
@@ -36,6 +40,7 @@ fun OptionsDialog(offset: Offset?, onClose: (String) -> Unit) {
             expanded = true,
             properties = PopupProperties(focusable = false),
             modifier = Modifier
+                .background(MaterialTheme.colorScheme.background)
                 .height(130.dp)
                 .width(120.dp),
             onDismissRequest = {
@@ -58,6 +63,7 @@ fun OptionsDialog(offset: Offset?, onClose: (String) -> Unit) {
                     Text(
                         "Generate",
                         fontWeight = FontWeight.Normal,
+                        color= MaterialTheme.colorScheme.primary,
                         fontSize = 15.sp,
                         modifier = Modifier.padding(start = 10.dp)
 
@@ -65,12 +71,11 @@ fun OptionsDialog(offset: Offset?, onClose: (String) -> Unit) {
                     SubcomposeAsyncImage(
                         model = R.drawable.brain_illustration_12_svgrepo_com,
                         contentDescription = null,
+                        colorFilter= ColorFilter.tint(MaterialTheme.colorScheme.primary),
                         modifier = Modifier
                             .padding(start = 15.dp)
                             .size(25.dp),
-                        loading = {
-                            CircularProgressIndicator()
-                        },
+
                     )
                 }
             }
@@ -85,11 +90,11 @@ fun OptionsDialog(offset: Offset?, onClose: (String) -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-
                     Text(
                         "Copy",
                         fontWeight = FontWeight.Normal,
                         fontSize = 15.sp,
+                        color= MaterialTheme.colorScheme.primary,
                         textAlign = TextAlign.Start,
                         modifier = Modifier.padding(start = 10.dp)
 
@@ -97,6 +102,7 @@ fun OptionsDialog(offset: Offset?, onClose: (String) -> Unit) {
                     Icon(
                         imageVector = Icons.Outlined.FileCopy,
                         contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .padding(start = 42.dp)
                             .size(25.dp)

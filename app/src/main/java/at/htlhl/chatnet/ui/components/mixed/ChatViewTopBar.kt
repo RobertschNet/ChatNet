@@ -1,22 +1,22 @@
-package at.htlhl.chatnet.ui.components
+package at.htlhl.chatnet.ui.components.mixed
 
 import androidx.compose.animation.core.animateOffsetAsState
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,7 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import at.chatnet.R
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.InternalChatInstance
+import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 
@@ -50,7 +51,7 @@ fun MessageTopBar(
     var offsetState by remember { mutableStateOf(Offset(0f, 0f)) }
     val offset by animateOffsetAsState(targetValue = offsetState, label = "")
     TopAppBar(
-        backgroundColor = Color.White,
+        backgroundColor = MaterialTheme.colorScheme.background,
         modifier = Modifier
             .fillMaxWidth(),
     ) {
@@ -62,7 +63,7 @@ fun MessageTopBar(
             IconButton(onClick = { onClick.invoke() }) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
-                    tint = Color.Black,
+                    tint = MaterialTheme.colorScheme.primary,
                     contentDescription = null,
                     modifier = Modifier
                         .size(30.dp)
@@ -82,11 +83,9 @@ fun MessageTopBar(
                     model = chatInstance.personList.image,
                     modifier = Modifier
                         .clip(CircleShape)
-                        .size(45.dp),
+                        .size(45.dp)
+                        .shimmerEffect(),
                     contentScale = ContentScale.Crop,
-                    loading = {
-                        CircularProgressIndicator()
-                    },
                 )
 
                 if (chatInstance.personList.id == "ChatMate") {
@@ -95,7 +94,7 @@ fun MessageTopBar(
                     ) {
                         Text(
                             text = chatInstance.personList.username["mixedcase"].toString(),
-                            color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                            color = MaterialTheme.colorScheme.primary,
                             fontSize = 22.sp,
                             fontFamily = FontFamily.SansSerif,
                             fontWeight = FontWeight.SemiBold,
@@ -106,23 +105,33 @@ fun MessageTopBar(
                         if (sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
                             Text(
                                 text = "thinking...",
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.secondary,
                                 fontSize = 12.sp,
                                 modifier = Modifier.padding(start = 8f.dp)
                             )
                         }
                     }
                 } else {
-                    Text(
-                        text = chatInstance.personList.username["mixedcase"].toString(),
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                        fontSize = 22.sp,
-                        fontFamily = FontFamily.SansSerif,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(start = 5.dp)
-                    )
+                    Column {
+                        Text(
+                            text = chatInstance.personList.username["mixedcase"].toString(),
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 22.sp,
+                            fontFamily = FontFamily.SansSerif,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(start = 5.dp)
+                        )
+                        Text(
+                            text = chatInstance.personList.status,
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(start = 7.dp)
+                        )
+                        Spacer(modifier = Modifier.size(5.dp))
+                    }
+
                 }
             }
             LaunchedEffect(sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
@@ -139,6 +148,7 @@ fun MessageTopBar(
                 SubcomposeAsyncImage(
                     model = R.drawable.person_block_svgrepo_com,
                     contentDescription = null,
+                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
                     modifier = Modifier
                         .size(30.dp),
                 )
@@ -149,6 +159,7 @@ fun MessageTopBar(
                 SubcomposeAsyncImage(
                     model = R.drawable.search_svgrepo_com_1_,
                     contentDescription = null,
+                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
                     modifier = Modifier
                         .size(30.dp),
                 )
@@ -159,6 +170,7 @@ fun MessageTopBar(
                 SubcomposeAsyncImage(
                     model = R.drawable.info_svgrepo_com,
                     contentDescription = null,
+                    colorFilter=ColorFilter.tint(MaterialTheme.colorScheme.primary),
                     modifier = Modifier
                         .size(30.dp),
                 )

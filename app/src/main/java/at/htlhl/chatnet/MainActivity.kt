@@ -12,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.core.view.WindowCompat
 import androidx.navigation.compose.rememberNavController
 import at.htlhl.chatnet.navigation.NavigationBarLayout
@@ -32,6 +33,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val viewModel = (application as MyApplication).sharedViewModel
             val navController = rememberNavController()
+            val start = rememberSaveable { mutableStateOf(true) }
             TestingTheme {
                 NavigationBarLayout(
                     navController = navController,
@@ -45,8 +47,10 @@ class MainActivity : ComponentActivity() {
                         viewModel.fetchFriendsFromUser()
                         viewModel.fetchChatsWithMessages {
                             viewModel.fetchFriendsFromFriend()
-                            if (navController.currentDestination?.route == Screens.LoadingScreen.route)
+                            if (navController.currentDestination?.route == Screens.LoadingScreen.route && start.value) {
+                                start.value = false
                                 navController.navigate(Screens.ChatsViewScreen.route)
+                            }
                         }
                     } else {
                         navController.navigate(Screens.LoginScreen.route)
@@ -63,6 +67,7 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         serviceConnection?.let { unbindService(it) }
         stopService(Intent(this, LocationUpdateService::class.java))
+        (application as MyApplication).sharedViewModel.resetRandChat()
         (application as MyApplication).sharedViewModel.updateOnlineStatus("offline")
         (application as MyApplication).sharedViewModel.reset()
     }

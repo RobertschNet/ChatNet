@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.components
+package at.htlhl.chatnet.ui.components.chats
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement

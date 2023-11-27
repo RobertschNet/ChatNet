@@ -165,6 +165,7 @@ class CameraPhotoView {
                                                 coroutineScope.launch {
                                                     sharedViewModel.saveMessages(
                                                         chatRoomId, FirebaseMessage(
+                                                            id = "",
                                                             sender = sharedViewModel.auth.currentUser?.uid.toString(),
                                                             content = "",
                                                             timestamp = Timestamp.now(),

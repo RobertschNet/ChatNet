@@ -4,9 +4,11 @@ import android.content.Context
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.VibratorManager
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
@@ -16,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Scaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -28,20 +31,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseMessage
-import at.htlhl.chatnet.ui.components.ChatViewMessageComponent
-import at.htlhl.chatnet.ui.components.DeleteMessageDialog
-import at.htlhl.chatnet.ui.components.InputField
-import at.htlhl.chatnet.ui.components.MessageTopBar
-import at.htlhl.chatnet.ui.components.OptionsDialog
+import at.htlhl.chatnet.navigation.Screens
+import at.htlhl.chatnet.ui.components.mixed.ChatViewMessageComponent
+import at.htlhl.chatnet.ui.components.mixed.DeleteMessageDialog
+import at.htlhl.chatnet.ui.components.mixed.InputField
+import at.htlhl.chatnet.ui.components.mixed.MessageTopBar
+import at.htlhl.chatnet.ui.components.mixed.OptionsDialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
+import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -60,6 +68,7 @@ class ChatView : ViewModel() {
         val messageListFromMatchingChat: List<FirebaseMessage> = matchingChat?.let { chat ->
             chat.messages.map { message ->
                 FirebaseMessage(
+                    id = message.id,
                     sender = message.sender,
                     image = message.image,
                     read = message.read,
@@ -77,6 +86,7 @@ class ChatView : ViewModel() {
                         sharedViewModel.saveMessages(
                             documentId = chatRoomId,
                             message = FirebaseMessage(
+                                id="",
                                 sender = "chatmate",
                                 content = response,
                                 timestamp = Timestamp.now(),
@@ -115,6 +125,7 @@ class ChatView : ViewModel() {
         chatRoomId: String,
         chatMateChat: Boolean
     ) {
+        Log.println(Log.ERROR, "ChatView", messagesForChat.toString())
         val coroutineScope = rememberCoroutineScope()
         val filteredMessages = messagesForChat.filter { message ->
             message.visible.contains(sharedViewModel.auth.currentUser?.uid.toString())
@@ -130,7 +141,9 @@ class ChatView : ViewModel() {
                     chatInstance = sharedViewModel.friend.value,
                     sharedViewModel = sharedViewModel
                 ) {
-                    navController.popBackStack()
+                    navController.navigate(
+                        if (chatMateChat) Screens.ChatMateScreen.route else Screens.ChatsViewScreen.route
+                    )
                 }
             },
             content = {
@@ -150,6 +163,7 @@ class ChatView : ViewModel() {
                     onMessageSent = { messageText, image ->
                         onMessageSent(
                             FirebaseMessage(
+                                id="",
                                 sender = sharedViewModel.auth.currentUser?.uid.toString(),
                                 content = messageText,
                                 timestamp = Timestamp.now(),
@@ -194,7 +208,7 @@ class ChatView : ViewModel() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(if (isSystemInDarkTheme()) Color.Black else Color.White),
+                .background(MaterialTheme.colorScheme.background),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Bottom
         ) {
@@ -208,6 +222,7 @@ class ChatView : ViewModel() {
                         chatMateChat = chatMateChat,
                         previousMessage = previousMessageIndex,
                         message = FirebaseMessage(
+                            id = message.id,
                             sender = message.sender,
                             image = message.image,
                             read = message.read,
@@ -233,6 +248,8 @@ class ChatView : ViewModel() {
     ) {
         val context = LocalContext.current
         var menuDialog by remember { mutableStateOf(false) }
+        var isFullScreenImageDialog by remember { mutableStateOf(false) }
+        var fullScreenImage by remember { mutableStateOf("") }
         var deleteDialog by remember { mutableStateOf(false) }
         val anchorPosition = remember { mutableStateOf<Offset?>(null) }
         val isUser = message.sender == sharedViewModel.auth.currentUser?.uid
@@ -247,6 +264,10 @@ class ChatView : ViewModel() {
             chatMateChat = chatMateChat,
             previousMessage = previousMessage,
             message = message,
+            onClick = {
+                fullScreenImage = message.image
+                isFullScreenImageDialog = true
+                      },
             onLongPress = {
                 if (isUser) {
                     anchorPosition.value = Offset(200f, 0f)
@@ -264,9 +285,9 @@ class ChatView : ViewModel() {
         if (deleteDialog) {
             DeleteMessageDialog(isUser = isUser) { value ->
                 if (value == "delete") {
-                    sharedViewModel.deleteMessage(chatRoomId, message.timestamp)
+                    sharedViewModel.deleteMessage(chatRoomId, message.id)
                 } else if (value == "change") {
-                    sharedViewModel.changeMessageVisibility(chatRoomId, message.timestamp)
+                    sharedViewModel.changeMessageVisibility(chatRoomId, message.id)
                 }
                 deleteDialog = false
             }
@@ -289,6 +310,32 @@ class ChatView : ViewModel() {
                     }
                 }
                 menuDialog = false
+            }
+        }
+        if (isFullScreenImageDialog) {
+            FullScreenImageDialog(imageUrl = fullScreenImage) {
+                isFullScreenImageDialog = false
+            }
+        }
+    }
+    @Composable
+    fun FullScreenImageDialog(imageUrl: String, onDismiss: () -> Unit) {
+        Dialog(
+            onDismissRequest = { onDismiss.invoke() },
+            properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = true, dismissOnClickOutside = true)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Transparent)
+            ) {
+                SubcomposeAsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
             }
         }
     }

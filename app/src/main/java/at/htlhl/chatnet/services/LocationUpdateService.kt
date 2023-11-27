@@ -13,6 +13,7 @@ import android.os.Binder
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
@@ -35,7 +36,7 @@ import com.google.firebase.ktx.Firebase
 
 class LocationUpdateService : Service() {
     private val locationScanInterval = 1000L // 1 second
-    private val handler = Handler()
+    private val handler = Handler(Looper.getMainLooper())
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationCallback: LocationCallback
