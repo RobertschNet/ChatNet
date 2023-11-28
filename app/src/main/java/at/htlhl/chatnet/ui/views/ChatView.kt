@@ -6,7 +6,6 @@ import android.os.VibrationEffect
 import android.os.VibratorManager
 import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -86,7 +85,7 @@ class ChatView : ViewModel() {
                         sharedViewModel.saveMessages(
                             documentId = chatRoomId,
                             message = FirebaseMessage(
-                                id="",
+                                id = "",
                                 sender = "chatmate",
                                 content = response,
                                 timestamp = Timestamp.now(),
@@ -163,7 +162,7 @@ class ChatView : ViewModel() {
                     onMessageSent = { messageText, image ->
                         onMessageSent(
                             FirebaseMessage(
-                                id="",
+                                id = "",
                                 sender = sharedViewModel.auth.currentUser?.uid.toString(),
                                 content = messageText,
                                 timestamp = Timestamp.now(),
@@ -217,10 +216,13 @@ class ChatView : ViewModel() {
                     val messageIndex = messages.indexOf(message)
                     val previousMessageIndex =
                         if (messageIndex > 0) messages.getOrNull(messageIndex - 1) else null
+                    val nextMessageIndex =
+                        if (messageIndex > 0) messages.getOrNull(messageIndex + 1) else null
                     MessageItem(
                         sharedViewModel = sharedViewModel,
                         chatMateChat = chatMateChat,
                         previousMessage = previousMessageIndex,
+                        nextMessage = nextMessageIndex,
                         message = FirebaseMessage(
                             id = message.id,
                             sender = message.sender,
@@ -233,10 +235,8 @@ class ChatView : ViewModel() {
                     )
                 }
             }
-
         }
     }
-
 
     @Composable
     fun MessageItem(
@@ -244,6 +244,7 @@ class ChatView : ViewModel() {
         chatMateChat: Boolean,
         message: FirebaseMessage,
         previousMessage: FirebaseMessage?,
+        nextMessage: FirebaseMessage?,
         chatRoomId: String
     ) {
         val context = LocalContext.current
@@ -263,11 +264,12 @@ class ChatView : ViewModel() {
             context = context,
             chatMateChat = chatMateChat,
             previousMessage = previousMessage,
+            nextMessage = nextMessage,
             message = message,
             onClick = {
                 fullScreenImage = message.image
                 isFullScreenImageDialog = true
-                      },
+            },
             onLongPress = {
                 if (isUser) {
                     anchorPosition.value = Offset(200f, 0f)
@@ -318,11 +320,16 @@ class ChatView : ViewModel() {
             }
         }
     }
+
     @Composable
     fun FullScreenImageDialog(imageUrl: String, onDismiss: () -> Unit) {
         Dialog(
             onDismissRequest = { onDismiss.invoke() },
-            properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = true, dismissOnClickOutside = true)
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true
+            )
         ) {
             Box(
                 modifier = Modifier

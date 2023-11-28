@@ -117,7 +117,7 @@ class RandChatView {
         val messageListFromMatchingChat: List<FirebaseMessage> = matchingChat?.let { chat ->
             chat.messages.map { message ->
                 FirebaseMessage(
-                    id= message.id,
+                    id = message.id,
                     sender = message.sender,
                     image = message.image,
                     read = message.read,
@@ -135,7 +135,7 @@ class RandChatView {
                         sharedViewModel.saveMessages(
                             documentId = chatRoomId,
                             message = FirebaseMessage(
-                                id= message.id,
+                                id = message.id,
                                 sender = "chatmate",
                                 content = response,
                                 timestamp = Timestamp.now(),
@@ -216,7 +216,7 @@ class RandChatView {
                     onMessageSent = { messageText, image ->
                         onMessageSent(
                             FirebaseMessage(
-                                id= "",
+                                id = "",
                                 sender = sharedViewModel.auth.currentUser?.uid.toString(),
                                 content = messageText,
                                 timestamp = Timestamp.now(),
@@ -270,12 +270,15 @@ class RandChatView {
                     val messageIndex = messages.indexOf(message)
                     val previousMessageIndex =
                         if (messageIndex > 0) messages.getOrNull(messageIndex - 1) else null
+                    val nextMessageIndex =
+                        if (messageIndex > 0) messages.getOrNull(messageIndex + 1) else null
                     MessageItem(
                         sharedViewModel = sharedViewModel,
                         chatMateChat = chatMateChat,
                         previousMessage = previousMessageIndex,
+                        nextMessage = nextMessageIndex,
                         message = FirebaseMessage(
-                            id= message.id,
+                            id = message.id,
                             sender = message.sender,
                             image = message.image,
                             read = message.read,
@@ -297,6 +300,7 @@ class RandChatView {
         chatMateChat: Boolean,
         message: FirebaseMessage,
         previousMessage: FirebaseMessage?,
+        nextMessage: FirebaseMessage?,
         chatRoomId: String
     ) {
         val context = LocalContext.current
@@ -314,6 +318,7 @@ class RandChatView {
             context = context,
             chatMateChat = chatMateChat,
             previousMessage = previousMessage,
+            nextMessage = nextMessage,
             message = message,
             onClick = {},
             onLongPress = {

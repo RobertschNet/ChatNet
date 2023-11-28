@@ -28,6 +28,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -248,7 +249,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             }
             val internalChatInstance = createInternalChatInstance(matchingChat ?: FirebaseChat())
 
-                internalChatInstance.copy(personList = person)
+            internalChatInstance.copy(personList = person)
 
         }
 
@@ -317,7 +318,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     if (documentChange.type != DocumentChange.Type.REMOVED) {
                         val subCollectionRef =
                             getChatDocumentRef().document(documentChange.document.id)
-                                .collection("/$MESSAGES_COLLECTION").orderBy("timestamp")
+                                .collection("/$MESSAGES_COLLECTION").orderBy("timestamp", Query.Direction.ASCENDING)
                         subCollectionRef.addSnapshotListener { subQuerySnapshot, exception ->
                             if (exception != null) {
                                 return@addSnapshotListener
@@ -325,10 +326,12 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                             // Step 4: For each change in the messages subcollection, update the chatDataSet
                             Log.println(Log.INFO, "2", subQuerySnapshot?.documents.toString())
                             subQuerySnapshot?.let { subSnapshot ->
-                                val subCollectionData = subSnapshot.documents.map { messageDocument ->
-                                    val message = messageDocument.toObject(FirebaseMessage::class.java)
-                                    message?.copy(id = messageDocument.id)
-                                }
+                                val subCollectionData =
+                                    subSnapshot.documents.map { messageDocument ->
+                                        val message =
+                                            messageDocument.toObject(FirebaseMessage::class.java)
+                                        message?.copy(id = messageDocument.id)
+                                    }
                                 val chat = FirebaseChat(
                                     members = documentChange.document.data["members"] as List<String>,
                                     unread = documentChange.document.data["unread"] as List<String>,
@@ -647,6 +650,18 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun updateBlockedUserList(isAlreadyBlocked: Boolean) {
+        val userRef = getUserDocumentRef().document(auth.currentUser?.uid.toString())
+        val updateData = if (isAlreadyBlocked) {
+            mapOf("blocked" to FieldValue.arrayRemove(friend.value.personList.id))
+        } else {
+            mapOf("blocked" to FieldValue.arrayUnion(friend.value.personList.id))
+        }
+        userRef.update(updateData)
+            .addOnSuccessListener {}
+            .addOnFailureListener { exception -> exception.printStackTrace() }
+    }
+
     fun updateMuteFriendStatus(isAlreadyMuted: Boolean) {
         val chatRef =
             firebaseInstance.collection("$USER_COLLECTION/${auth.currentUser?.uid.toString()}/$FRIENDS_COLLECTION")
@@ -945,7 +960,9 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 if (documentSnapshot.exists()) {
                     Log.println(Log.INFO, "Response", sharedViewModel.chatData.value.toString())
                     val personList = documentSnapshot.toObject(FirebaseUsers::class.java)
-                    val specificChat = sharedViewModel.chatData.value.find { it.tab == "randchat" && it.members.contains(uID) && it.members.contains(auth.currentUser?.uid.toString()) }
+                    val specificChat = sharedViewModel.chatData.value.find {
+                        it.tab == "randchat" && it.members.contains(uID) && it.members.contains(auth.currentUser?.uid.toString())
+                    }
                     sharedViewModel.friend.value = InternalChatInstance(
                         personList = personList!!,
                         timestampMessage = Timestamp.now(),

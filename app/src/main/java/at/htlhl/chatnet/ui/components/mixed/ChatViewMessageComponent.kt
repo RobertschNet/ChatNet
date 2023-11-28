@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,9 +49,10 @@ fun ChatViewMessageComponent(
     isUser: Boolean,
     context: Context,
     message: FirebaseMessage,
-    chatMateChat:Boolean,
+    chatMateChat: Boolean,
     onLongPress: () -> Unit,
     previousMessage: FirebaseMessage?,
+    nextMessage: FirebaseMessage?,
     onClick: (String) -> Unit
 ) {
     val formatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -65,12 +65,18 @@ fun ChatViewMessageComponent(
         if (isSystemInDarkTheme()) Color.DarkGray else Color.White
     }
     val alignment = if (isUser) Arrangement.End else Arrangement.Start
+    val previousCalendar = Calendar.getInstance().apply {
+        timeInMillis = previousMessage?.timestamp?.toDate()?.time ?: message.timestamp.toDate().time
+    }
+    val currentCalendar = Calendar.getInstance().apply {
+        timeInMillis = message.timestamp.toDate().time
+    }
     Column {
         if (isDateSeparatorNeeded(message, previousMessage)) {
             Box(
                 contentAlignment = Alignment.Center, modifier = Modifier
                     .background(
-                        if(isSystemInDarkTheme()) Color.DarkGray else Color(0xFFF5F5F5),
+                        if (isSystemInDarkTheme()) Color.DarkGray else Color(0xFFF5F5F5),
                         RoundedCornerShape(30)
                     )
                     .align(CenterHorizontally)
@@ -98,7 +104,7 @@ fun ChatViewMessageComponent(
                         .padding(
                             start = if (isUser) 80.dp else 10.dp,
                             end = if (isUser) 10.dp else 80.dp,
-                            top = 25.dp,
+                            top = if (isTopPaddingNeeded(message, previousMessage)) 25.dp else 5.dp,
                         )
                         .pointerInput(Unit) {
                             detectTapGestures(
@@ -119,7 +125,7 @@ fun ChatViewMessageComponent(
                         .padding(
                             start = if (isUser) 90.dp else 10.dp,
                             end = if (isUser) 10.dp else 90.dp,
-                            top = 25.dp,
+                            top = if (isTopPaddingNeeded(message, previousMessage)) 25.dp else 5.dp,
                         )
                         .pointerInput(Unit) {
                             detectTapGestures(
@@ -194,40 +200,41 @@ fun ChatViewMessageComponent(
             }
         }
     }
-
-    Row(
-        horizontalArrangement = alignment,
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (isUser) {
-            if (!chatMateChat) {
-                SubcomposeAsyncImage(
-                    model = if (message.read) R.drawable.eye_1_svgrepo_com else R.drawable.eye_hide_1_svgrepo_com,
-                    contentDescription = null,
-                    colorFilter=ColorFilter.tint(MaterialTheme.colorScheme.primary),
-                    modifier = Modifier
-                        .size(20.dp)
-                        .padding(end = 5.dp),
+    if (isDateNeeded(message, nextMessage)) {
+        Row(
+            horizontalArrangement = alignment,
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (isUser) {
+                if (!chatMateChat) {
+                    SubcomposeAsyncImage(
+                        model = if (message.read) R.drawable.eye_1_svgrepo_com else R.drawable.eye_hide_1_svgrepo_com,
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
+                        modifier = Modifier
+                            .size(20.dp)
+                            .padding(end = 5.dp),
+                    )
+                }
+                Text(
+                    text = formattedTime,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Start,
+                    modifier =
+                    Modifier.padding(end = 15.dp)
+                )
+            } else {
+                Text(
+                    text = formattedTime,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Start,
+                    modifier =
+                    Modifier.padding(start = 15.dp)
                 )
             }
-            Text(
-                text = formattedTime,
-                fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Start,
-                modifier =
-                Modifier.padding(end = 15.dp)
-            )
-        } else {
-            Text(
-                text = formattedTime,
-                fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Start,
-                modifier =
-                Modifier.padding(start = 15.dp)
-            )
         }
     }
 }
@@ -251,6 +258,7 @@ private fun isDateSeparatorNeeded(
     return currentCalendar.get(Calendar.YEAR) != previousCalendar.get(Calendar.YEAR) ||
             currentCalendar.get(Calendar.DAY_OF_YEAR) != previousCalendar.get(Calendar.DAY_OF_YEAR)
 }
+
 @RequiresApi(Build.VERSION_CODES.O)
 private fun formatDateForSeparator(timestamp: Timestamp): String {
     val currentInstant = Instant.now()
@@ -269,4 +277,41 @@ private fun formatDateForSeparator(timestamp: Timestamp): String {
             formatter.format(messageInstant.atZone(currentZone))
         }
     }
+}
+
+private fun isTopPaddingNeeded(
+    currentMessage: FirebaseMessage,
+    previousMessage: FirebaseMessage?,
+): Boolean {
+    if (previousMessage == null) {
+        return true
+    }
+
+    val currentCalendar = Calendar.getInstance().apply {
+        timeInMillis = currentMessage.timestamp.toDate().time
+    }
+
+    val previousCalender = Calendar.getInstance().apply {
+        timeInMillis = previousMessage.timestamp.toDate().time
+    }
+
+    return currentCalendar.get(Calendar.MINUTE) != previousCalender.get(Calendar.MINUTE)
+}
+
+private fun isDateNeeded(
+    currentMessage: FirebaseMessage,
+    nextMessage: FirebaseMessage?,
+): Boolean {
+    if (nextMessage == null) {
+        return true
+    }
+
+    val currentCalendar = Calendar.getInstance().apply {
+        timeInMillis = currentMessage.timestamp.toDate().time
+    }
+
+    val nextCalendar = Calendar.getInstance().apply {
+        timeInMillis = nextMessage.timestamp.toDate().time
+    }
+    return currentCalendar.get(Calendar.MINUTE) != nextCalendar.get(Calendar.MINUTE)
 }

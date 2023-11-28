@@ -143,7 +143,7 @@ fun MessageTopBar(
                     }
             }
             IconButton(onClick = {
-                //TODO: Block User
+                sharedViewModel.updateBlockedUserList(sharedViewModel.user.value.blocked.contains(sharedViewModel.friend.value.personList.id))
             }) {
                 SubcomposeAsyncImage(
                     model = R.drawable.person_block_svgrepo_com,
