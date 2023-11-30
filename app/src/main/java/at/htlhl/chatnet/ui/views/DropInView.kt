@@ -64,9 +64,9 @@ import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.BottomSheetItem
 import at.htlhl.chatnet.data.FirebaseChat
-import at.htlhl.chatnet.data.FirebaseMessage
 import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.data.InternalChatInstance
+import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
 import at.htlhl.chatnet.viewmodels.SharedViewModel
@@ -99,8 +99,8 @@ class DropIn : ViewModel() {
             val lastVisibleMessage = matchingChat?.messages?.lastOrNull { message ->
                 sharedViewModel.auth.currentUser?.uid.toString() in message.visible
             }
-            val updatedStatus = lastVisibleMessage ?: FirebaseMessage()
-            if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != FirebaseMessage()) {
+            val updatedStatus = lastVisibleMessage ?: InternalMessageInstance()
+            if (matchingChat?.messages?.lastOrNull()?.sender != person.id && updatedStatus != InternalMessageInstance()) {
                 InternalChatInstance(
                     personList = person,
                     timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
@@ -135,7 +135,7 @@ class DropIn : ViewModel() {
                 personList = person,
                 timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                     ?: Timestamp.now(),
-                lastMessage = matchingChat?.messages?.lastOrNull() ?: FirebaseMessage(),
+                lastMessage = matchingChat?.messages?.lastOrNull() ?: InternalMessageInstance(),
                 markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
                 pinChat = person.blocked.contains(matchingChat?.chatRoomID),
                 chatRoomID = matchingChat?.chatRoomID ?: "",
@@ -271,7 +271,7 @@ class DropIn : ViewModel() {
                                 .align(Alignment.CenterStart)
                                 .padding(start = 20.dp),
                             fontWeight = FontWeight.Bold,
-                            color=MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.primary,
                             fontSize = 36.sp,
                             fontFamily = Cursive
                         )
@@ -289,7 +289,7 @@ class DropIn : ViewModel() {
                             Icon(
                                 imageVector = if (!sharedViewModel.gpsState.value) Icons.Outlined.GpsNotFixed else Icons.Outlined.GpsOff,
                                 contentDescription = "GPS",
-                                tint=MaterialTheme.colorScheme.primary,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(30.dp)
                             )
                         }

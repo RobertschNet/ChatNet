@@ -33,7 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.chatnet.R
-import at.htlhl.chatnet.data.FirebaseMessage
+import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
@@ -48,11 +48,11 @@ import java.util.Locale
 fun ChatViewMessageComponent(
     isUser: Boolean,
     context: Context,
-    message: FirebaseMessage,
+    message: InternalMessageInstance,
     chatMateChat: Boolean,
     onLongPress: () -> Unit,
-    previousMessage: FirebaseMessage?,
-    nextMessage: FirebaseMessage?,
+    previousMessage: InternalMessageInstance?,
+    nextMessage: InternalMessageInstance?,
     onClick: (String) -> Unit
 ) {
     val formatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -65,12 +65,6 @@ fun ChatViewMessageComponent(
         if (isSystemInDarkTheme()) Color.DarkGray else Color.White
     }
     val alignment = if (isUser) Arrangement.End else Arrangement.Start
-    val previousCalendar = Calendar.getInstance().apply {
-        timeInMillis = previousMessage?.timestamp?.toDate()?.time ?: message.timestamp.toDate().time
-    }
-    val currentCalendar = Calendar.getInstance().apply {
-        timeInMillis = message.timestamp.toDate().time
-    }
     Column {
         if (isDateSeparatorNeeded(message, previousMessage)) {
             Box(
@@ -240,8 +234,8 @@ fun ChatViewMessageComponent(
 }
 
 private fun isDateSeparatorNeeded(
-    currentMessage: FirebaseMessage,
-    previousMessage: FirebaseMessage?
+    currentMessage: InternalMessageInstance,
+    previousMessage: InternalMessageInstance?
 ): Boolean {
     if (previousMessage == null) {
         return true
@@ -280,8 +274,8 @@ private fun formatDateForSeparator(timestamp: Timestamp): String {
 }
 
 private fun isTopPaddingNeeded(
-    currentMessage: FirebaseMessage,
-    previousMessage: FirebaseMessage?,
+    currentMessage: InternalMessageInstance,
+    previousMessage: InternalMessageInstance?,
 ): Boolean {
     if (previousMessage == null) {
         return true
@@ -299,8 +293,8 @@ private fun isTopPaddingNeeded(
 }
 
 private fun isDateNeeded(
-    currentMessage: FirebaseMessage,
-    nextMessage: FirebaseMessage?,
+    currentMessage: InternalMessageInstance,
+    nextMessage: InternalMessageInstance?,
 ): Boolean {
     if (nextMessage == null) {
         return true

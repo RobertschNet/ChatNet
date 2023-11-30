@@ -2,7 +2,8 @@ package at.htlhl.chatnet.data
 
 import com.google.firebase.Timestamp
 
-data class FirebaseMessage(
+data class InternalMessageInstance(
+    val id: String, // id of the message
     val sender: String, // id of the sender (FirebaseUsers id)
     val image: String, // type of the message (text, image)
     val read: Boolean, // if the message has been read by the receiver
@@ -11,6 +12,7 @@ data class FirebaseMessage(
     val visible: List<String>, // list of the users that can see the Message (FirebaseUsers ids)
 ) {
     constructor() : this(
+        "",
         "",
         "",
         false,

@@ -46,7 +46,7 @@ import coil.compose.SubcomposeAsyncImage
 fun MessageTopBar(
     chatInstance: InternalChatInstance,
     sharedViewModel: SharedViewModel,
-    onClick: () -> Unit
+    onClick: (String) -> Unit
 ) {
     var offsetState by remember { mutableStateOf(Offset(0f, 0f)) }
     val offset by animateOffsetAsState(targetValue = offsetState, label = "")
@@ -60,7 +60,7 @@ fun MessageTopBar(
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            IconButton(onClick = { onClick.invoke() }) {
+            IconButton(onClick = { onClick.invoke("return") }) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
                     tint = MaterialTheme.colorScheme.primary,
@@ -78,15 +78,26 @@ fun MessageTopBar(
                         //TODO: Open Profile
                     }
                     .weight(1f)) {
-                SubcomposeAsyncImage(
-                    contentDescription = null,
-                    model = chatInstance.personList.image,
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .size(45.dp)
-                        .shimmerEffect(),
-                    contentScale = ContentScale.Crop,
-                )
+                if (!chatInstance.personList.blocked.contains(sharedViewModel.auth.currentUser?.uid.toString())) {
+                    SubcomposeAsyncImage(
+                        contentDescription = null,
+                        model = chatInstance.personList.image,
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .size(45.dp)
+                            .shimmerEffect(),
+                        contentScale = ContentScale.Crop,
+                    )
+                }else{
+                    SubcomposeAsyncImage(
+                        contentDescription = null,
+                        model = R.drawable.default_user,
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .size(45.dp),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
 
                 if (chatInstance.personList.id == "ChatMate") {
                     Column(
@@ -143,7 +154,7 @@ fun MessageTopBar(
                     }
             }
             IconButton(onClick = {
-                sharedViewModel.updateBlockedUserList(sharedViewModel.user.value.blocked.contains(sharedViewModel.friend.value.personList.id))
+               onClick.invoke("block")
             }) {
                 SubcomposeAsyncImage(
                     model = R.drawable.person_block_svgrepo_com,
@@ -170,7 +181,7 @@ fun MessageTopBar(
                 SubcomposeAsyncImage(
                     model = R.drawable.info_svgrepo_com,
                     contentDescription = null,
-                    colorFilter=ColorFilter.tint(MaterialTheme.colorScheme.primary),
+                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
                     modifier = Modifier
                         .size(30.dp),
                 )

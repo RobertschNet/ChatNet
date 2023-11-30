@@ -41,6 +41,7 @@ import androidx.navigation.NavController
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseMessage
+import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.mixed.ChatViewMessageComponent
 import at.htlhl.chatnet.ui.components.mixed.DeleteMessageDialog
@@ -114,9 +115,9 @@ class RandChatView {
         }
         val chatMateChat = matchingChat?.tab == "chatmate"
         val chatRoomId = matchingChat?.chatRoomID ?: ""
-        val messageListFromMatchingChat: List<FirebaseMessage> = matchingChat?.let { chat ->
+        val messageListFromMatchingChat: List<InternalMessageInstance> = matchingChat?.let { chat ->
             chat.messages.map { message ->
-                FirebaseMessage(
+                InternalMessageInstance(
                     id = message.id,
                     sender = message.sender,
                     image = message.image,
@@ -135,7 +136,6 @@ class RandChatView {
                         sharedViewModel.saveMessages(
                             documentId = chatRoomId,
                             message = FirebaseMessage(
-                                id = message.id,
                                 sender = "chatmate",
                                 content = response,
                                 timestamp = Timestamp.now(),
@@ -168,7 +168,7 @@ class RandChatView {
     @Composable
     fun ChatViewContentStructure(
         navController: NavController,
-        messagesForChat: List<FirebaseMessage>,
+        messagesForChat: List<InternalMessageInstance>,
         onMessageSent: (FirebaseMessage) -> Unit,
         sharedViewModel: SharedViewModel,
         chatRoomId: String,
@@ -216,7 +216,6 @@ class RandChatView {
                     onMessageSent = { messageText, image ->
                         onMessageSent(
                             FirebaseMessage(
-                                id = "",
                                 sender = sharedViewModel.auth.currentUser?.uid.toString(),
                                 content = messageText,
                                 timestamp = Timestamp.now(),
@@ -238,7 +237,7 @@ class RandChatView {
     fun ChatViewContentList(
         sharedViewModel: SharedViewModel,
         chatMateChat: Boolean,
-        messages: List<FirebaseMessage>,
+        messages: List<InternalMessageInstance>,
         lazyListState: LazyListState,
         chatRoomId: String
     ) {
@@ -277,7 +276,7 @@ class RandChatView {
                         chatMateChat = chatMateChat,
                         previousMessage = previousMessageIndex,
                         nextMessage = nextMessageIndex,
-                        message = FirebaseMessage(
+                        message = InternalMessageInstance(
                             id = message.id,
                             sender = message.sender,
                             image = message.image,
@@ -298,9 +297,9 @@ class RandChatView {
     fun MessageItem(
         sharedViewModel: SharedViewModel,
         chatMateChat: Boolean,
-        message: FirebaseMessage,
-        previousMessage: FirebaseMessage?,
-        nextMessage: FirebaseMessage?,
+        message: InternalMessageInstance,
+        previousMessage: InternalMessageInstance?,
+        nextMessage: InternalMessageInstance?,
         chatRoomId: String
     ) {
         val context = LocalContext.current

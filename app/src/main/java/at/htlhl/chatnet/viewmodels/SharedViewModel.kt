@@ -3,10 +3,13 @@ package at.htlhl.chatnet.viewmodels
 import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.provider.MediaStore
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
@@ -17,6 +20,7 @@ import at.htlhl.chatnet.data.FirebaseFriend
 import at.htlhl.chatnet.data.FirebaseMessage
 import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.data.InternalChatInstance
+import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
@@ -213,7 +217,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val completeChatMateList: StateFlow<List<InternalChatInstance>> get() = _completeChatMateList
 
     private fun createInternalChatInstance(chat: FirebaseChat): InternalChatInstance {
-        val lastMessage = chat.messages.lastOrNull() ?: FirebaseMessage()
+        val lastMessage = chat.messages.lastOrNull() ?: InternalMessageInstance()
         return InternalChatInstance(
             personList = FirebaseUsers(
                 blocked = emptyList(),
@@ -232,7 +236,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             timestampMessage = lastMessage.timestamp,
             markedAsUnread = chat.unread.contains(auth.currentUser?.uid.toString()),
             pinChat = _user.value.pinned.contains(chat.chatRoomID),
-            read = if (lastMessage != FirebaseMessage()) {
+            read = if (lastMessage != InternalMessageInstance()) {
                 chat.messages.count { it.sender != auth.currentUser?.uid.toString() && !it.read }
             } else {
                 0
@@ -318,7 +322,8 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     if (documentChange.type != DocumentChange.Type.REMOVED) {
                         val subCollectionRef =
                             getChatDocumentRef().document(documentChange.document.id)
-                                .collection("/$MESSAGES_COLLECTION").orderBy("timestamp", Query.Direction.ASCENDING)
+                                .collection("/$MESSAGES_COLLECTION")
+                                .orderBy("timestamp", Query.Direction.ASCENDING)
                         subCollectionRef.addSnapshotListener { subQuerySnapshot, exception ->
                             if (exception != null) {
                                 return@addSnapshotListener
@@ -329,7 +334,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                 val subCollectionData =
                                     subSnapshot.documents.map { messageDocument ->
                                         val message =
-                                            messageDocument.toObject(FirebaseMessage::class.java)
+                                            messageDocument.toObject(InternalMessageInstance::class.java)
                                         message?.copy(id = messageDocument.id)
                                     }
                                 val chat = FirebaseChat(
@@ -555,7 +560,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         friend.value = InternalChatInstance(
             FirebaseUsers(),
             Timestamp.now(),
-            FirebaseMessage(),
+            InternalMessageInstance(),
             false,
             0,
             false,
@@ -966,7 +971,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     sharedViewModel.friend.value = InternalChatInstance(
                         personList = personList!!,
                         timestampMessage = Timestamp.now(),
-                        lastMessage = FirebaseMessage(),
+                        lastMessage = InternalMessageInstance(),
                         pinChat = false,
                         read = 0,
                         markedAsUnread = false,
@@ -975,5 +980,35 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     onComplete.invoke()
                 }
             }
+    }
+
+     fun saveBitmapToGallery(
+        bitmap: Bitmap,
+        displayName: String,
+        context: Context,
+        onSaved: () -> Unit
+    ): Uri? {
+        val chatNetFolderName = "ChatNet"
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/$chatNetFolderName")
+        }
+        val contentResolver = context.contentResolver
+        val uri =
+            contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+        try {
+            uri?.let { imageUri ->
+                contentResolver.openOutputStream(imageUri)?.use { outputStream ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                    outputStream.flush()
+                    onSaved.invoke()
+                }
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+            return null
+        }
+        return uri
     }
 }

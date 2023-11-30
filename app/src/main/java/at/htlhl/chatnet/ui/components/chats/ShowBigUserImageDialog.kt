@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Image
@@ -33,11 +32,15 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
+import at.chatnet.R
 import at.htlhl.chatnet.data.InternalChatInstance
+import at.htlhl.chatnet.ui.theme.shimmerEffect
+import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 
 @Composable
 fun ShowBigUserImageDialog(
+    sharedViewModel: SharedViewModel,
     userData: InternalChatInstance,
     onDismiss: (String) -> Unit
 ) {
@@ -60,7 +63,7 @@ fun ShowBigUserImageDialog(
                     text = userData.personList.username["mixedcase"].toString(),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Normal,
-                    maxLines= 1,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .zIndex(1f)
@@ -72,15 +75,26 @@ fun ShowBigUserImageDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                SubcomposeAsyncImage(model = userData.personList.image,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(250.dp)
-                        .clip(shape = RoundedCornerShape(4.dp)),
-                    contentScale = ContentScale.Crop,
-                    loading = {
-                        CircularProgressIndicator()
-                    })
+                if (!userData.personList.blocked.contains(sharedViewModel.auth.currentUser?.uid.toString())) {
+                    SubcomposeAsyncImage(
+                        model = userData.personList.image,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(250.dp)
+                            .clip(shape = RoundedCornerShape(4.dp))
+                            .shimmerEffect(),
+                        contentScale = ContentScale.Crop,
+                    )
+                } else {
+                    SubcomposeAsyncImage(
+                        model = R.drawable.default_user,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(250.dp)
+                            .clip(shape = RoundedCornerShape(4.dp)),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

@@ -76,19 +76,34 @@ fun ChatsViewChatItem(
         Box(
             modifier = Modifier.size(50.dp)
         ) {
-            SubcomposeAsyncImage(
-                contentDescription = null,
-                model = chat.personList.image,
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .size(50.dp)
-                    .shimmerEffect()
-                    .clickable {
-                        onClick.invoke("image")
-                    },
-                contentScale = ContentScale.Crop,
-                alignment = Alignment.Center,
-            )
+            if (!chat.personList.blocked.contains(sharedViewModel.auth.currentUser?.uid.toString())) {
+                SubcomposeAsyncImage(
+                    contentDescription = null,
+                    model = chat.personList.image,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .size(50.dp)
+                        .shimmerEffect()
+                        .clickable {
+                            onClick.invoke("image")
+                        },
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.Center,
+                )
+            } else {
+                SubcomposeAsyncImage(
+                    model = R.drawable.default_user,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .size(50.dp)
+                        .clickable {
+                            onClick.invoke("image")
+                        },
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.Center,
+                )
+            }
             if (displayOnlineState) {
                 Box(
                     modifier = Modifier

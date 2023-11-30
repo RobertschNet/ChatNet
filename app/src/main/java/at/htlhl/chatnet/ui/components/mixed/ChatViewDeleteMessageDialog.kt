@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -34,7 +35,7 @@ fun DeleteMessageDialog(
     ) {
         Column(
             modifier = Modifier
-                .background(Color.White, RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.background, RoundedCornerShape(20.dp))
                 .width(250.dp)
                 .height(if (isUser) 240.dp else 200.dp),
             verticalArrangement = Arrangement.Center,
@@ -44,12 +45,13 @@ fun DeleteMessageDialog(
                 text = "Delete Message?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
                 text = if (!isUser) "This message can be deleted only for you, and not for everyone." else "This message can be deleted only for you, or for everyone in the chat.",
                 fontWeight = FontWeight.Light,
+                color= MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(
@@ -115,6 +117,7 @@ fun DeleteMessageDialog(
             ) {
                 Text(
                     text = "Cancel",
+                    color= MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
                     modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)

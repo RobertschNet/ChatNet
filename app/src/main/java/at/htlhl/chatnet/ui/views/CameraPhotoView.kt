@@ -1,11 +1,8 @@
 package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
-import android.content.ContentValues
-import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
-import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -49,7 +46,6 @@ import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
-import java.io.IOException
 
 class CameraPhotoView {
 
@@ -93,12 +89,14 @@ class CameraPhotoView {
                                 contentDescription = null
                             )
                         }
-                        Spacer(modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f))
+                        Spacer(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                        )
                         IconButton(
                             onClick = {
-                                saveBitmapToGallery(
+                                sharedViewModel.saveBitmapToGallery(
                                     bitmap = bitmap.value,
                                     displayName = "ChatNet${Timestamp.now()}",
                                     context = context
@@ -144,6 +142,11 @@ class CameraPhotoView {
                         Box(modifier = Modifier.background(Color.Green, RoundedCornerShape(100))) {
                             IconButton(
                                 onClick = {
+                                    systemUiController.setStatusBarColor(
+                                        color = Color.Transparent,
+                                        darkIcons = true
+                                    )
+                                    navController.navigate(Screens.ChatViewScreen.route)
                                     val storage = Firebase.storage
                                     val storageRef = storage.reference
                                     val cachePath = File(context.cacheDir, "tempImage.jpg")
@@ -156,7 +159,7 @@ class CameraPhotoView {
                                     )
                                     outputStream.close()
                                     val imageRef =
-                                        storageRef.child("images/${bitmap.value.generationId}") // Not safe
+                                        storageRef.child("images/${System.currentTimeMillis()}") // Not safe
                                     val uploadTask = imageRef.putFile(Uri.fromFile(cachePath))
                                     uploadTask.addOnCompleteListener { task ->
                                         if (task.isSuccessful) {
@@ -165,7 +168,6 @@ class CameraPhotoView {
                                                 coroutineScope.launch {
                                                     sharedViewModel.saveMessages(
                                                         chatRoomId, FirebaseMessage(
-                                                            id = "",
                                                             sender = sharedViewModel.auth.currentUser?.uid.toString(),
                                                             content = "",
                                                             timestamp = Timestamp.now(),
@@ -178,11 +180,7 @@ class CameraPhotoView {
                                                         )
                                                     )
                                                 }
-                                                systemUiController.setStatusBarColor(
-                                                    color = Color.Transparent,
-                                                    darkIcons = true
-                                                )
-                                                navController.navigate(Screens.ChatViewScreen.route)
+
                                             }.addOnFailureListener { exception ->
                                                 Log.e("Image", exception.toString())
                                             }
@@ -206,35 +204,4 @@ class CameraPhotoView {
         )
 
     }
-
-    private fun saveBitmapToGallery(
-        bitmap: Bitmap,
-        displayName: String,
-        context: Context,
-        onSaved: () -> Unit
-    ): Uri? {
-        val chatNetFolderName = "ChatNet"
-        val contentValues = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
-            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/$chatNetFolderName")
-        }
-        val contentResolver = context.contentResolver
-        val uri =
-            contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-        try {
-            uri?.let { imageUri ->
-                contentResolver.openOutputStream(imageUri)?.use { outputStream ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                    outputStream.flush()
-                    onSaved.invoke()
-                }
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
-            return null
-        }
-        return uri
-    }
-
 }
