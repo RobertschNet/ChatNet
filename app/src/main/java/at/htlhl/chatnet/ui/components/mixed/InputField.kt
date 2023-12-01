@@ -104,7 +104,12 @@ fun InputField(
                     onSend = {
                         if (text.isNotEmpty()) {
                             onMessageSent(text, "")
-                            sharedViewModel.text.value = ""
+                            if (!sharedViewModel.user.value.blocked.contains(
+                                    sharedViewModel.friend.value.personList.id
+                                )
+                            ) {
+                                sharedViewModel.text.value = ""
+                            }
                         }
                     }
                 ),
@@ -241,7 +246,12 @@ fun InputField(
                                     .clickable {
                                         if (text.isNotEmpty()) {
                                             onMessageSent(text, "")
-                                            sharedViewModel.text.value = ""
+                                            if (!sharedViewModel.user.value.blocked.contains(
+                                                    sharedViewModel.friend.value.personList.id
+                                                )
+                                            ) {
+                                                sharedViewModel.text.value = ""
+                                            }
                                         }
                                     }
                             )

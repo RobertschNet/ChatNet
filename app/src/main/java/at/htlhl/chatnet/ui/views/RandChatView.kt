@@ -313,6 +313,7 @@ class RandChatView {
             TODO("VERSION.SDK_INT < S")
         }
         ChatViewMessageComponent(
+            sharedViewModel = sharedViewModel,
             isUser = isUser,
             context = context,
             chatMateChat = chatMateChat,

@@ -41,7 +41,7 @@ import java.lang.ref.WeakReference
 
 class Chats : ViewModel() {
 
-    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "UnusedMaterialScaffoldPaddingParameter")
+    @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun ChatsScreen(

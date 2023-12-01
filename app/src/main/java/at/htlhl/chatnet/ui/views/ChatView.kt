@@ -7,18 +7,23 @@ import android.os.VibrationEffect
 import android.os.VibratorManager
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Scaffold
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -34,7 +39,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
@@ -50,6 +57,7 @@ import at.htlhl.chatnet.ui.components.mixed.DeleteMessageDialog
 import at.htlhl.chatnet.ui.components.mixed.InputField
 import at.htlhl.chatnet.ui.components.mixed.MessageTopBar
 import at.htlhl.chatnet.ui.components.mixed.OptionsDialog
+import at.htlhl.chatnet.ui.components.mixed.UnblockToMessageDialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
@@ -130,6 +138,7 @@ class ChatView : ViewModel() {
         Log.println(Log.ERROR, "ChatView", messagesForChat.toString())
         val coroutineScope = rememberCoroutineScope()
         var blockDialog by remember { mutableStateOf(false) }
+        var unblockDialog by remember { mutableStateOf(false) }
         val filteredMessages = messagesForChat.filter { message ->
             message.visible.contains(sharedViewModel.auth.currentUser?.uid.toString())
         }.toMutableList()
@@ -148,7 +157,7 @@ class ChatView : ViewModel() {
                         navController.navigate(
                             if (chatMateChat) Screens.ChatMateScreen.route else Screens.ChatsViewScreen.route
                         )
-                    }else{
+                    } else {
                         blockDialog = true
                     }
                 }
@@ -168,36 +177,42 @@ class ChatView : ViewModel() {
                     navController = navController,
                     chatMateChat = chatMateChat,
                     onMessageSent = { messageText, image ->
-                        onMessageSent(
-                            FirebaseMessage(
-                                sender = sharedViewModel.auth.currentUser?.uid.toString(),
-                                content = messageText,
-                                timestamp = Timestamp.now(),
-                                read = false,
-                                image = image,
-                                visible =
-                                if (sharedViewModel.friend.value.personList.blocked.contains(
-                                        sharedViewModel.user.value.id
-                                    )
-                                ) {
-                                    listOf(
-                                        sharedViewModel.auth.currentUser?.uid.toString(),
-                                    )
-                                } else {
-                                    listOf(
-                                        sharedViewModel.auth.currentUser?.uid.toString(),
-                                        sharedViewModel.friend.value.personList.id
-                                    )
-                                }
+                        if (!sharedViewModel.user.value.blocked.contains(sharedViewModel.friend.value.personList.id)) {
+                            onMessageSent(
+                                FirebaseMessage(
+                                    sender = sharedViewModel.auth.currentUser?.uid.toString(),
+                                    content = messageText,
+                                    timestamp = Timestamp.now(),
+                                    read = false,
+                                    image = image,
+                                    visible =
+                                    if (sharedViewModel.friend.value.personList.blocked.contains(
+                                            sharedViewModel.user.value.id
+                                        )
+                                    ) {
+                                        listOf(
+                                            sharedViewModel.auth.currentUser?.uid.toString(),
+                                        )
+                                    } else {
+                                        listOf(
+                                            sharedViewModel.auth.currentUser?.uid.toString(),
+                                            sharedViewModel.friend.value.personList.id
+                                        )
+                                    }
+                                )
                             )
-                        )
+                        } else {
+                            unblockDialog = true
+                        }
                     },
                 )
             }
-
         )
         if (blockDialog) {
-            BlockUserDialog(friend = sharedViewModel.friend.value, user = sharedViewModel.user.value) { value ->
+            BlockUserDialog(
+                friend = sharedViewModel.friend.value,
+                user = sharedViewModel.user.value
+            ) { value ->
                 if (value == "blocked") {
                     sharedViewModel.updateBlockedUserList(
                         sharedViewModel.user.value.blocked.contains(
@@ -206,6 +221,16 @@ class ChatView : ViewModel() {
                     )
                 }
                 blockDialog = false
+            }
+        }
+        if (unblockDialog) {
+            UnblockToMessageDialog(
+                friend = sharedViewModel.friend.value,
+            ) { value ->
+                if (value == "unblock") {
+                    sharedViewModel.updateBlockedUserList(true)
+                }
+                unblockDialog = false
             }
         }
     }
@@ -219,6 +244,8 @@ class ChatView : ViewModel() {
         chatRoomId: String
     ) {
         var animatedText by remember { mutableStateOf("Robert is writing") }
+        var unblockDialog by remember { mutableStateOf(false) }
+        val coroutineScope = rememberCoroutineScope()
         LaunchedEffect(sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
             while (true) {
                 delay(750)
@@ -234,6 +261,9 @@ class ChatView : ViewModel() {
         LaunchedEffect(messages.size) {
             lazyListState.animateScrollToItem(messages.size)
         }
+        val filteredMessages = messages.filter {
+            it.content.contains(sharedViewModel.searchValue.value, ignoreCase = true)
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -241,8 +271,13 @@ class ChatView : ViewModel() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Bottom
         ) {
+            LaunchedEffect(sharedViewModel.searchValue.value) {
+                coroutineScope.launch {
+                    lazyListState.scrollToItem(filteredMessages.size)
+                }
+            }
             LazyColumn(modifier = Modifier.padding(bottom = 70.dp), state = lazyListState) {
-                items(messages) { message ->
+                items(filteredMessages) { message ->
                     val messageIndex = messages.indexOf(message)
                     val previousMessageIndex =
                         if (messageIndex > 0) messages.getOrNull(messageIndex - 1) else null
@@ -264,9 +299,41 @@ class ChatView : ViewModel() {
                         ), chatRoomId = chatRoomId
                     )
                 }
+                item {
+                    if (isBlockSeparatorNeeded(sharedViewModel)) {
+                        Column(
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center, modifier = Modifier
+                                    .background(
+                                        if (isSystemInDarkTheme()) Color.DarkGray else Color(
+                                            0xFFF5F5F5
+                                        ),
+                                        RoundedCornerShape(30)
+                                    )
+                                    .clickable { unblockDialog = true }
+                                    .align(Alignment.CenterHorizontally)
+                            ) {
+                                Text(
+                                    text = "You have blocked this user",
+                                    maxLines = 1,
+                                    modifier = Modifier
+                                        .padding(6.dp),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
+
 
     @Composable
     fun MessageItem(
@@ -290,6 +357,7 @@ class ChatView : ViewModel() {
             TODO("VERSION.SDK_INT < S")
         }
         ChatViewMessageComponent(
+            sharedViewModel = sharedViewModel,
             isUser = isUser,
             context = context,
             chatMateChat = chatMateChat,
@@ -350,6 +418,12 @@ class ChatView : ViewModel() {
                 isFullScreenImageDialog = false
             }
         }
+    }
+
+    private fun isBlockSeparatorNeeded(
+        sharedViewModel: SharedViewModel
+    ): Boolean {
+        return sharedViewModel.user.value.blocked.contains(sharedViewModel.friend.value.personList.id)
     }
 
     @Composable

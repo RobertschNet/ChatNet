@@ -2,6 +2,7 @@ package at.htlhl.chatnet.ui.components.mixed
 
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,13 +29,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.chatnet.R
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.ui.theme.shimmerEffect
+import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
 import java.time.Instant
@@ -46,6 +52,7 @@ import java.util.Locale
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
 fun ChatViewMessageComponent(
+    sharedViewModel: SharedViewModel,
     isUser: Boolean,
     context: Context,
     message: InternalMessageInstance,
@@ -56,6 +63,7 @@ fun ChatViewMessageComponent(
     onClick: (String) -> Unit
 ) {
     val formatter = DateTimeFormatter.ofPattern("HH:mm")
+    val searchValue = sharedViewModel.searchValue.value
     val formattedTime =
         message.timestamp.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalTime()
             .format(formatter)
@@ -66,7 +74,7 @@ fun ChatViewMessageComponent(
     }
     val alignment = if (isUser) Arrangement.End else Arrangement.Start
     Column {
-        if (isDateSeparatorNeeded(message, previousMessage)) {
+        if (isDateSeparatorNeeded(message, previousMessage, searchValue)) {
             Box(
                 contentAlignment = Alignment.Center, modifier = Modifier
                     .background(
@@ -98,7 +106,7 @@ fun ChatViewMessageComponent(
                         .padding(
                             start = if (isUser) 80.dp else 10.dp,
                             end = if (isUser) 10.dp else 80.dp,
-                            top = if (isTopPaddingNeeded(message, previousMessage)) 25.dp else 5.dp,
+                            top = if (isTopPaddingNeeded(message, previousMessage)) 20.dp else 5.dp,
                         )
                         .pointerInput(Unit) {
                             detectTapGestures(
@@ -119,7 +127,7 @@ fun ChatViewMessageComponent(
                         .padding(
                             start = if (isUser) 90.dp else 10.dp,
                             end = if (isUser) 10.dp else 90.dp,
-                            top = if (isTopPaddingNeeded(message, previousMessage)) 25.dp else 5.dp,
+                            top = if (isTopPaddingNeeded(message, previousMessage)) 20.dp else 5.dp,
                         )
                         .pointerInput(Unit) {
                             detectTapGestures(
@@ -169,15 +177,18 @@ fun ChatViewMessageComponent(
                 }
                 if (message.image.isEmpty()) {
                     Text(
-                        text = lines.toString(),
+                        text = buildAnnotatedStringWithOttoHighlight(lines.toString(), searchValue),
                         fontSize = 14.sp,
-                        color = if (isUser) Color.White else Color.Black,
                         modifier = Modifier
                             .padding(8.dp)
                             .background(backgroundColor, shape = RoundedCornerShape(24.dp)),
-                        textAlign = TextAlign.Start
+                        textAlign = TextAlign.Start,
+                        color = if (isUser) Color.White else Color.Black // Set color based on user
                     )
+
                 }
+
+
                 if (message.image.isNotEmpty()) {
                     SubcomposeAsyncImage(
                         model = message.image,
@@ -233,9 +244,11 @@ fun ChatViewMessageComponent(
     }
 }
 
+
 private fun isDateSeparatorNeeded(
     currentMessage: InternalMessageInstance,
-    previousMessage: InternalMessageInstance?
+    previousMessage: InternalMessageInstance?,
+    searchValue: String?
 ): Boolean {
     if (previousMessage == null) {
         return true
@@ -249,9 +262,19 @@ private fun isDateSeparatorNeeded(
         timeInMillis = previousMessage.timestamp.toDate().time
     }
 
-    return currentCalendar.get(Calendar.YEAR) != previousCalendar.get(Calendar.YEAR) ||
-            currentCalendar.get(Calendar.DAY_OF_YEAR) != previousCalendar.get(Calendar.DAY_OF_YEAR)
+    // Check if the search value is not null and is not empty
+    val isSearchActive = !searchValue.isNullOrBlank()
+
+    return if (isSearchActive) {
+        // If search is active, always show date separators
+        true
+    } else {
+        // If search is not active, show date separators based on date comparison
+        currentCalendar.get(Calendar.YEAR) != previousCalendar.get(Calendar.YEAR) ||
+                currentCalendar.get(Calendar.DAY_OF_YEAR) != previousCalendar.get(Calendar.DAY_OF_YEAR)
+    }
 }
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 private fun formatDateForSeparator(timestamp: Timestamp): String {
@@ -308,4 +331,49 @@ private fun isDateNeeded(
         timeInMillis = nextMessage.timestamp.toDate().time
     }
     return currentCalendar.get(Calendar.MINUTE) != nextCalendar.get(Calendar.MINUTE)
+}
+
+
+fun findAllOccurrences(main: String, sub: String): List<Int> {
+    val indices = mutableListOf<Int>()
+    var lastIndex = main.indexOf(sub, 0)
+    while (lastIndex != -1) {
+        indices.add(lastIndex)
+        lastIndex = main.indexOf(sub, lastIndex + sub.length)
+    }
+    Log.d("indices", indices.toString())
+    return indices
+}
+
+fun buildAnnotatedStringWithOttoHighlight(content: String, otto: String): AnnotatedString {
+    val ottoLower = otto.lowercase(Locale.getDefault())
+    val ottoOccurrences = if (otto.isNotEmpty()) {
+        findAllOccurrences(content.lowercase(Locale.getDefault()), ottoLower)
+    } else {
+        emptyList()
+    }
+
+    return buildAnnotatedString {
+        var lastIndex = 0
+
+        ottoOccurrences.forEach { ottoIndex ->
+            // Append the text before the otto occurrence
+            append(content.substring(lastIndex, ottoIndex))
+
+            // Append the otto occurrence with yellow color
+            if (otto.isNotEmpty()) {
+                withStyle(style = SpanStyle(color = Color.Yellow)) {
+                    val ottoLength = otto.length
+                    append(content.substring(ottoIndex, ottoIndex + ottoLength))
+                }
+            }
+
+            lastIndex = ottoIndex + otto.length
+        }
+
+        // Append the remaining text after the last otto occurrence
+        if (lastIndex < content.length) {
+            append(content.substring(lastIndex))
+        }
+    }
 }
