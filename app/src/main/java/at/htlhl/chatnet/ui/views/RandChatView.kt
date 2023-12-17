@@ -46,7 +46,7 @@ import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.mixed.ChatViewMessageComponent
 import at.htlhl.chatnet.ui.components.mixed.DeleteMessageDialog
 import at.htlhl.chatnet.ui.components.mixed.InputField
-import at.htlhl.chatnet.ui.components.mixed.MessageTopBar
+import at.htlhl.chatnet.ui.components.mixed.ChatViewTopBar
 import at.htlhl.chatnet.ui.components.mixed.OptionsDialog
 import at.htlhl.chatnet.ui.components.randchat.LoadingChat
 import at.htlhl.chatnet.viewmodels.SharedViewModel
@@ -190,7 +190,8 @@ class RandChatView {
                     }
                 },
             topBar = {
-                MessageTopBar(
+                ChatViewTopBar(
+                    navController = navController,
                     chatInstance = sharedViewModel.friend.value,
                     sharedViewModel = sharedViewModel
                 ) {

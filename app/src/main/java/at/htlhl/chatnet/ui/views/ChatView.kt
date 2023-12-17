@@ -53,13 +53,14 @@ import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.mixed.BlockUserDialog
 import at.htlhl.chatnet.ui.components.mixed.ChatViewMessageComponent
+import at.htlhl.chatnet.ui.components.mixed.ChatViewTopBar
 import at.htlhl.chatnet.ui.components.mixed.DeleteMessageDialog
 import at.htlhl.chatnet.ui.components.mixed.InputField
-import at.htlhl.chatnet.ui.components.mixed.MessageTopBar
 import at.htlhl.chatnet.ui.components.mixed.OptionsDialog
 import at.htlhl.chatnet.ui.components.mixed.UnblockToMessageDialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -68,6 +69,11 @@ import kotlinx.coroutines.runBlocking
 class ChatView : ViewModel() {
     @Composable
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+        val systemUiController = rememberSystemUiController()
+        systemUiController.setStatusBarColor(
+            color = Color.Transparent,
+            darkIcons = true
+        )
         val chatDataState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val chatData: List<FirebaseChat> = chatDataState.value
         val matchingChat = chatData.find { chat ->
@@ -149,7 +155,8 @@ class ChatView : ViewModel() {
                 .imePadding()
                 .onSizeChanged { coroutineScope.launch { lazyListState.scrollToItem(messagesForChat.size) } },
             topBar = {
-                MessageTopBar(
+                ChatViewTopBar(
+                    navController = navController,
                     chatInstance = sharedViewModel.friend.value,
                     sharedViewModel = sharedViewModel
                 ) {
@@ -169,7 +176,8 @@ class ChatView : ViewModel() {
                     chatMateChat = chatMateChat,
                     messages = filteredMessages,
                     lazyListState = lazyListState,
-                    chatRoomId = chatRoomId
+                    chatRoomId = chatRoomId,
+                    navController = navController
                 )
             }, bottomBar = {
                 InputField(
@@ -238,6 +246,7 @@ class ChatView : ViewModel() {
     @Composable
     fun ChatViewContentList(
         sharedViewModel: SharedViewModel,
+        navController: NavController,
         chatMateChat: Boolean,
         messages: List<InternalMessageInstance>,
         lazyListState: LazyListState,
@@ -296,8 +305,11 @@ class ChatView : ViewModel() {
                             content = message.content,
                             timestamp = message.timestamp,
                             visible = message.visible,
-                        ), chatRoomId = chatRoomId
-                    )
+                        ), chatRoomId = chatRoomId, navController = navController
+                    ) {
+                        sharedViewModel.imagePosition.value = messages.find { it.id== message.id }?.let { messages.indexOf(it) }!!
+                        navController.navigate(Screens.ImageViewScreen.route)
+                    }
                 }
                 item {
                     if (isBlockSeparatorNeeded(sharedViewModel)) {
@@ -334,20 +346,19 @@ class ChatView : ViewModel() {
         }
     }
 
-
     @Composable
     fun MessageItem(
         sharedViewModel: SharedViewModel,
+        navController: NavController,
         chatMateChat: Boolean,
         message: InternalMessageInstance,
         previousMessage: InternalMessageInstance?,
         nextMessage: InternalMessageInstance?,
-        chatRoomId: String
+        chatRoomId: String,
+        onClick: (String) -> Unit
     ) {
         val context = LocalContext.current
         var menuDialog by remember { mutableStateOf(false) }
-        var isFullScreenImageDialog by remember { mutableStateOf(false) }
-        var fullScreenImage by remember { mutableStateOf("") }
         var deleteDialog by remember { mutableStateOf(false) }
         val anchorPosition = remember { mutableStateOf<Offset?>(null) }
         val isUser = message.sender == sharedViewModel.auth.currentUser?.uid
@@ -365,8 +376,7 @@ class ChatView : ViewModel() {
             nextMessage = nextMessage,
             message = message,
             onClick = {
-                fullScreenImage = message.image
-                isFullScreenImageDialog = true
+                onClick.invoke(it)
             },
             onLongPress = {
                 if (isUser) {
@@ -411,11 +421,6 @@ class ChatView : ViewModel() {
                     }
                 }
                 menuDialog = false
-            }
-        }
-        if (isFullScreenImageDialog) {
-            FullScreenImageDialog(imageUrl = fullScreenImage) {
-                isFullScreenImageDialog = false
             }
         }
     }

@@ -14,6 +14,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
@@ -35,7 +36,7 @@ import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.ktx.Firebase
 
 class LocationUpdateService : Service() {
-    private val locationScanInterval = 1000L // 1 second
+    private val locationScanInterval = 60000L // 60 second
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
@@ -102,11 +103,13 @@ class LocationUpdateService : Service() {
             super.onDestroy()
             return START_NOT_STICKY
         }
+        // Request location updates immediately
+        requestLocationUpdates()
+        // Schedule periodic location updates
         handler.postDelayed(locationRunnable, locationScanInterval)
-
         return START_STICKY
-
     }
+
 
     override fun onDestroy() {
         handler.removeCallbacks(locationRunnable)
@@ -219,6 +222,7 @@ class LocationUpdateService : Service() {
                             statusFriend = "User is ${distanceInM.toInt()} meters away",
                         )
                     }
+                    Log.println(Log.INFO,"ottt",personList.toString())
                     locationLiveData.postValue(personList)
                 }
             }

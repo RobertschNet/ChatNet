@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -99,110 +100,118 @@ fun ChatViewMessageComponent(
             horizontalArrangement = alignment,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier =
-                if (message.image.isEmpty()) {
-                    Modifier
-                        .padding(
-                            start = if (isUser) 80.dp else 10.dp,
-                            end = if (isUser) 10.dp else 80.dp,
-                            top = if (isTopPaddingNeeded(message, previousMessage)) 20.dp else 5.dp,
-                        )
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    onLongPress.invoke()
-                                }
+                Box(
+                    modifier =
+                    if (message.image.isEmpty()) {
+                        Modifier
+                            .padding(
+                                start = if (isUser) 80.dp else 10.dp,
+                                end = if (isUser) 10.dp else 80.dp,
+                                top = if (isTopPaddingNeeded(
+                                        message,
+                                        previousMessage
+                                    )
+                                ) 20.dp else 5.dp,
                             )
-                        }
-                        .border(
-                            if (isUser) 0.dp else 0.5f.dp,
-                            if (isUser) Color.White else Color.Black,
-                            RoundedCornerShape(20.dp)
-                        )
-                        .background(backgroundColor, shape = RoundedCornerShape(20.dp))
-                        .padding(top = 4.dp, start = 4.dp, end = 4.dp, bottom = 4.dp)
-                } else {
-                    Modifier
-                        .padding(
-                            start = if (isUser) 90.dp else 10.dp,
-                            end = if (isUser) 10.dp else 90.dp,
-                            top = if (isTopPaddingNeeded(message, previousMessage)) 20.dp else 5.dp,
-                        )
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    onLongPress.invoke()
-                                }
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        onLongPress.invoke()
+                                    }
+                                )
+                            }
+                            .border(
+                                if (isUser) 0.dp else 0.5f.dp,
+                                if (isUser) Color.White else Color.Black,
+                                RoundedCornerShape(20.dp)
                             )
-                        }
-                }
-            ) {
-                val messageContent = message.content
-                val maxLineLength = 30
-                val words = messageContent.split("\\s+".toRegex())
-                val lines = StringBuilder()
-                var currentLine = StringBuilder()
-
-                for (word in words) {
-                    if (word.length > maxLineLength) {
-                        if (currentLine.isNotEmpty()) {
-                            lines.append('\n')
-                        }
-                        for (i in word.indices step maxLineLength) {
-                            val endIndex = (i + maxLineLength).coerceAtMost(word.length)
-                            val subWord = word.substring(i, endIndex)
-                            if (currentLine.isNotEmpty()) {
-                                currentLine.append(' ')
-                            }
-                            currentLine.append(subWord)
-                            if (currentLine.length >= maxLineLength) {
-                                lines.append(currentLine)
-                                currentLine = StringBuilder()
-                            }
-                        }
-                    } else if (currentLine.isNotEmpty() && currentLine.length + word.length + 1 <= maxLineLength) {
-                        currentLine.append(' ')
-                        currentLine.append(word)
-                    } else if (currentLine.isNotEmpty()) {
-                        lines.append(currentLine)
-                        lines.append('\n')
-                        currentLine = StringBuilder(word)
+                            .background(backgroundColor, shape = RoundedCornerShape(20.dp))
+                            .padding(top = 4.dp, start = 4.dp, end = 4.dp, bottom = 4.dp)
                     } else {
-                        currentLine = StringBuilder(word)
+                        Modifier
+                            .padding(
+                                start = if (isUser) 90.dp else 10.dp,
+                                end = if (isUser) 10.dp else 90.dp,
+                                top = if (isTopPaddingNeeded(
+                                        message,
+                                        previousMessage
+                                    )
+                                ) 20.dp else 5.dp,
+                            )
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        onLongPress.invoke()
+                                    }
+                                )
+                            }
+                    }
+                ) {
+                    val messageContent = message.content
+                    val maxLineLength = 30
+                    val words = messageContent.split("\\s+".toRegex())
+                    val lines = StringBuilder()
+                    var currentLine = StringBuilder()
+
+                    for (word in words) {
+                        if (word.length > maxLineLength) {
+                            if (currentLine.isNotEmpty()) {
+                                lines.append('\n')
+                            }
+                            for (i in word.indices step maxLineLength) {
+                                val endIndex = (i + maxLineLength).coerceAtMost(word.length)
+                                val subWord = word.substring(i, endIndex)
+                                if (currentLine.isNotEmpty()) {
+                                    currentLine.append(' ')
+                                }
+                                currentLine.append(subWord)
+                                if (currentLine.length >= maxLineLength) {
+                                    lines.append(currentLine)
+                                    currentLine = StringBuilder()
+                                }
+                            }
+                        } else if (currentLine.isNotEmpty() && currentLine.length + word.length + 1 <= maxLineLength) {
+                            currentLine.append(' ')
+                            currentLine.append(word)
+                        } else if (currentLine.isNotEmpty()) {
+                            lines.append(currentLine)
+                            lines.append('\n')
+                            currentLine = StringBuilder(word)
+                        } else {
+                            currentLine = StringBuilder(word)
+                        }
+                    }
+                    if (currentLine.isNotEmpty()) {
+                        lines.append(currentLine)
+                    }
+                    if (message.image.isEmpty()) {
+                        Text(
+                            text = buildAnnotatedStringWithOttoHighlight(
+                                lines.toString(),
+                                searchValue
+                            ),
+                            fontSize = 14.sp,
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .background(backgroundColor, shape = RoundedCornerShape(24.dp)),
+                            textAlign = TextAlign.Start,
+                            color = if (isUser) Color.White else Color.Black // Set color based on user
+                        )
+                    }
+                    if (message.image.isNotEmpty()) {
+                        SubcomposeAsyncImage(
+                            model = message.image,
+                            alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(24.dp))
+                                .heightIn(min = 50.dp, max = 250.dp)
+                                .widthIn(min = 75.dp, max = 250.dp)
+                                .clickable { onClick.invoke(message.id) }
+                                .shimmerEffect()
+                        )
                     }
                 }
-                if (currentLine.isNotEmpty()) {
-                    lines.append(currentLine)
-                }
-                if (message.image.isEmpty()) {
-                    Text(
-                        text = buildAnnotatedStringWithOttoHighlight(lines.toString(), searchValue),
-                        fontSize = 14.sp,
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .background(backgroundColor, shape = RoundedCornerShape(24.dp)),
-                        textAlign = TextAlign.Start,
-                        color = if (isUser) Color.White else Color.Black // Set color based on user
-                    )
-
-                }
-
-
-                if (message.image.isNotEmpty()) {
-                    SubcomposeAsyncImage(
-                        model = message.image,
-                        alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(24.dp))
-                            .heightIn(min = 50.dp, max = 250.dp)
-                            .widthIn(min = 75.dp, max = 250.dp)
-                            .clickable { onClick.invoke(message.image) }
-                            .shimmerEffect()
-                    )
-                }
-            }
         }
     }
     if (isDateNeeded(message, nextMessage)) {

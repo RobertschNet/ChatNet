@@ -1,6 +1,5 @@
 package at.htlhl.chatnet.ui.views
 
-import at.htlhl.chatnet.services.SaveImageTask
 import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.foundation.background
@@ -9,10 +8,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material.Scaffold
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,7 +28,8 @@ import at.htlhl.chatnet.data.BottomSheetItem
 import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.chats.ChatsViewTopBar
+import at.htlhl.chatnet.services.SaveImageTask
+import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.ui.components.chats.EmptyChatContent
 import at.htlhl.chatnet.ui.components.chats.ShowBigUserImageDialog
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
@@ -91,10 +91,10 @@ class Chats : ViewModel() {
             modifier = Modifier
                 .fillMaxSize(),
             topBar = {
-                ChatsViewTopBar(
-                    availableUsers,
-                    coroutineScope,
-                    sharedViewModel
+                TabsTopBar(
+                    tab = "Chats",
+                    availableUsers = availableUsers,
+                    sharedViewModel = sharedViewModel,
                 ) {
                     navController.navigate(Screens.FindUserScreen.route)
                 }
@@ -148,7 +148,11 @@ class Chats : ViewModel() {
                         }
 
                         "block" -> {
-                            sharedViewModel.updateBlockedUserList(sharedViewModel.user.value.blocked.contains(sharedViewModel.friend.value.personList.id))
+                            sharedViewModel.updateBlockedUserList(
+                                sharedViewModel.user.value.blocked.contains(
+                                    sharedViewModel.friend.value.personList.id
+                                )
+                            )
                         }
 
                         "image" -> {
@@ -158,7 +162,7 @@ class Chats : ViewModel() {
                         }
 
                         "info" -> {
-                            //TODO: Info
+                            navController.navigate(Screens.ProfileInfoScreen.route)
                         }
                     }
                     showUserIconPrompt = false

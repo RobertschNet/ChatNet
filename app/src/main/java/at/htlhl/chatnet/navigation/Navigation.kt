@@ -19,8 +19,10 @@ import at.htlhl.chatnet.ui.views.ChatView
 import at.htlhl.chatnet.ui.views.Chats
 import at.htlhl.chatnet.ui.views.DropIn
 import at.htlhl.chatnet.ui.views.FindUserView
+import at.htlhl.chatnet.ui.views.ImageView
 import at.htlhl.chatnet.ui.views.LoadingView
 import at.htlhl.chatnet.ui.views.LoginView
+import at.htlhl.chatnet.ui.views.ProfileInfoView
 import at.htlhl.chatnet.ui.views.ProfileView
 import at.htlhl.chatnet.ui.views.RandChatStartView
 import at.htlhl.chatnet.ui.views.RandChatView
@@ -138,6 +140,17 @@ fun Navigation(
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             sharedViewModel.bottomBarState.value = true
             RandChatStartView().RandChatStartScreen(navController, sharedViewModel)
+        }
+        composable("ProfileInfoScreen",
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
+            sharedViewModel.bottomBarState.value = false
+            ProfileInfoView().ProfileInfoScreen(sharedViewModel, navController)
+        }
+        composable("ImageViewScreen",
+            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
+            ImageView().ImageViewScreen(sharedViewModel, navController)
         }
     }
 }

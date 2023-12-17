@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Scaffold
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -57,11 +56,11 @@ import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.SaveImageTask
-import at.htlhl.chatnet.ui.components.chats.ChatsViewTopBar
 import at.htlhl.chatnet.ui.components.chats.ShowBigUserImageDialog
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
 import at.htlhl.chatnet.ui.components.mixed.ClearChatDialog
+import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
@@ -134,12 +133,12 @@ class DropIn : ViewModel() {
             modifier = Modifier
                 .fillMaxSize(),
             topBar = {
-                ChatsViewTopBar(
-                    friendListData,
-                    coroutineScope,
-                    sharedViewModel
+                TabsTopBar(
+                    tab = "DropIn",
+                    availableUsers = listOf(FirebaseUsers()),
+                    sharedViewModel = sharedViewModel,
                 ) {
-                    navController.navigate(Screens.FindUserScreen.route)
+                    sharedViewModel.gpsState.value = !sharedViewModel.gpsState.value
                 }
             },
             content = {

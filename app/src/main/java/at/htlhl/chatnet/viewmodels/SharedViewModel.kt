@@ -81,6 +81,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val text = mutableStateOf("")
     val randState = mutableStateOf(false)
     val isConnected = mutableStateOf(false)
+    val imagePosition= mutableStateOf(0)
 
 
     private fun getUserDocumentRef() = firebaseInstance.collection(USER_COLLECTION)

@@ -25,9 +25,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItem
+import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.chatmate.ChatMateTopBar
+import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
 import at.htlhl.chatnet.ui.components.mixed.ClearChatDialog
@@ -70,7 +71,13 @@ class ChatMateView {
         )
         Scaffold(
             modifier = Modifier.fillMaxSize(),
-            topBar = { ChatMateTopBar(sharedViewModel) { sharedViewModel.createChatMateChat() } },
+            topBar = {
+                TabsTopBar(
+                    tab = "ChatMate",
+                    sharedViewModel=sharedViewModel,
+                    availableUsers = listOf(FirebaseUsers()),
+                ) { sharedViewModel.createChatMateChat() }
+            },
             content = {
                 LazyColumn(
                     Modifier

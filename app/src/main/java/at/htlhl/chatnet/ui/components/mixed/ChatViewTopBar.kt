@@ -52,16 +52,19 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.InternalChatInstance
+import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun MessageTopBar(
+fun ChatViewTopBar(
+    navController: NavController,
     chatInstance: InternalChatInstance,
     sharedViewModel: SharedViewModel,
     onClick: (String) -> Unit
@@ -86,8 +89,7 @@ fun MessageTopBar(
                         tint = MaterialTheme.colorScheme.primary,
                         contentDescription = null,
                         modifier = Modifier
-                            .size(30.dp)
-                    )
+                            .size(30.dp))
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -95,7 +97,7 @@ fun MessageTopBar(
                         .fillMaxWidth()
                         .clip(CircleShape)
                         .clickable {
-                            //TODO: Open Profile
+                            navController.navigate(Screens.ProfileInfoScreen.route)
                         }
                         .weight(1f)) {
                     if (!chatInstance.personList.blocked.contains(sharedViewModel.auth.currentUser?.uid.toString())) {
@@ -118,7 +120,6 @@ fun MessageTopBar(
                             contentScale = ContentScale.Crop,
                         )
                     }
-
                     if (chatInstance.personList.id == "ChatMate") {
                         Column(
                             modifier = Modifier.offset(y = -offset.y.dp)
@@ -196,7 +197,7 @@ fun MessageTopBar(
                     )
                 }
                 IconButton(onClick = {
-                    //TODO: Info
+                    navController.navigate(Screens.ProfileInfoScreen.route)
                 }) {
                     SubcomposeAsyncImage(
                         model = R.drawable.info_svgrepo_com,
