@@ -13,10 +13,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -34,11 +37,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
@@ -52,67 +57,103 @@ import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.storage.ktx.storage
+import com.google.firebase.Firebase
+import com.google.firebase.storage.storage
 
 @Composable
 fun InputField(
     sharedViewModel: SharedViewModel,
     navController: NavController,
     chatMateChat: Boolean,
-    onMessageSent: (String, String) -> Unit
+    onMessageSent: (String, List<String>) -> Unit
 ) {
     var badgeCount by remember { mutableIntStateOf(0) }
+    val isLoading = remember {
+        mutableStateOf(false)
+    }
     val systemUiController = rememberSystemUiController()
     val text = sharedViewModel.text.value
-    var selectedImageUris by remember {
-        mutableStateOf<List<Uri>>(emptyList())
-    }
-    val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(),
-        onResult = { uris ->
-            selectedImageUris = uris
-            selectedImageUris.forEach { image ->
-                val storage = Firebase.storage
-                val storageRef = storage.reference
-                val imageRef =
-                    storageRef.child("images/${image.lastPathSegment}")
-                val uploadTask = imageRef.putFile(image)
-                uploadTask.addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        imageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-                            Log.d("Image", downloadUrl.toString())
-                            onMessageSent("", downloadUrl.toString())
-                        }.addOnFailureListener { exception ->
-                            Log.e("Image", exception.toString())
+    val multiplePhotoPickerLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.PickMultipleVisualMedia(),
+            onResult = { uris ->
+                sharedViewModel.galleryImageList.value = uris
+            })
+    BottomAppBar(
+        elevation = 10.dp,
+        modifier = if (sharedViewModel.galleryImageList.value.isEmpty()) Modifier.height(70.dp + badgeCount.dp)
+        else Modifier.height(160.dp + badgeCount.dp),
+        backgroundColor = MaterialTheme.colorScheme.background,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Bottom
+        ) {
+            if (sharedViewModel.galleryImageList.value.isNotEmpty()) {
+                LazyRow(modifier = Modifier.fillMaxWidth().padding(start=5.dp, end = 5.dp)) {
+                    items(sharedViewModel.galleryImageList.value.size) { index ->
+                        Box(
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .padding(5.dp)
+                        ) {
+                            SubcomposeAsyncImage(
+                                model = sharedViewModel.galleryImageList.value[index],
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(16.dp)),
+                            )
+                            Box(modifier = Modifier
+                                .size(20.dp)
+                                .clip(CircleShape)
+                                .background(Color.Gray.copy(alpha = 0.5f), CircleShape)
+                                .clickable {
+                                    sharedViewModel.galleryImageList.value =
+                                        sharedViewModel.galleryImageList.value.filterIndexed { i, _ -> i != index }
+                                }
+                                .border(
+                                    width = 1.dp,
+                                    color = Color.White,
+                                    shape = CircleShape
+                                )
+                                .align(Alignment.TopEnd)) {
+                                SubcomposeAsyncImage(
+                                    model = R.drawable.close_svgrepo_com,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(10.dp).align(Alignment.Center),
+                                    colorFilter = ColorFilter.tint(Color.White)
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
-    )
-    BottomAppBar(
-        elevation = 10.dp,
-        modifier = Modifier.height(70.dp),
-        backgroundColor = MaterialTheme.colorScheme.background,
-    ) {
-        Column {
             BasicTextField(
                 // TODO  enabled = sharedViewModel.isConnected.value,
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(
-                    onSend = {
-                        if (text.isNotEmpty()) {
-                            onMessageSent(text, "")
-                            if (!sharedViewModel.user.value.blocked.contains(
-                                    sharedViewModel.friend.value.personList.id
-                                )
-                            ) {
-                                sharedViewModel.text.value = ""
+                keyboardActions = KeyboardActions(onSend = {
+                    if (text.isNotEmpty() || sharedViewModel.galleryImageList.value.isNotEmpty()) {
+                        if (sharedViewModel.galleryImageList.value.isEmpty()) {
+                            onMessageSent(text, listOf())
+                        } else {
+                            isLoading.value = true
+                            uploadImage(sharedViewModel.galleryImageList.value) {
+                                isLoading.value = false
+                                sharedViewModel.galleryImageList.value = emptyList()
+                                onMessageSent(text, it)
                             }
                         }
+                        if (!sharedViewModel.user.value.blocked.contains(
+                                sharedViewModel.friend.value.personList.id
+                            )
+                        ) {
+                            sharedViewModel.text.value = ""
+                        }
                     }
-                ),
+                }),
                 value = text,
                 onTextLayout = { textLayoutResult ->
                     when {
@@ -153,8 +194,7 @@ fun InputField(
                     .height(50.dp + badgeCount.dp)
                     .padding(start = 10.dp, end = 10.dp)
                     .background(
-                        MaterialTheme.colorScheme.background,
-                        RoundedCornerShape(26.dp)
+                        MaterialTheme.colorScheme.background, RoundedCornerShape(26.dp)
                     )
                     .border(
                         width = 1.dp,
@@ -183,15 +223,12 @@ fun InputField(
                         ) {
 
                             if (text.isEmpty()) {
-                                IconButton(
-                                    enabled = !chatMateChat,
-                                    onClick = {
-                                        systemUiController.setStatusBarColor(
-                                            color = Color.Black,
-                                            darkIcons = false
-                                        )
-                                        navController.navigate(Screens.CameraViewScreen.route)
-                                    }) {
+                                IconButton(enabled = !chatMateChat, onClick = {
+                                    systemUiController.setStatusBarColor(
+                                        color = Color.Black, darkIcons = false
+                                    )
+                                    navController.navigate(Screens.CameraViewScreen.route)
+                                }) {
                                     SubcomposeAsyncImage(
                                         model = R.drawable.camera_svgrepo_com_5_,
                                         contentDescription = null,
@@ -200,13 +237,11 @@ fun InputField(
                                     )
                                 }
                             } else {
-                                IconButton(
-                                    enabled = !chatMateChat,
-                                    onClick = {
-                                        multiplePhotoPickerLauncher.launch(
-                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                        )
-                                    }) {
+                                IconButton(enabled = !chatMateChat, onClick = {
+                                    multiplePhotoPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                }) {
                                     SubcomposeAsyncImage(
                                         model = R.drawable.gallery_svgrepo_com,
                                         contentDescription = null,
@@ -232,37 +267,42 @@ fun InputField(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(if (text.isEmpty()) 6.dp else 12.dp),
+                            .padding(if (text.isEmpty() && sharedViewModel.galleryImageList.value.isEmpty()) 6.dp else 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.End,
                     ) {
-                        if (text.isNotEmpty()) {
-                            Text(
-                                text = "Send",
+                        if (text.isNotEmpty() || sharedViewModel.galleryImageList.value.isNotEmpty()) {
+                            Text(text = "Send",
                                 fontSize = 18.sp,
                                 color = Color(0xFF00A0E8),
                                 fontWeight = Bold,
-                                modifier = Modifier
-                                    .clickable {
-                                        if (text.isNotEmpty()) {
-                                            onMessageSent(text, "")
-                                            if (!sharedViewModel.user.value.blocked.contains(
-                                                    sharedViewModel.friend.value.personList.id
-                                                )
-                                            ) {
-                                                sharedViewModel.text.value = ""
+                                modifier = Modifier.clickable {
+                                    if (text.isNotEmpty() || sharedViewModel.galleryImageList.value.isNotEmpty()) {
+                                        if (sharedViewModel.galleryImageList.value.isEmpty()) {
+                                            onMessageSent(text, listOf())
+                                        } else {
+                                            isLoading.value = true
+                                            uploadImage(sharedViewModel.galleryImageList.value) {
+                                                isLoading.value = false
+                                                sharedViewModel.galleryImageList.value =
+                                                    emptyList()
+                                                onMessageSent(text, it)
                                             }
                                         }
+                                        if (!sharedViewModel.user.value.blocked.contains(
+                                                sharedViewModel.friend.value.personList.id
+                                            )
+                                        ) {
+                                            sharedViewModel.text.value = ""
+                                        }
                                     }
-                            )
+                                })
                         } else {
-                            IconButton(
-                                enabled = !chatMateChat,
-                                onClick = {
-                                    multiplePhotoPickerLauncher.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                    )
-                                }) {
+                            IconButton(enabled = !chatMateChat, onClick = {
+                                multiplePhotoPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            }) {
                                 SubcomposeAsyncImage(
                                     model = R.drawable.gallery_svgrepo_com,
                                     contentDescription = null,
@@ -270,12 +310,43 @@ fun InputField(
                                     modifier = Modifier.size(30.dp)
                                 )
                             }
+
                         }
                     }
 
                 },
             )
             Spacer(modifier = Modifier.height(10.dp))
+        }
+    }
+}
+
+fun uploadImage(selectedImageUris: List<Uri>, onUploadSuccess: (List<String>) -> Unit) {
+    val images = arrayListOf<String>()
+    var successCount = 0
+    selectedImageUris.forEach { image ->
+        val storage = Firebase.storage
+        val storageRef = storage.reference
+        val imageRef = storageRef.child("images/${image.lastPathSegment}")
+        val uploadTask = imageRef.putFile(image)
+
+        uploadTask.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                imageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
+                    Log.d("Image", downloadUrl.toString())
+                    images.add(downloadUrl.toString())
+
+                    successCount++
+                    if (successCount == selectedImageUris.size) {
+                        Log.println(Log.INFO, "Image", images.toString())
+                        onUploadSuccess(images)
+                    }
+                }.addOnFailureListener { exception ->
+                    Log.e("Image", exception.toString())
+                }
+            } else {
+                // Handle upload failure if needed
+            }
         }
     }
 }

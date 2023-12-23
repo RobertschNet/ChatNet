@@ -5,16 +5,16 @@ import com.google.firebase.Timestamp
 data class InternalMessageInstance(
     val id: String, // id of the message
     val sender: String, // id of the sender (FirebaseUsers id)
-    val image: String, // type of the message (text, image)
+    val images: List<String>, // amount of images in the message
     val read: Boolean, // if the message has been read by the receiver
-    val content: String, // content of the message (text, url of the image)
+    val text: String, // text of the message
     val timestamp: Timestamp, // timestamp when the message was sent
     val visible: List<String>, // list of the users that can see the Message (FirebaseUsers ids)
 ) {
     constructor() : this(
         "",
         "",
-        "",
+        arrayListOf(),
         false,
         "",
         Timestamp.now(),

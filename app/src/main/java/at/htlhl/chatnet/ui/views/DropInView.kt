@@ -434,7 +434,7 @@ fun ChatItemForDropIn(
                 text = person.personList.statusFriend,
                 maxLines = 1,
                 fontSize = 15.sp,
-                color = if (person.lastMessage.content >= "User is 400 meters away") Color.Yellow else if (person.lastMessage.content >= "User is 450 meters away") Color.Red else Color.LightGray
+                color = if (person.lastMessage.text >= "User is 400 meters away") Color.Yellow else if (person.lastMessage.text >= "User is 450 meters away") Color.Red else Color.LightGray
             )
         }
     }

@@ -1,5 +1,6 @@
 package at.htlhl.chatnet.ui.components.mixed
 
+import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -218,7 +219,7 @@ fun ChatsViewChatItem(
             ) {
                 if (chat.lastMessage.visible.contains(sharedViewModel.auth.currentUser?.uid.toString())) {
                     val messageContent =
-                        if (chat.lastMessage.content.isEmpty() && chat.lastMessage.image.isNotEmpty()) "Image" else chat.lastMessage.content
+                        if (chat.lastMessage.text.isEmpty() && chat.lastMessage.images.isNotEmpty()) "Image" else chat.lastMessage.text
                     val senderPrefix =
                         if (chat.lastMessage.sender != sharedViewModel.auth.currentUser?.uid.toString()) "" else "Me: "
                     Text(

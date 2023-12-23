@@ -12,6 +12,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -21,8 +22,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Scaffold
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -70,10 +71,7 @@ class ChatView : ViewModel() {
     @Composable
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val systemUiController = rememberSystemUiController()
-        systemUiController.setStatusBarColor(
-            color = Color.Transparent,
-            darkIcons = true
-        )
+        systemUiController.setStatusBarColor(color = Color.Transparent, darkIcons = true)
         val chatDataState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val chatData: List<FirebaseChat> = chatDataState.value
         val matchingChat = chatData.find { chat ->
@@ -81,14 +79,15 @@ class ChatView : ViewModel() {
         }
         val chatMateChat = matchingChat?.tab == "chatmate"
         val chatRoomId = matchingChat?.chatRoomID ?: ""
+
         val messageListFromMatchingChat: List<InternalMessageInstance> = matchingChat?.let { chat ->
             chat.messages.map { message ->
                 InternalMessageInstance(
                     id = message.id,
                     sender = message.sender,
-                    image = message.image,
+                    images = message.images,
                     read = message.read,
-                    content = message.content,
+                    text = message.text,
                     timestamp = message.timestamp,
                     visible = message.visible,
                 )
@@ -97,16 +96,16 @@ class ChatView : ViewModel() {
         val onMessageSent: (FirebaseMessage) -> Unit = { message ->
             if (chatMateChat) {
                 sharedViewModel.chatMateResponseState.value = ChatMateResponseState.Loading
-                sharedViewModel.sendDataToServer(message.content) { response ->
+                sharedViewModel.sendDataToServer(message.text) { response ->
                     runBlocking {
                         sharedViewModel.saveMessages(
                             documentId = chatRoomId,
                             message = FirebaseMessage(
                                 sender = "chatmate",
-                                content = response,
+                                text = response,
                                 timestamp = Timestamp.now(),
                                 read = false,
-                                image = "",
+                                images = arrayListOf(),
                                 visible = listOf(
                                     sharedViewModel.auth.currentUser?.uid.toString(),
                                 )
@@ -119,6 +118,8 @@ class ChatView : ViewModel() {
                 sharedViewModel.saveMessages(documentId = chatRoomId, message = message)
             }
         }
+        sharedViewModel.imageList.value = createImageList(messageListFromMatchingChat)
+        Log.println(Log.ERROR, "ChatViewMab", messageListFromMatchingChat.toString())
         sharedViewModel.markMessagesAsRead(user = sharedViewModel.friend.value)
         sharedViewModel.updateMarkAsReadStatus(isAlreadyUnread = true)
         ChatViewContentStructure(
@@ -153,7 +154,7 @@ class ChatView : ViewModel() {
         Scaffold(
             modifier = Modifier
                 .imePadding()
-                .onSizeChanged { coroutineScope.launch { lazyListState.scrollToItem(messagesForChat.size) } },
+                .onSizeChanged { coroutineScope.launch { lazyListState.scrollToItem(filteredMessages.size) } },
             topBar = {
                 ChatViewTopBar(
                     navController = navController,
@@ -170,9 +171,14 @@ class ChatView : ViewModel() {
                 }
             },
             content = {
-                it.calculateBottomPadding()
+                Log.println(Log.INFO, "paul", it.calculateBottomPadding().toString())
+                Log.println(Log.INFO, "paul1", it.calculateTopPadding().toString())
+                LaunchedEffect(it.calculateBottomPadding()){
+                    lazyListState.scrollToItem(filteredMessages.size)
+                }
                 ChatViewContentList(
                     sharedViewModel = sharedViewModel,
+                    paddingValues = it,
                     chatMateChat = chatMateChat,
                     messages = filteredMessages,
                     lazyListState = lazyListState,
@@ -189,10 +195,10 @@ class ChatView : ViewModel() {
                             onMessageSent(
                                 FirebaseMessage(
                                     sender = sharedViewModel.auth.currentUser?.uid.toString(),
-                                    content = messageText,
+                                    text = messageText,
                                     timestamp = Timestamp.now(),
                                     read = false,
-                                    image = image,
+                                    images = image,
                                     visible =
                                     if (sharedViewModel.friend.value.personList.blocked.contains(
                                             sharedViewModel.user.value.id
@@ -246,6 +252,7 @@ class ChatView : ViewModel() {
     @Composable
     fun ChatViewContentList(
         sharedViewModel: SharedViewModel,
+        paddingValues: PaddingValues,
         navController: NavController,
         chatMateChat: Boolean,
         messages: List<InternalMessageInstance>,
@@ -271,7 +278,7 @@ class ChatView : ViewModel() {
             lazyListState.animateScrollToItem(messages.size)
         }
         val filteredMessages = messages.filter {
-            it.content.contains(sharedViewModel.searchValue.value, ignoreCase = true)
+            it.text.contains(sharedViewModel.searchValue.value, ignoreCase = true)
         }
         Column(
             modifier = Modifier
@@ -285,7 +292,13 @@ class ChatView : ViewModel() {
                     lazyListState.scrollToItem(filteredMessages.size)
                 }
             }
-            LazyColumn(modifier = Modifier.padding(bottom = 70.dp), state = lazyListState) {
+            LazyColumn(
+                modifier = Modifier.padding(
+                    bottom = paddingValues.calculateBottomPadding(),
+                    top = paddingValues.calculateTopPadding()
+                ),
+                state = lazyListState
+            ) {
                 items(filteredMessages) { message ->
                     val messageIndex = messages.indexOf(message)
                     val previousMessageIndex =
@@ -300,14 +313,16 @@ class ChatView : ViewModel() {
                         message = InternalMessageInstance(
                             id = message.id,
                             sender = message.sender,
-                            image = message.image,
+                            images = message.images,
                             read = message.read,
-                            content = message.content,
+                            text = message.text,
                             timestamp = message.timestamp,
                             visible = message.visible,
                         ), chatRoomId = chatRoomId, navController = navController
-                    ) {
-                        sharedViewModel.imagePosition.value = messages.find { it.id== message.id }?.let { messages.indexOf(it) }!!
+                    ) { image ->
+                        sharedViewModel.imagePosition.value =
+                            sharedViewModel.imageList.value.find { it.images[0] == image }
+                                ?.let { sharedViewModel.imageList.value.indexOf(it) } ?: 0
                         navController.navigate(Screens.ImageViewScreen.route)
                     }
                 }
@@ -343,6 +358,7 @@ class ChatView : ViewModel() {
                     }
                 }
             }
+
         }
     }
 
@@ -411,11 +427,11 @@ class ChatView : ViewModel() {
                     }
 
                     "copy" -> {
-                        sharedViewModel.copyToClipboard(context, message.content)
+                        sharedViewModel.copyToClipboard(context, message.text)
                     }
 
                     "generate" -> {
-                        sharedViewModel.sendDataToServer(message.content) {
+                        sharedViewModel.sendDataToServer(message.text) {
                             sharedViewModel.text.value = it
                         }
                     }
@@ -455,5 +471,28 @@ class ChatView : ViewModel() {
                 )
             }
         }
+    }
+
+
+    private fun createImageList(messages: List<InternalMessageInstance>): List<InternalMessageInstance> {
+        val imageList = arrayListOf<InternalMessageInstance>()
+        messages.forEach {
+            if (it.images.isNotEmpty()) {
+                it.images.forEach { image ->
+                    imageList.add(
+                        InternalMessageInstance(
+                            id = it.id,
+                            sender = it.sender,
+                            images = arrayListOf(image),
+                            read = it.read,
+                            text = it.text,
+                            timestamp = it.timestamp,
+                            visible = it.visible
+                        )
+                    )
+                }
+            }
+        }
+        return imageList
     }
 }

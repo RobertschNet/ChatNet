@@ -120,9 +120,9 @@ class RandChatView {
                 InternalMessageInstance(
                     id = message.id,
                     sender = message.sender,
-                    image = message.image,
+                    images = message.images,
                     read = message.read,
-                    content = message.content,
+                    text = message.text,
                     timestamp = message.timestamp,
                     visible = message.visible,
                 )
@@ -131,16 +131,16 @@ class RandChatView {
         val onMessageSent: (FirebaseMessage) -> Unit = { message ->
             if (chatMateChat) {
                 sharedViewModel.chatMateResponseState.value = ChatMateResponseState.Loading
-                sharedViewModel.sendDataToServer(message.content) { response ->
+                sharedViewModel.sendDataToServer(message.text) { response ->
                     runBlocking {
                         sharedViewModel.saveMessages(
                             documentId = chatRoomId,
                             message = FirebaseMessage(
                                 sender = "chatmate",
-                                content = response,
+                                text = response,
                                 timestamp = Timestamp.now(),
                                 read = false,
-                                image = "",
+                                images = arrayListOf(),
                                 visible = listOf(
                                     sharedViewModel.auth.currentUser?.uid.toString(),
                                 )
@@ -218,10 +218,10 @@ class RandChatView {
                         onMessageSent(
                             FirebaseMessage(
                                 sender = sharedViewModel.auth.currentUser?.uid.toString(),
-                                content = messageText,
+                                text = messageText,
                                 timestamp = Timestamp.now(),
                                 read = false,
-                                image = image,
+                                images = image,
                                 visible = listOf(
                                     sharedViewModel.auth.currentUser?.uid.toString(),
                                     sharedViewModel.friend.value.personList.id
@@ -280,9 +280,9 @@ class RandChatView {
                         message = InternalMessageInstance(
                             id = message.id,
                             sender = message.sender,
-                            image = message.image,
+                            images = message.images,
                             read = message.read,
-                            content = message.content,
+                            text = message.text,
                             timestamp = message.timestamp,
                             visible = message.visible,
                         ), chatRoomId = chatRoomId
@@ -354,11 +354,11 @@ class RandChatView {
                     }
 
                     "copy" -> {
-                        sharedViewModel.copyToClipboard(context, message.content)
+                        sharedViewModel.copyToClipboard(context, message.text)
                     }
 
                     "generate" -> {
-                        sharedViewModel.sendDataToServer(message.content) {
+                        sharedViewModel.sendDataToServer(message.text) {
                             sharedViewModel.text.value = it
                         }
                     }

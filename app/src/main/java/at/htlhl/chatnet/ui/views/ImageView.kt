@@ -1,7 +1,9 @@
 package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseChat
+import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -47,6 +50,7 @@ import java.time.temporal.ChronoUnit
 import kotlin.math.absoluteValue
 
 class ImageView {
+    @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("StateFlowValueCalledInComposition")
     @Composable
     fun ImageViewScreen(sharedViewModel: SharedViewModel, navController: NavController) {
@@ -61,6 +65,7 @@ class ImageView {
         HorizontalPager(sharedViewModel, chat, navController)
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
     private fun HorizontalPager(
@@ -68,13 +73,12 @@ class ImageView {
         chat: FirebaseChat,
         navController: NavController
     ) {
-        val imageList = chat.messages.filter { message ->
-            message.image != "" && message.visible.contains(sharedViewModel.auth.currentUser!!.uid)
-        }
-        Log.println(Log.INFO, "ImageView", imageList.toString())
-        val pageCount = imageList.size
 
-        val pagerState = rememberPagerState(initialPage = sharedViewModel.imagePosition.value) { pageCount }
+        Log.println(Log.INFO, "ImageView", sharedViewModel.imageList.value.toString())
+        val pageCount = sharedViewModel.imageList.value.size
+
+        val pagerState =
+            rememberPagerState(initialPage = sharedViewModel.imagePosition.value) { pageCount }
 
         Box(Modifier.fillMaxSize()) {
             HorizontalPager(
@@ -83,7 +87,7 @@ class ImageView {
                     .fillMaxSize(),
                 state = pagerState,
             ) {
-                ImageItem(imageList[it].image)
+                ImageItem(sharedViewModel.imageList.value[it].images[0])// TODO: 2021-12-17 fix this
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -116,14 +120,16 @@ class ImageView {
                         .fillMaxSize(),
                 ) {
                     Text(
-                        text = if (imageList[pagerState.currentPage].sender == sharedViewModel.auth.currentUser!!.uid) "You" else sharedViewModel.friend.value.personList.username.toString(),
+                        text = if (sharedViewModel.imageList.value[pagerState.currentPage].sender == sharedViewModel.auth.currentUser!!.uid) "You" else sharedViewModel.friend.value.personList.username.toString(),
                         fontSize = 18.sp
                     )
                     Text(
-                        text = formatTimestamp(imageList[pagerState.currentPage].timestamp.toDate().time),
+                        text = formatTimestamp(sharedViewModel.imageList.value[pagerState.currentPage].timestamp.toDate().time),
                         fontSize = 14.sp,
                         color = Color.Gray
                     )
+
+
                 }
             }
             HorizontalPagerIndicator(
@@ -136,6 +142,7 @@ class ImageView {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun formatTimestamp(timestampMillis: Long): String {
         val formatter = DateTimeFormatter.ofPattern("d MMMM, HH:mm")

@@ -81,8 +81,23 @@ class ProfileInfoView {
         val lazyListState = rememberLazyListState()
         val chat: FirebaseChat =
             sharedViewModel.chatData.value.find { it.chatRoomID == sharedViewModel.friend.value.chatRoomID }!!
-        val imageList = chat.messages.filter { message ->
-            message.image != "" && message.visible.contains(sharedViewModel.auth.currentUser!!.uid)
+        val imageList = arrayListOf<InternalMessageInstance>()
+        chat.messages.forEach {
+            if (it.images.isNotEmpty()) {
+                it.images.forEach { image ->
+                    imageList.add(
+                        InternalMessageInstance(
+                            id = it.id,
+                            sender = it.sender,
+                            images = arrayListOf(image),
+                            read = it.read,
+                            text = it.text,
+                            timestamp = it.timestamp,
+                            visible = it.visible
+                        )
+                    )
+                }
+            }
         }
         val systemUiController = rememberSystemUiController()
         systemUiController.setStatusBarColor(
@@ -399,7 +414,7 @@ class ProfileInfoView {
                                             width = 2.dp,
                                             color = Color.White,
                                         ),
-                                    model = imageList[it].image,
+                                    model = imageList[it].images[0],// TODO: 2021-12-17 fix this
                                     contentDescription = null,
                                     contentScale = ContentScale.Crop
                                 )

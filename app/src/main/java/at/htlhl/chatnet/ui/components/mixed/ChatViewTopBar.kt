@@ -89,7 +89,8 @@ fun ChatViewTopBar(
                         tint = MaterialTheme.colorScheme.primary,
                         contentDescription = null,
                         modifier = Modifier
-                            .size(30.dp))
+                            .size(30.dp)
+                    )
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -208,7 +209,7 @@ fun ChatViewTopBar(
                     )
                 }
             }
-        }else{
+        } else {
             val (text, setText) = remember { mutableStateOf("") }
             val keyboardController = LocalSoftwareKeyboardController.current
             val interactionSource = remember { MutableInteractionSource() }
@@ -230,7 +231,11 @@ fun ChatViewTopBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(40.dp)
-                        .border(0.3f.dp, MaterialTheme.colorScheme.secondary, RoundedCornerShape(36.dp))
+                        .border(
+                            0.3f.dp,
+                            MaterialTheme.colorScheme.secondary,
+                            RoundedCornerShape(36.dp)
+                        )
                         .background(MaterialTheme.colorScheme.background, RoundedCornerShape(36.dp))
                         .focusRequester(focusRequester),
                     textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.primary),

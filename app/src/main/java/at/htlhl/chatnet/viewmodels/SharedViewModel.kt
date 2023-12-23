@@ -13,6 +13,7 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.FirebaseChat
@@ -38,6 +39,7 @@ import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import okhttp3.Call
 import okhttp3.Callback
@@ -82,6 +84,9 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val randState = mutableStateOf(false)
     val isConnected = mutableStateOf(false)
     val imagePosition= mutableStateOf(0)
+    val imageList= mutableStateOf<List<InternalMessageInstance>>(emptyList())
+    val galleryImageList= mutableStateOf<List<Uri>>(emptyList())
+    val paddingValues= mutableStateOf(70)
 
 
     private fun getUserDocumentRef() = firebaseInstance.collection(USER_COLLECTION)
@@ -443,9 +448,13 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             }
     }
 
-    suspend fun saveMessages(documentId: String?, message: FirebaseMessage) {
-        firebaseInstance.collection("$CHATS_COLLECTION/${documentId}/$MESSAGES_COLLECTION")
-            .add(message).await()
+    suspend fun saveMessages(documentId: String?, message: FirebaseMessage, onComplete: () -> Unit={}) {
+        viewModelScope.launch {
+            Log.println(Log.INFO, "Message", message.toString())
+            firebaseInstance.collection("$CHATS_COLLECTION/${documentId}/$MESSAGES_COLLECTION")
+                .add(message).await()
+            onComplete.invoke()
+        }
     }
 
     /**

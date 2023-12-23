@@ -20,6 +20,8 @@ import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.LocationUpdateService
 import at.htlhl.chatnet.ui.theme.TestingTheme
 import at.htlhl.chatnet.viewmodels.SharedViewModel
+import com.google.firebase.FirebaseApp
+import com.google.firebase.storage.FirebaseStorage
 
 class MainActivity : ComponentActivity() {
     private var serviceConnection: ServiceConnection? = null
@@ -41,6 +43,7 @@ class MainActivity : ComponentActivity() {
                     context = applicationContext
                 )
                 LaunchedEffect(Unit) {
+                    FirebaseApp.initializeApp(this@MainActivity);
                     if (viewModel.checkIfUserIsLoggedIn()) {
                         viewModel.updateOnlineStatus("online")
                         viewModel.getUserData()
