@@ -30,6 +30,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -53,12 +54,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
+import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.google.firebase.Firebase
 import com.google.firebase.storage.storage
+import kotlinx.coroutines.delay
 
 @Composable
 fun InputField(
@@ -73,6 +76,9 @@ fun InputField(
     }
     val systemUiController = rememberSystemUiController()
     val text = sharedViewModel.text.value
+    var chatMateResponseText by remember { mutableStateOf("ChatMate is thinking") }
+    val chatMatePadding =
+        if (sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) 10.dp else 0.dp
     val multiplePhotoPickerLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.PickMultipleVisualMedia(),
             onResult = { uris ->
@@ -80,17 +86,20 @@ fun InputField(
             })
     BottomAppBar(
         elevation = 10.dp,
-        modifier = if (sharedViewModel.galleryImageList.value.isEmpty()) Modifier.height(70.dp + badgeCount.dp)
-        else Modifier.height(160.dp + badgeCount.dp),
+        modifier = if (sharedViewModel.galleryImageList.value.isEmpty()) Modifier.height(70.dp + badgeCount.dp + chatMatePadding)
+        else Modifier.height(160.dp + badgeCount.dp + chatMatePadding),
         backgroundColor = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Bottom
         ) {
             if (sharedViewModel.galleryImageList.value.isNotEmpty()) {
-                LazyRow(modifier = Modifier.fillMaxWidth().padding(start=5.dp, end = 5.dp)) {
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 5.dp, end = 5.dp)
+                ) {
                     items(sharedViewModel.galleryImageList.value.size) { index ->
                         Box(
                             modifier = Modifier
@@ -123,7 +132,9 @@ fun InputField(
                                 SubcomposeAsyncImage(
                                     model = R.drawable.close_svgrepo_com,
                                     contentDescription = null,
-                                    modifier = Modifier.size(10.dp).align(Alignment.Center),
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .align(Alignment.Center),
                                     colorFilter = ColorFilter.tint(Color.White)
                                 )
                             }
@@ -131,6 +142,27 @@ fun InputField(
                     }
                 }
             }
+            if (sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
+                LaunchedEffect(sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
+                    while (true) {
+                        delay(750)
+                        chatMateResponseText = "ChatMate is thinking."
+                        delay(750)
+                        chatMateResponseText = "ChatMate is thinking.."
+                        delay(750)
+                        chatMateResponseText = "ChatMate is thinking..."
+                    }
+                }
+                Text(
+                    text = chatMateResponseText,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Start,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Light,
+                    modifier = Modifier.padding(start = 30.dp)
+                )
+            }
+
             BasicTextField(
                 // TODO  enabled = sharedViewModel.isConnected.value,
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),

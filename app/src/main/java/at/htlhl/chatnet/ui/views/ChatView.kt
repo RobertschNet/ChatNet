@@ -37,14 +37,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.ChatMateResponseState
@@ -60,7 +57,6 @@ import at.htlhl.chatnet.ui.components.mixed.InputField
 import at.htlhl.chatnet.ui.components.mixed.OptionsDialog
 import at.htlhl.chatnet.ui.components.mixed.UnblockToMessageDialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
-import coil.compose.SubcomposeAsyncImage
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.delay
@@ -95,7 +91,6 @@ class ChatView : ViewModel() {
         } ?: emptyList()
         val onMessageSent: (FirebaseMessage) -> Unit = { message ->
             if (chatMateChat) {
-                sharedViewModel.chatMateResponseState.value = ChatMateResponseState.Loading
                 sharedViewModel.sendDataToServer(message.text) { response ->
                     runBlocking {
                         sharedViewModel.saveMessages(
@@ -173,7 +168,7 @@ class ChatView : ViewModel() {
             content = {
                 Log.println(Log.INFO, "paul", it.calculateBottomPadding().toString())
                 Log.println(Log.INFO, "paul1", it.calculateTopPadding().toString())
-                LaunchedEffect(it.calculateBottomPadding()){
+                LaunchedEffect(it.calculateBottomPadding()) {
                     lazyListState.scrollToItem(filteredMessages.size)
                 }
                 ChatViewContentList(
@@ -318,9 +313,9 @@ class ChatView : ViewModel() {
                             text = message.text,
                             timestamp = message.timestamp,
                             visible = message.visible,
-                        ), chatRoomId = chatRoomId, navController = navController
+                        ), chatRoomId = chatRoomId
                     ) { image ->
-                        sharedViewModel.imagePosition.value =
+                        sharedViewModel.imagePosition.intValue =
                             sharedViewModel.imageList.value.find { it.images[0] == image }
                                 ?.let { sharedViewModel.imageList.value.indexOf(it) } ?: 0
                         navController.navigate(Screens.ImageViewScreen.route)
@@ -365,7 +360,6 @@ class ChatView : ViewModel() {
     @Composable
     fun MessageItem(
         sharedViewModel: SharedViewModel,
-        navController: NavController,
         chatMateChat: Boolean,
         message: InternalMessageInstance,
         previousMessage: InternalMessageInstance?,
@@ -386,7 +380,6 @@ class ChatView : ViewModel() {
         ChatViewMessageComponent(
             sharedViewModel = sharedViewModel,
             isUser = isUser,
-            context = context,
             chatMateChat = chatMateChat,
             previousMessage = previousMessage,
             nextMessage = nextMessage,
@@ -446,33 +439,6 @@ class ChatView : ViewModel() {
     ): Boolean {
         return sharedViewModel.user.value.blocked.contains(sharedViewModel.friend.value.personList.id)
     }
-
-    @Composable
-    fun FullScreenImageDialog(imageUrl: String, onDismiss: () -> Unit) {
-        Dialog(
-            onDismissRequest = { onDismiss.invoke() },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                dismissOnBackPress = true,
-                dismissOnClickOutside = true
-            )
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Transparent)
-            ) {
-                SubcomposeAsyncImage(
-                    model = imageUrl,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
-            }
-        }
-    }
-
 
     private fun createImageList(messages: List<InternalMessageInstance>): List<InternalMessageInstance> {
         val imageList = arrayListOf<InternalMessageInstance>()

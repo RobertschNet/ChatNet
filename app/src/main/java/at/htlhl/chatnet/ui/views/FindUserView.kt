@@ -71,7 +71,7 @@ class FindUserView : ViewModel() {
         val isSearching by isSearching.collectAsState()
         val chatDataState = sharedViewModel.chatData.collectAsState()
         val chatData: List<FirebaseChat> = chatDataState.value
-        val friendListFriendsDataState = sharedViewModel.friendFriendsListData.collectAsState()
+        val friendListFriendsDataState = sharedViewModel.friendRandomFriendsListData.collectAsState()
         val friendListFriendsData: List<FirebaseUsers> = friendListFriendsDataState.value
 
         val friendListDataState = sharedViewModel.friendListData.collectAsState()

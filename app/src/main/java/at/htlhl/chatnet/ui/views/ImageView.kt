@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseChat
-import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -62,7 +61,7 @@ class ImageView {
         val chat: FirebaseChat =
             sharedViewModel.chatData.value.find { it.chatRoomID == sharedViewModel.friend.value.chatRoomID }!!
         Log.println(Log.INFO, "ImageView", chat.chatRoomID)
-        HorizontalPager(sharedViewModel, chat, navController)
+        HorizontalPager(sharedViewModel, navController)
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -70,15 +69,13 @@ class ImageView {
     @Composable
     private fun HorizontalPager(
         sharedViewModel: SharedViewModel,
-        chat: FirebaseChat,
         navController: NavController
     ) {
-
         Log.println(Log.INFO, "ImageView", sharedViewModel.imageList.value.toString())
         val pageCount = sharedViewModel.imageList.value.size
 
         val pagerState =
-            rememberPagerState(initialPage = sharedViewModel.imagePosition.value) { pageCount }
+            rememberPagerState(initialPage = sharedViewModel.imagePosition.intValue) { pageCount }
 
         Box(Modifier.fillMaxSize()) {
             HorizontalPager(
@@ -87,7 +84,7 @@ class ImageView {
                     .fillMaxSize(),
                 state = pagerState,
             ) {
-                ImageItem(sharedViewModel.imageList.value[it].images[0])// TODO: 2021-12-17 fix this
+                ImageItem(sharedViewModel.imageList.value[it].images[0])
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -120,7 +117,7 @@ class ImageView {
                         .fillMaxSize(),
                 ) {
                     Text(
-                        text = if (sharedViewModel.imageList.value[pagerState.currentPage].sender == sharedViewModel.auth.currentUser!!.uid) "You" else sharedViewModel.friend.value.personList.username.toString(),
+                        text = if (sharedViewModel.imageList.value[pagerState.currentPage].sender == sharedViewModel.auth.currentUser!!.uid) "You" else sharedViewModel.friend.value.personList.username["mixedcase"].toString(),
                         fontSize = 18.sp
                     )
                     Text(

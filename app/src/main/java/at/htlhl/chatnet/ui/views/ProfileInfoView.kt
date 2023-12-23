@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.SportsFootball
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -64,6 +65,7 @@ import androidx.constraintlayout.compose.MotionScene
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseChat
+import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.theme.shimmerEffect
@@ -79,6 +81,8 @@ class ProfileInfoView {
         var progress by remember { mutableFloatStateOf(1f) }
         val totalHeight = remember { mutableFloatStateOf(0f) }
         val lazyListState = rememberLazyListState()
+        val friendsFromFriendsListState=sharedViewModel.friendFriendsListData.collectAsState(initial = emptyList())
+        val friendsFromFriendsList: List<FirebaseUsers> = friendsFromFriendsListState.value
         val chat: FirebaseChat =
             sharedViewModel.chatData.value.find { it.chatRoomID == sharedViewModel.friend.value.chatRoomID }!!
         val imageList = arrayListOf<InternalMessageInstance>()
@@ -128,7 +132,7 @@ class ProfileInfoView {
                                 )
                             }
                             item {
-                                ProfileInfoContent(sharedViewModel, navController, imageList)
+                                ProfileInfoContent(sharedViewModel, navController,friendsFromFriendsList, imageList)
                             }
                         }
                     )
@@ -154,6 +158,7 @@ class ProfileInfoView {
     fun ProfileInfoContent(
         sharedViewModel: SharedViewModel,
         navController: NavController,
+        friendsFromFriendsList:List<FirebaseUsers>,
         imageList: List<InternalMessageInstance>
     ) {
         Spacer(modifier = Modifier.height(15.dp))
@@ -366,7 +371,7 @@ class ProfileInfoView {
                         Text(
                             modifier = Modifier
                                 .clickable {
-                                    sharedViewModel.imagePosition.value = 0
+                                    sharedViewModel.imagePosition.intValue = 0
                                     navController.navigate(Screens.ImageViewScreen.route)
                                 },
                             textAlign = TextAlign.Center,
@@ -404,7 +409,7 @@ class ProfileInfoView {
                                 SubcomposeAsyncImage(
                                     modifier = Modifier
                                         .clickable {
-                                            sharedViewModel.imagePosition.value = it
+                                            sharedViewModel.imagePosition.intValue = it
                                             navController.navigate(Screens.ImageViewScreen.route)
                                         }
                                         .height(100.dp)
@@ -414,14 +419,14 @@ class ProfileInfoView {
                                             width = 2.dp,
                                             color = Color.White,
                                         ),
-                                    model = imageList[it].images[0],// TODO: 2021-12-17 fix this
+                                    model = imageList[it].images[0],
                                     contentDescription = null,
                                     contentScale = ContentScale.Crop
                                 )
                             }
                             item {
                                 IconButton(onClick = {
-                                    sharedViewModel.imagePosition.value = 0
+                                    sharedViewModel.imagePosition.intValue = 0
                                     navController.navigate(Screens.ImageViewScreen.route)
                                 }) {
                                     SubcomposeAsyncImage(
@@ -588,156 +593,44 @@ class ProfileInfoView {
                     Spacer(modifier = Modifier.height(2.5f.dp))
                     Column(content = {
                         Spacer(modifier = Modifier.height(5.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Spacer(modifier = Modifier.width(10.dp))
-                            SubcomposeAsyncImage(
-                                modifier = Modifier
-                                    .height(50.dp)
-                                    .width(50.dp)
-                                    .padding(5.dp)
-                                    .clip(CircleShape)
-                                    .border(
-                                        width = 2.dp,
+                        friendsFromFriendsList.forEach {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Spacer(modifier = Modifier.width(10.dp))
+                                SubcomposeAsyncImage(
+                                    modifier = Modifier
+                                        .height(50.dp)
+                                        .width(50.dp)
+                                        .padding(5.dp)
+                                        .clip(CircleShape)
+                                        .border(
+                                            width = 2.dp,
+                                            color = Color.Black,
+                                            shape = CircleShape
+                                        ),
+                                    model = it.image,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column(
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.Start
+                                ) {
+                                    Text(
+                                        textAlign = TextAlign.Start,
+                                        overflow = TextOverflow.Ellipsis,
+                                        text = it.username["mixedcase"].toString(),
+                                        fontSize = 16.sp,
                                         color = Color.Black,
-                                        shape = CircleShape
-                                    ),
-                                model = "https://picsum.photos/200/300",
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column(
-                                verticalArrangement = Arrangement.Center,
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    textAlign = TextAlign.Start,
-                                    overflow = TextOverflow.Ellipsis,
-                                    text = "Tobias Brandl",
-                                    fontSize = 16.sp,
-                                    color = Color.Black,
-                                )
-                                Text(
-                                    textAlign = TextAlign.Start,
-                                    overflow = TextOverflow.Ellipsis,
-                                    text = "1 mutual friend",
-                                    fontSize = 14.sp,
-                                    color = Color.Gray,
-                                )
-                            }
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Spacer(modifier = Modifier.width(10.dp))
-                            SubcomposeAsyncImage(
-                                modifier = Modifier
-                                    .height(50.dp)
-                                    .width(50.dp)
-                                    .padding(5.dp)
-                                    .clip(CircleShape)
-                                    .border(
-                                        width = 2.dp,
-                                        color = Color.Black,
-                                        shape = CircleShape
-                                    ),
-                                model = "https://picsum.photos/200/300",
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column(
-                                verticalArrangement = Arrangement.Center,
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    textAlign = TextAlign.Start,
-                                    overflow = TextOverflow.Ellipsis,
-                                    text = "Tobias Brandl",
-                                    fontSize = 16.sp,
-                                    color = Color.Black,
-                                )
-                                Text(
-                                    textAlign = TextAlign.Start,
-                                    overflow = TextOverflow.Ellipsis,
-                                    text = "1 mutual friend",
-                                    fontSize = 14.sp,
-                                    color = Color.Gray,
-                                )
-                            }
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Spacer(modifier = Modifier.width(10.dp))
-                            SubcomposeAsyncImage(
-                                modifier = Modifier
-                                    .height(50.dp)
-                                    .width(50.dp)
-                                    .padding(5.dp)
-                                    .clip(CircleShape)
-                                    .border(
-                                        width = 2.dp,
-                                        color = Color.Black,
-                                        shape = CircleShape
-                                    ),
-                                model = "https://picsum.photos/200/300",
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column(
-                                verticalArrangement = Arrangement.Center,
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    textAlign = TextAlign.Start,
-                                    overflow = TextOverflow.Ellipsis,
-                                    text = "Tobias Brandl",
-                                    fontSize = 16.sp,
-                                    color = Color.Black,
-                                )
-                                Text(
-                                    textAlign = TextAlign.Start,
-                                    overflow = TextOverflow.Ellipsis,
-                                    text = "1 mutual friend",
-                                    fontSize = 14.sp,
-                                    color = Color.Gray,
-                                )
-                            }
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Spacer(modifier = Modifier.width(10.dp))
-                            SubcomposeAsyncImage(
-                                modifier = Modifier
-                                    .height(50.dp)
-                                    .width(50.dp)
-                                    .padding(5.dp)
-                                    .clip(CircleShape)
-                                    .border(
-                                        width = 2.dp,
-                                        color = Color.Black,
-                                        shape = CircleShape
-                                    ),
-                                model = "https://picsum.photos/200/300",
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column(
-                                verticalArrangement = Arrangement.Center,
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    textAlign = TextAlign.Start,
-                                    overflow = TextOverflow.Ellipsis,
-                                    text = "Tobias Brandl",
-                                    fontSize = 16.sp,
-                                    color = Color.Black,
-                                )
-                                Text(
-                                    textAlign = TextAlign.Start,
-                                    overflow = TextOverflow.Ellipsis,
-                                    text = "1 mutual friend",
-                                    fontSize = 14.sp,
-                                    color = Color.Gray,
-                                )
+                                    )
+                                    Text(
+                                        textAlign = TextAlign.Start,
+                                        overflow = TextOverflow.Ellipsis,
+                                        text = "1 mutual friend",
+                                        fontSize = 14.sp,
+                                        color = Color.Gray,
+                                    )
+                                }
                             }
                         }
                     })
