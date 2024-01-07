@@ -2,15 +2,15 @@
   "ConstraintSets": {
     "start": {
       "back_arrow": {
-        "width": 30,
-        "height": 30,
-        "start": ["parent", "start", 16],
+        "width": 25,
+        "height": 25,
+        "start": ["parent", "start", 12],
         "top": ["parent", "top", 16],
       },
       "profile_pic": {
-        "width": 50,
-        "height": 50,
-        "start": ["back_arrow", "end", 16],
+        "width": 45,
+        "height": 45,
+        "start": ["back_arrow", "end", 12],
         "top": ["parent", "top",8],
         "custom": {
           "background": "#08ff04"
@@ -19,7 +19,7 @@
       "username": {
         "top": ["profile_pic", "top",],
         "bottom":["profile_pic","bottom",],
-        "start": ["profile_pic", "end", 16]
+        "start": ["profile_pic", "end", 14]
       },
       "box": {
         "width": "spread",

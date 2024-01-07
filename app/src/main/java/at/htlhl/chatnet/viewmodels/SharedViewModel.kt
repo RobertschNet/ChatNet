@@ -11,8 +11,10 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.constraintlayout.compose.State
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
@@ -29,12 +31,14 @@ import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.QueryDocumentSnapshot
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,7 +80,8 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     val auth: FirebaseAuth = Firebase.auth
     val chatMateResponseState = mutableStateOf(ChatMateResponseState.Success)
-    val friend = mutableStateOf(InternalChatInstance())
+    private val _friend = MutableStateFlow(InternalChatInstance())
+    val friend: StateFlow<InternalChatInstance> get() = _friend
     val bottomBarState = mutableStateOf(false)
     val gpsState = mutableStateOf(false)
     val localChatUserList = mutableStateOf<List<FirebaseUsers>>(emptyList())
@@ -88,7 +93,9 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val imageList= mutableStateOf<List<InternalMessageInstance>>(emptyList())
     val galleryImageList= mutableStateOf<List<Uri>>(emptyList())
 
-
+    fun updateFriend(newFriend: InternalChatInstance) {
+        _friend.value = newFriend
+    }
     private fun getUserDocumentRef() = firebaseInstance.collection(USER_COLLECTION)
 
     private fun getChatDocumentRef() = firebaseInstance.collection(CHATS_COLLECTION)
@@ -567,7 +574,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     fun reset() {
         _chatData.value = emptyList()
-        friend.value = InternalChatInstance(
+        _friend.value = InternalChatInstance(
             FirebaseUsers(),
             Timestamp.now(),
             InternalMessageInstance(),
@@ -979,7 +986,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     val specificChat = sharedViewModel.chatData.value.find {
                         it.tab == "randchat" && it.members.contains(uID) && it.members.contains(auth.currentUser?.uid.toString())
                     }
-                    sharedViewModel.friend.value = InternalChatInstance(
+                    _friend.value = InternalChatInstance(
                         personList = personList!!,
                         timestampMessage = Timestamp.now(),
                         lastMessage = InternalMessageInstance(),
@@ -1083,4 +1090,54 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 exception.printStackTrace()
             }
     }
+    fun changeMediaVisibility(userContext: Boolean, isMedia: Boolean) {
+        for (chat in chatData.value) {
+            if (chat.members.contains(friend.value.personList.id) && chat.members.contains(auth.currentUser?.uid.toString())) {
+                val chatRef = getChatDocumentRef().document(chat.chatRoomID).collection(MESSAGES_COLLECTION)
+                chatRef.get().addOnSuccessListener { querySnapshot ->
+                    for (document in querySnapshot.documents) {
+                        if (isMedia) {
+                            // Handle media visibility
+                            val images = document.get("images") as List<*>?
+                            if (images != null && images.isNotEmpty()) {
+                                handleVisibility(userContext, chatRef, document)
+                            }
+                        } else {
+                            // Handle text visibility
+                            val text = document.getString("text")
+                            if (!text.isNullOrBlank()) {
+                                handleVisibility(userContext, chatRef, document)
+                            }
+                        }
+                    }
+                }.addOnFailureListener { exception ->
+                    exception.printStackTrace()
+                    // Handle the failure here
+                }
+            }
+        }
+    }
+
+    private fun handleVisibility(userContext: Boolean, chatRef: CollectionReference, document: DocumentSnapshot) {
+        val sender = document.get("visible") as List<*>
+        if (auth.currentUser?.uid.toString() in sender) {
+            val updatedVisible = sender.toMutableList()
+            if (userContext) {
+                updatedVisible.remove(auth.currentUser?.uid.toString())
+            } else {
+                updatedVisible.clear()
+            }
+            chatRef.document(document.id)
+                .update("visible", updatedVisible)
+                .addOnSuccessListener {
+                    // Successfully removed the entry from the "visible" array
+                }
+                .addOnFailureListener { exception ->
+                    exception.printStackTrace()
+                    // Handle the failure here
+                }
+        }
+    }
+
+
 }

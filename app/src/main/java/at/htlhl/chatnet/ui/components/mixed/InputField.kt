@@ -1,7 +1,9 @@
 package at.htlhl.chatnet.ui.components.mixed
 
+import android.content.Context
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -45,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
@@ -74,6 +77,7 @@ fun InputField(
     val isLoading = remember {
         mutableStateOf(false)
     }
+    val context=LocalContext.current
     val systemUiController = rememberSystemUiController()
     val text = sharedViewModel.text.value
     var chatMateResponseText by remember { mutableStateOf("ChatMate is thinking") }
@@ -253,32 +257,32 @@ fun InputField(
                                     ), RoundedCornerShape(24.dp)
                                 )
                         ) {
-
                             if (text.isEmpty()) {
-                                IconButton(enabled = !chatMateChat, onClick = {
-                                    systemUiController.setStatusBarColor(
-                                        color = Color.Black, darkIcons = false
-                                    )
-                                    navController.navigate(Screens.CameraViewScreen.route)
+                                IconButton(onClick = {
+                                    if (chatMateChat) createToast(true, context) else {
+                                        systemUiController.setStatusBarColor(
+                                            color = Color.Black,
+                                            darkIcons = false
+                                        )
+                                        navController.navigate(Screens.CameraViewScreen.route)
+                                    }
                                 }) {
                                     SubcomposeAsyncImage(
                                         model = R.drawable.camera_svgrepo_com_5_,
                                         contentDescription = null,
-                                        colorFilter = ColorFilter.tint(Color.White),
+                                        colorFilter = ColorFilter.tint(Color.White.copy(alpha=if (chatMateChat) 0.7f else 1f)),
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
                             } else {
-                                IconButton(enabled = !chatMateChat, onClick = {
-                                    multiplePhotoPickerLauncher.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                    )
+                                IconButton(onClick = {
+                                    if (chatMateChat) createToast(false, context) else multiplePhotoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                                 }) {
                                     SubcomposeAsyncImage(
                                         model = R.drawable.gallery_svgrepo_com,
                                         contentDescription = null,
                                         modifier = Modifier.size(28.dp),
-                                        colorFilter = ColorFilter.tint(Color.White),
+                                        colorFilter = ColorFilter.tint(Color.White.copy(alpha=if (chatMateChat) 0.7f else 1f)),
                                     )
                                 }
                             }
@@ -330,15 +334,15 @@ fun InputField(
                                     }
                                 })
                         } else {
-                            IconButton(enabled = !chatMateChat, onClick = {
-                                multiplePhotoPickerLauncher.launch(
+                            IconButton(onClick = {
+                                if (chatMateChat) createToast(false,context) else multiplePhotoPickerLauncher.launch(
                                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                                 )
                             }) {
                                 SubcomposeAsyncImage(
                                     model = R.drawable.gallery_svgrepo_com,
                                     contentDescription = null,
-                                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
+                                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary.copy(alpha=if (chatMateChat) 0.7f else 1f)),
                                     modifier = Modifier.size(30.dp)
                                 )
                             }
@@ -351,6 +355,14 @@ fun InputField(
             Spacer(modifier = Modifier.height(10.dp))
         }
     }
+}
+fun createToast(camera:Boolean, context: Context) {
+    Log.println(Log.INFO, "Camera", "Permission denied")
+    Toast.makeText(
+       context,
+        if (camera) "Camera not available" else "Gallery not available",
+        Toast.LENGTH_SHORT
+    ).show()
 }
 
 fun uploadImage(selectedImageUris: List<Uri>, onUploadSuccess: (List<String>) -> Unit) {

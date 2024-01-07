@@ -64,6 +64,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class ChatView : ViewModel() {
+    @SuppressLint("StateFlowValueCalledInComposition")
     @Composable
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val systemUiController = rememberSystemUiController()
@@ -113,7 +114,8 @@ class ChatView : ViewModel() {
                 sharedViewModel.saveMessages(documentId = chatRoomId, message = message)
             }
         }
-        sharedViewModel.imageList.value = createImageList(messageListFromMatchingChat)
+        sharedViewModel.imageList.value =
+            createImageList(messageListFromMatchingChat, sharedViewModel)
         Log.println(Log.ERROR, "ChatViewMab", messageListFromMatchingChat.toString())
         sharedViewModel.markMessagesAsRead(user = sharedViewModel.friend.value)
         sharedViewModel.updateMarkAsReadStatus(isAlreadyUnread = true)
@@ -137,7 +139,6 @@ class ChatView : ViewModel() {
         chatRoomId: String,
         chatMateChat: Boolean
     ) {
-        Log.println(Log.ERROR, "ChatView", messagesForChat.toString())
         val coroutineScope = rememberCoroutineScope()
         var blockDialog by remember { mutableStateOf(false) }
         var unblockDialog by remember { mutableStateOf(false) }
@@ -166,8 +167,6 @@ class ChatView : ViewModel() {
                 }
             },
             content = {
-                Log.println(Log.INFO, "paul", it.calculateBottomPadding().toString())
-                Log.println(Log.INFO, "paul1", it.calculateTopPadding().toString())
                 LaunchedEffect(it.calculateBottomPadding()) {
                     lazyListState.scrollToItem(filteredMessages.size)
                 }
@@ -294,7 +293,11 @@ class ChatView : ViewModel() {
                 ),
                 state = lazyListState
             ) {
-                items(filteredMessages) { message ->
+                items(
+
+                    key = { it.id },
+                    items = filteredMessages
+                ) { message ->
                     val messageIndex = messages.indexOf(message)
                     val previousMessageIndex =
                         if (messageIndex > 0) messages.getOrNull(messageIndex - 1) else null
@@ -440,22 +443,27 @@ class ChatView : ViewModel() {
         return sharedViewModel.user.value.blocked.contains(sharedViewModel.friend.value.personList.id)
     }
 
-    private fun createImageList(messages: List<InternalMessageInstance>): List<InternalMessageInstance> {
+    private fun createImageList(
+        messages: List<InternalMessageInstance>,
+        sharedViewModel: SharedViewModel
+    ): List<InternalMessageInstance> {
         val imageList = arrayListOf<InternalMessageInstance>()
         messages.forEach {
             if (it.images.isNotEmpty()) {
                 it.images.forEach { image ->
-                    imageList.add(
-                        InternalMessageInstance(
-                            id = it.id,
-                            sender = it.sender,
-                            images = arrayListOf(image),
-                            read = it.read,
-                            text = it.text,
-                            timestamp = it.timestamp,
-                            visible = it.visible
+                    if (it.visible.contains(sharedViewModel.auth.currentUser?.uid.toString())) {
+                        imageList.add(
+                            InternalMessageInstance(
+                                id = it.id,
+                                sender = it.sender,
+                                images = arrayListOf(image),
+                                read = it.read,
+                                text = it.text,
+                                timestamp = it.timestamp,
+                                visible = it.visible
+                            )
                         )
-                    )
+                    }
                 }
             }
         }

@@ -47,20 +47,22 @@ class ChatMateView {
         val modelSheetState = remember { mutableStateOf(false) }
         val messageChatRoomDataState = sharedViewModel.completeChatMateList.collectAsState()
         val messageChatRoomData: List<InternalChatInstance> = messageChatRoomDataState.value
+        val friendState = sharedViewModel.friend.collectAsState()
+        val friend: InternalChatInstance = friendState.value
         var showClearChatPrompt by remember { mutableStateOf(false) }
         Log.println(Log.INFO, "ChatMateView", "messageChatRoomData: $messageChatRoomData")
         val bottomSheetItems = listOf(
             BottomSheetItem(
-                title = if (sharedViewModel.friend.value.markedAsUnread || sharedViewModel.friend.value.read > 0) "Mark as Read" else "Mark as Unread",
-                icon = if (sharedViewModel.friend.value.markedAsUnread || sharedViewModel.friend.value.read > 0) R.drawable.chat_bubble_svgrepo_com else R.drawable.chat_bubble_outline_badged_svgrepo_com,
+                title = if (friend.markedAsUnread || friend.read > 0) "Mark as Read" else "Mark as Unread",
+                icon = if (friend.markedAsUnread || friend.read > 0) R.drawable.chat_bubble_svgrepo_com else R.drawable.chat_bubble_outline_badged_svgrepo_com,
                 tag = "unread"
             ),
             BottomSheetItem(
                 title = "Clear Chat", icon = R.drawable.comment_delete_svgrepo_com, tag = "clear"
             ),
             BottomSheetItem(
-                title = if (sharedViewModel.friend.value.pinChat) "Unpin Chat" else "Pin Chat",
-                icon = if (sharedViewModel.friend.value.pinChat) R.drawable.pin_off_svgrepo_com else R.drawable.pin_svgrepo_com,
+                title = if (friend.pinChat) "Unpin Chat" else "Pin Chat",
+                icon = if (friend.pinChat) R.drawable.pin_off_svgrepo_com else R.drawable.pin_svgrepo_com,
                 tag = "pin"
             ),
             BottomSheetItem(
@@ -104,7 +106,7 @@ class ChatMateView {
                                     navController.navigate(Screens.ChatViewScreen.route)
                                 }
                             }
-                            sharedViewModel.friend.value = message
+                            sharedViewModel.updateFriend(message)
                         }
                     }
                 }
@@ -156,7 +158,7 @@ class ChatMateView {
                                 }
                             }
                         },
-                        friend = sharedViewModel.friend.value,
+                        friend = friend,
                     )
                 }
             )

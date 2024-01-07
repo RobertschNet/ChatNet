@@ -85,8 +85,8 @@ class DropIn : ViewModel() {
         val modelSheetState = remember { mutableStateOf(false) }
         val documentIdState = sharedViewModel.chatData.collectAsState()
         val documentationId: List<FirebaseChat> = documentIdState.value
-        val friendIdState = sharedViewModel.personData.collectAsState(initial = emptyList())
-        val friendListData: List<FirebaseUsers> = friendIdState.value
+        val friendDataState= sharedViewModel.friend.collectAsState()
+        val friend: InternalChatInstance = friendDataState.value
         val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
             localUser.id != sharedViewModel.auth.currentUser?.uid
         }
@@ -111,21 +111,21 @@ class DropIn : ViewModel() {
         }
         val bottomSheetItems = listOf(
             BottomSheetItem(
-                title = if (sharedViewModel.friend.value.markedAsUnread || sharedViewModel.friend.value.read > 0) "Mark as Read" else "Mark as Unread",
-                icon = if (sharedViewModel.friend.value.markedAsUnread || sharedViewModel.friend.value.read > 0) R.drawable.chat_bubble_svgrepo_com else R.drawable.chat_bubble_outline_badged_svgrepo_com,
+                title = if (friend.markedAsUnread || friend.read > 0) "Mark as Read" else "Mark as Unread",
+                icon = if (friend.markedAsUnread || friend.read > 0) R.drawable.chat_bubble_svgrepo_com else R.drawable.chat_bubble_outline_badged_svgrepo_com,
                 tag = "unread"
             ),
             BottomSheetItem(
                 title = "Clear Chat", icon = R.drawable.comment_delete_svgrepo_com, tag = "clear"
             ),
             BottomSheetItem(
-                title = if (sharedViewModel.friend.value.personList.mutedFriend) "Unmute User" else "Mute User",
-                icon = if (sharedViewModel.friend.value.personList.mutedFriend) R.drawable.speaker_none_svgrepo_com else R.drawable.speaker_svgrepo_com,
+                title = if (friend.personList.mutedFriend) "Unmute User" else "Mute User",
+                icon = if (friend.personList.mutedFriend) R.drawable.speaker_none_svgrepo_com else R.drawable.speaker_svgrepo_com,
                 tag = "mute"
             ),
             BottomSheetItem(
-                title = if (sharedViewModel.friend.value.pinChat) "Unpin Chat" else "Pin Chat",
-                icon = if (sharedViewModel.friend.value.pinChat) R.drawable.pin_off_svgrepo_com else R.drawable.pin_svgrepo_com,
+                title = if (friend.pinChat) "Unpin Chat" else "Pin Chat",
+                icon = if (friend.pinChat) R.drawable.pin_off_svgrepo_com else R.drawable.pin_svgrepo_com,
                 tag = "pin"
             ),
         )
@@ -148,9 +148,12 @@ class DropIn : ViewModel() {
                         .background(MaterialTheme.colorScheme.tertiary),
                     state = lazyListState
                 ) {
-                    items(updatedLocalChatUsers) { message ->
+                    item { 
+                        Text(text = "User in your area", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp))
+                    }
+                    items(updatedLocalChatUsers) { chats ->
                         ChatsViewChatItem(
-                            chat = message,
+                            chat = chats,
                             displayOnlineState = true,
                             sharedViewModel = sharedViewModel,
                             navController = navController,
@@ -168,8 +171,14 @@ class DropIn : ViewModel() {
                                     navController.navigate(Screens.ChatViewScreen.route)
                                 }
                             }
-                            sharedViewModel.friend.value = message
+                            sharedViewModel.updateFriend(chats)
                         }
+                    }
+                    item {
+                        Text(text = "Users with empty chat rooms", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp))
+                    }
+                    items(usersWithEmptyChatRooms){ chats ->
+                        Text(text = chats.members.toString())
                     }
                 }
             }
@@ -177,7 +186,7 @@ class DropIn : ViewModel() {
         if (showUserIconPrompt) {
             ShowBigUserImageDialog(
                 sharedViewModel = sharedViewModel,
-                userData = sharedViewModel.friend.value,
+                userData = friend,
                 onDismiss = { action ->
                     when (action) {
                         "message" -> {
@@ -199,7 +208,7 @@ class DropIn : ViewModel() {
                         }
 
                         "info" -> {
-                            //TODO: Info
+                            navController.navigate(Screens.ProfileInfoScreen.route)
                         }
                     }
                     showUserIconPrompt = false
@@ -256,7 +265,7 @@ class DropIn : ViewModel() {
                                 }
                             }
                         },
-                        friend = sharedViewModel.friend.value,
+                        friend = friend,
                     )
                 }
             )
@@ -285,7 +294,7 @@ fun ChatItemForDropIn(
                     if (bottomSheetState) {
                         onItemClicked()
                     } else {
-                        sharedViewModel.friend.value = person
+                        sharedViewModel.updateFriend(person)
                         Log.println(Log.INFO, "Current", person.toString())
                         val filteredChats = documentationId.filter { chat ->
                             chat.members.contains(person.personList.id) && chat.members
@@ -302,7 +311,7 @@ fun ChatItemForDropIn(
 
                 },
                 onLongClick = {
-                    sharedViewModel.friend.value = person
+                    sharedViewModel.updateFriend(person)
                     onItemClicked()
                 },
             )
