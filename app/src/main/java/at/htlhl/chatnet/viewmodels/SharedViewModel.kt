@@ -83,10 +83,10 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val text = mutableStateOf("")
     val randState = mutableStateOf(false)
     val isConnected = mutableStateOf(false)
-    val imagePosition= mutableStateOf(0)
-    val imageList= mutableStateOf<List<InternalMessageInstance>>(emptyList())
-    val galleryImageList= mutableStateOf<List<Uri>>(emptyList())
-    val paddingValues= mutableStateOf(70)
+    val imagePosition = mutableStateOf(0)
+    val imageList = mutableStateOf<List<InternalMessageInstance>>(emptyList())
+    val galleryImageList = mutableStateOf<List<Uri>>(emptyList())
+    val paddingValues = mutableStateOf(70)
 
 
     private fun getUserDocumentRef() = firebaseInstance.collection(USER_COLLECTION)
@@ -121,9 +121,6 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     @Suppress("LABEL_NAME_CLASH")
     fun fetchFriendsFromUser() {
-        if (auth.currentUser == null) {
-            return
-        }
         val subCollectionRef = getUserDocumentRef()
             .document(auth.currentUser!!.uid)
             .collection("/$FRIENDS_COLLECTION")
@@ -306,16 +303,13 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     fun fetchChatsWithMessages(
         onComplete: () -> Unit,
     ) {
-        if (auth.currentUser == null) {
-            return
-        }
         val chatDataSet = mutableSetOf<FirebaseChat>()
         // Step 1: Listen for changes in the chats collection
+        Log.println(Log.INFO, "ChatData!!!", auth.currentUser!!.uid)
         getChatDocumentRef().whereArrayContains("members", auth.currentUser!!.uid)
             .addSnapshotListener { querySnapshot, error ->
-                if (error != null) {
-                    return@addSnapshotListener
-                }
+                if (error != null) { return@addSnapshotListener }
+                if (querySnapshot?.documentChanges?.isEmpty() == true) { onComplete.invoke() }
                 // Step 2: For each change in the chats collection, fetch the messages subcollection
                 querySnapshot?.documentChanges?.forEach { documentChange ->
                     // Step 3: Listen for changes in the messages subcollection
@@ -448,7 +442,11 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             }
     }
 
-    suspend fun saveMessages(documentId: String?, message: FirebaseMessage, onComplete: () -> Unit={}) {
+    suspend fun saveMessages(
+        documentId: String?,
+        message: FirebaseMessage,
+        onComplete: () -> Unit = {}
+    ) {
         viewModelScope.launch {
             Log.println(Log.INFO, "Message", message.toString())
             firebaseInstance.collection("$CHATS_COLLECTION/${documentId}/$MESSAGES_COLLECTION")
@@ -837,6 +835,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun checkIfUserIsLoggedIn(): Boolean {
+        Log.println(Log.INFO, "User", auth.currentUser?.uid.toString())
         return auth.currentUser != null
     }
 
@@ -856,6 +855,9 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val friendFriendsListData: StateFlow<List<FirebaseUsers>> get() = _friendFriendsListData
 
     fun fetchFriendsFromFriend() {
+        if (friendListData.value.isEmpty()) {
+            return
+        }
         val randomFriend = friendListData.value.random()
         getUserDocumentRef().document(randomFriend.id).collection("/$FRIENDS_COLLECTION")
             .whereNotEqualTo("status", "pending").limit(5).get()
@@ -992,7 +994,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             }
     }
 
-     fun saveBitmapToGallery(
+    fun saveBitmapToGallery(
         bitmap: Bitmap,
         displayName: String,
         context: Context,

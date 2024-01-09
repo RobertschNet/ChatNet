@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(Unit) {
                     FirebaseApp.initializeApp(this@MainActivity);
                     if (viewModel.checkIfUserIsLoggedIn()) {
+                        Log.println(Log.INFO, "User", "User is logged in!!!!!!!!!")
                         viewModel.updateOnlineStatus("online")
                         viewModel.getUserData()
                         viewModel.fetchFriendsFromUser()

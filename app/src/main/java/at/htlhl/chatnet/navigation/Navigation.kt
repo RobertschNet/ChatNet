@@ -128,7 +128,7 @@ fun Navigation(
         composable("RegisterScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-            RegisterView().RegisterScreen(navController)
+            RegisterView().RegisterScreen(navController, sharedViewModel)
         }
         composable("LoadingScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },

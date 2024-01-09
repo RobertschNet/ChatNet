@@ -37,7 +37,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,6 +60,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.navigation.Screens
+import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -80,7 +80,7 @@ class RegisterView {
 
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @Composable
-    fun RegisterScreen(navController: NavController) {
+    fun RegisterScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val authentication = FirebaseAuth.getInstance()
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
@@ -101,7 +101,13 @@ class RegisterView {
                     authentication.signInWithCredential(credential)
                         .addOnCompleteListener { signInTask ->
                             if (signInTask.isSuccessful) {
-                                println("Sign-in successful")
+                                sharedViewModel.updateOnlineStatus("online")
+                                sharedViewModel.getUserData()
+                                sharedViewModel.fetchFriendsFromUser()
+                                sharedViewModel.fetchChatsWithMessages {
+                                    sharedViewModel.fetchFriendsFromFriend()
+                                    navController.navigate(Screens.ChatsViewScreen.route)
+                                }
                             } else {
                                 println("Sign-in failed")
                             }
@@ -210,25 +216,24 @@ class RegisterView {
                 ),
                 value = name,
                 onValueChange = { newValue ->
-                    if (newValue.isEmpty() || regexPattern.matches(newValue)) {
-                        name = newValue
-                        if (name.isEmpty()) {
-                            usernameTexFieldColor = Color.Gray
-                        } else {
-                            retrieveMessages(
-                                name = name,
-                                contextForToast = toastContext
-                            ) { success, value ->
-                                usernameTexFieldColor = if (success) {
-                                    println("Retrieved value: $value")
-                                    Color.Red
-                                } else {
-                                    println("Failed to retrieve value")
-                                    Color.Green
-                                }
+                    name = newValue
+                    if (name.isEmpty()) {
+                        usernameTexFieldColor = Color.Gray
+                    } else {
+                        checkIfUsernameExists(
+                            name = name,
+                            contextForToast = toastContext
+                        ) { success, value ->
+                            usernameTexFieldColor = if (success) {
+                                println("Retrieved value: $value")
+                                Color.Red
+                            } else {
+                                println("Failed to retrieve value")
+                                Color.Green
                             }
                         }
                     }
+
                 },
                 modifier = Modifier
                     .fillMaxWidth(),
@@ -369,6 +374,7 @@ class RegisterView {
                             GoogleSignIn.getClient(context, googleSignInOptions)
                         val signInIntent = googleSignInClient.signInIntent
                         signInLauncher.launch(signInIntent)
+
                     }
                 }) {
                     Row(
@@ -518,26 +524,31 @@ class RegisterView {
 
      */
 
-    private fun retrieveMessages(
+    private fun checkIfUsernameExists(
         name: String,
         contextForToast: Context,
         callback: (Boolean, String?) -> Unit
     ) {
-        val query = db.collection("usernames")
-            .whereEqualTo("username", name)
+        val query = db.collection("users")
+            .whereEqualTo("username.lowercase", name.lowercase(Locale.ROOT))
             .limit(1)
         query.get()
             .addOnSuccessListener { querySnapshot ->
                 if (!querySnapshot.isEmpty) {
                     val documentSnapshot = querySnapshot.documents[0]
-                    val value = documentSnapshot.getString("username")
-                    println("Retrieved value: $value")
-                    Toast.makeText(
-                        contextForToast,
-                        "Username already exists",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    callback(true, value)
+                    val usernameField = documentSnapshot.get("username.lowercase")
+                    if (usernameField is String) {
+                        println("Retrieved value: $usernameField")
+                        Toast.makeText(
+                            contextForToast,
+                            "Username already exists",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        callback(true, usernameField)
+                    } else {
+                        println("Field 'username.value' is not a String")
+                        callback(false, null)
+                    }
                 } else {
                     println("Document not found")
                     callback(false, null)
@@ -548,6 +559,7 @@ class RegisterView {
                 callback(false, exception.message)
             }
     }
+
 
     private fun createUserEntry(name: String) {
         val user = FirebaseAuth.getInstance().currentUser

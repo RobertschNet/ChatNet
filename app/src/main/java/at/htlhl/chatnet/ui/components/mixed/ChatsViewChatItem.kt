@@ -265,9 +265,6 @@ fun ChatsViewChatItem(
                         model = R.drawable.speaker_none_svgrepo_com,
                         contentDescription = null,
                         colorFilter = ColorFilter.tint(Color.Gray),
-                        loading = {
-                            CircularProgressIndicator()
-                        },
                     )
                 }
                 if (chat.pinChat) {
@@ -278,9 +275,6 @@ fun ChatsViewChatItem(
                         model = R.drawable.pin_svgrepo_com,
                         contentDescription = null,
                         colorFilter = ColorFilter.tint(Color.Gray),
-                        loading = {
-                            CircularProgressIndicator()
-                        },
                     )
                 }
                 if (chat.read > 0 || chat.markedAsUnread) {

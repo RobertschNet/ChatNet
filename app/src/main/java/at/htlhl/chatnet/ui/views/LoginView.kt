@@ -52,17 +52,21 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.navigation.Screens
+import at.htlhl.chatnet.ui.components.mixed.CreateUserWithGoogle
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 class LoginView {
     private lateinit var auth: FirebaseAuth
@@ -71,6 +75,7 @@ class LoginView {
     @Composable
     fun LoginScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         sharedViewModel.bottomBarState.value = false
+        val createAccountWithGoogleDialog = remember { mutableStateOf(false) }
         val authentication = FirebaseAuth.getInstance()
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
@@ -84,18 +89,31 @@ class LoginView {
             contract = ActivityResultContracts.StartActivityForResult()
         ) { result ->
             val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            Log.println(Log.INFO, "GoogleSignIn", task.toString())
             try {
                 val account = task.getResult(ApiException::class.java)
+                Log.println(Log.INFO, "GoogleSignIn2", account.idToken.toString())
                 if (account != null) {
                     val credential = GoogleAuthProvider.getCredential(account.idToken, null)
                     authentication.signInWithCredential(credential)
                         .addOnCompleteListener { signInTask ->
                             if (signInTask.isSuccessful) {
-                                println("Sign-in successful")
-                                sharedViewModel.fetchFriendsFromUser()
-                                sharedViewModel.fetchChatsWithMessages {}
-                                sharedViewModel.gpsState.value = false
-                                navController.navigate(Screens.ChatsViewScreen.route)
+                                account.email?.let {
+                                    checkIfUserExists(it) {
+                                        println("Sign-in successful")
+                                        if (it) {
+                                            sharedViewModel.updateOnlineStatus("online")
+                                            sharedViewModel.getUserData()
+                                            sharedViewModel.fetchFriendsFromUser()
+                                            sharedViewModel.fetchChatsWithMessages {
+                                                sharedViewModel.fetchFriendsFromFriend()
+                                                navController.navigate(Screens.ChatsViewScreen.route)
+                                            }
+                                        } else {
+                                            createAccountWithGoogleDialog.value = true
+                                        }
+                                    }
+                                }
                             } else {
                                 println("Sign-in failed")
                             }
@@ -105,6 +123,7 @@ class LoginView {
                 e.stackTrace
             }
         }
+        val googleSignInClient = GoogleSignIn.getClient(context, googleSignInOptions)
         Scaffold(
             containerColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
             content = {
@@ -112,10 +131,31 @@ class LoginView {
                     navController,
                     scope,
                     context,
-                    googleSignInOptions,
+                    googleSignInClient,
                     signInLauncher,
                     sharedViewModel
                 )
+                if (createAccountWithGoogleDialog.value) {
+                    CreateUserWithGoogle(
+                        onClose = {
+                            createAccountWithGoogleDialog.value = false
+                            if (it != "") {
+                                createUserEntry(auth, it) {
+                                    sharedViewModel.updateOnlineStatus("online")
+                                    sharedViewModel.getUserData()
+                                    sharedViewModel.fetchFriendsFromUser()
+                                    sharedViewModel.fetchChatsWithMessages {
+                                        sharedViewModel.fetchFriendsFromFriend()
+                                        navController.navigate(Screens.ChatsViewScreen.route)
+                                    }
+                                }
+                            } else {
+                                googleSignInClient.signOut()
+                                authentication.signOut()
+                            }
+                        },
+                    )
+                }
             },
             bottomBar = { BottomScreen(navController) })
     }
@@ -163,7 +203,7 @@ class LoginView {
         navController: NavController,
         scope: CoroutineScope,
         context: Context,
-        googleSignInOptions: GoogleSignInOptions,
+        googleSignInClient: GoogleSignInClient,
         signInLauncher: ActivityResultLauncher<Intent>,
         sharedViewModel: SharedViewModel
     ) {
@@ -320,8 +360,6 @@ class LoginView {
             ) {
                 IconButton(onClick = {
                     scope.launch {
-                        val googleSignInClient =
-                            GoogleSignIn.getClient(context, googleSignInOptions)
                         val signInIntent = googleSignInClient.signInIntent
                         signInLauncher.launch(signInIntent)
                     }
@@ -358,5 +396,60 @@ class LoginView {
         val user = auth.currentUser
         println(user)
         return user?.isEmailVerified == true
+    }
+
+    private fun checkIfUserExists(
+        email: String,
+        callback: (Boolean) -> Unit
+    ) {
+        val query = FirebaseFirestore.getInstance().collection("users")
+            .whereEqualTo("email", email)
+            .limit(1)
+
+        query.get()
+            .addOnSuccessListener { querySnapshot ->
+                if (!querySnapshot.isEmpty) {
+                    println("Document found")
+                    callback(true)
+                } else {
+                    println("Document not found")
+                    callback(false)
+                }
+            }
+            .addOnFailureListener { exception ->
+                println("Error retrieving document: ${exception.message}")
+                callback(false)
+            }
+    }
+
+    private fun createUserEntry(
+        account: FirebaseAuth,
+        name: String,
+        onSuccess: () -> Unit
+    ) {
+        val db = FirebaseFirestore.getInstance()
+        val userRef = db.collection("users").document(account.currentUser?.uid.toString())
+        val userData = hashMapOf(
+            "blocked" to emptyList<String>(),
+            "pinned" to emptyList<String>(),
+            "color" to "",
+            "connected" to false,
+            "email" to account.currentUser?.email.toString(),
+            "id" to account.currentUser?.uid.toString(),
+            "image" to "https://www.w3schools.com/howto/img_avatar2.png",
+            "status" to "online",
+            "username" to mapOf(
+                "lowercase" to name.lowercase(Locale.ROOT),
+                "mixedcase" to name,
+            ),
+        )
+        userRef.set(userData)
+            .addOnSuccessListener {
+                println("User successfully created")
+                onSuccess.invoke()
+            }
+            .addOnFailureListener { e ->
+                println("Error creating user: $e")
+            }
     }
 }
