@@ -58,6 +58,8 @@ class Chats : ViewModel() {
         val userDataInstance: List<InternalChatInstance> = userDataInstanceState.value
         val friendListDataState = sharedViewModel.friendListData.collectAsState()
         val friendListData: List<FirebaseUsers> = friendListDataState.value
+        val friendDataState = sharedViewModel.friend.collectAsState()
+        val friendData: InternalChatInstance = friendDataState.value
         Log.println(Log.INFO, "Chats", "friendListData: $friendListData")
         val availableUsers = friendListData.filter { friend -> friend.statusFriend == "pending" }
         Log.println(Log.INFO, "Chats", "userDataInstance: $userDataInstance")
@@ -69,21 +71,21 @@ class Chats : ViewModel() {
             } else userDataInstance
         val bottomSheetItems = listOf(
             BottomSheetItem(
-                title = if (sharedViewModel.friend.value.markedAsUnread || sharedViewModel.friend.value.read > 0) "Mark as Read" else "Mark as Unread",
-                icon = if (sharedViewModel.friend.value.markedAsUnread || sharedViewModel.friend.value.read > 0) R.drawable.chat_bubble_svgrepo_com else R.drawable.chat_bubble_outline_badged_svgrepo_com,
+                title = if (friendData.markedAsUnread || friendData.read > 0) "Mark as Read" else "Mark as Unread",
+                icon = if (friendData.markedAsUnread || friendData.read > 0) R.drawable.chat_bubble_svgrepo_com else R.drawable.chat_bubble_outline_badged_svgrepo_com,
                 tag = "unread"
             ),
             BottomSheetItem(
                 title = "Clear Chat", icon = R.drawable.comment_delete_svgrepo_com, tag = "clear"
             ),
             BottomSheetItem(
-                title = if (sharedViewModel.friend.value.personList.mutedFriend) "Unmute User" else "Mute User",
-                icon = if (sharedViewModel.friend.value.personList.mutedFriend) R.drawable.speaker_none_svgrepo_com else R.drawable.speaker_svgrepo_com,
+                title = if (friendData.personList.mutedFriend) "Unmute User" else "Mute User",
+                icon = if (friendData.personList.mutedFriend) R.drawable.speaker_none_svgrepo_com else R.drawable.speaker_svgrepo_com,
                 tag = "mute"
             ),
             BottomSheetItem(
-                title = if (sharedViewModel.friend.value.pinChat) "Unpin Chat" else "Pin Chat",
-                icon = if (sharedViewModel.friend.value.pinChat) R.drawable.pin_off_svgrepo_com else R.drawable.pin_svgrepo_com,
+                title = if (friendData.pinChat) "Unpin Chat" else "Pin Chat",
+                icon = if (friendData.pinChat) R.drawable.pin_off_svgrepo_com else R.drawable.pin_svgrepo_com,
                 tag = "pin"
             ),
         )
@@ -131,7 +133,7 @@ class Chats : ViewModel() {
                                     navController.navigate(Screens.ChatViewScreen.route)
                                 }
                             }
-                            sharedViewModel.friend.value = message
+                            sharedViewModel.updateFriend(message)
                         }
                     }
                 }
@@ -140,7 +142,7 @@ class Chats : ViewModel() {
         if (showUserIconPrompt) {
             ShowBigUserImageDialog(
                 sharedViewModel = sharedViewModel,
-                userData = sharedViewModel.friend.value,
+                userData = friendData,
                 onDismiss = { action ->
                     when (action) {
                         "message" -> {
@@ -186,10 +188,9 @@ class Chats : ViewModel() {
                         bottomSheetItems,
                         onItemClicked = { item ->
                             modelSheetState.value = false
-
                             when (item.tag) {
                                 "unread" -> {
-                                    if (sharedViewModel.friend.value.read > 0) {
+                                    if (friendData.read > 0) {
                                         sharedViewModel.markMessagesAsRead(sharedViewModel.friend.value)
                                     } else if (sharedViewModel.friend.value.markedAsUnread && sharedViewModel.friend.value.read == 0) {
                                         sharedViewModel.updateMarkAsReadStatus(true)
@@ -203,7 +204,7 @@ class Chats : ViewModel() {
                                 }
 
                                 "mute" -> {
-                                    if (sharedViewModel.friend.value.personList.mutedFriend) {
+                                    if (friendData.personList.mutedFriend) {
                                         sharedViewModel.updateMuteFriendStatus(true)
                                     } else {
                                         sharedViewModel.updateMuteFriendStatus(false)
@@ -211,7 +212,7 @@ class Chats : ViewModel() {
                                 }
 
                                 "pin" -> {
-                                    if (sharedViewModel.friend.value.pinChat) {
+                                    if (friendData.pinChat) {
                                         sharedViewModel.updatePinChatStatus(true)
                                     } else {
                                         sharedViewModel.updatePinChatStatus(false)
@@ -219,7 +220,7 @@ class Chats : ViewModel() {
                                 }
                             }
                         },
-                        friend = sharedViewModel.friend.value,
+                        friend = friendData,
                     )
                 }
             )

@@ -130,7 +130,6 @@ class RandChatView {
         } ?: emptyList()
         val onMessageSent: (FirebaseMessage) -> Unit = { message ->
             if (chatMateChat) {
-                sharedViewModel.chatMateResponseState.value = ChatMateResponseState.Loading
                 sharedViewModel.sendDataToServer(message.text) { response ->
                     runBlocking {
                         sharedViewModel.saveMessages(
@@ -316,7 +315,6 @@ class RandChatView {
         ChatViewMessageComponent(
             sharedViewModel = sharedViewModel,
             isUser = isUser,
-            context = context,
             chatMateChat = chatMateChat,
             previousMessage = previousMessage,
             nextMessage = nextMessage,

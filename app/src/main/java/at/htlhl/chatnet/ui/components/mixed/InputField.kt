@@ -1,7 +1,9 @@
 package at.htlhl.chatnet.ui.components.mixed
 
+import android.content.Context
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,6 +32,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
@@ -53,12 +57,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
+import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.google.firebase.Firebase
 import com.google.firebase.storage.storage
+import kotlinx.coroutines.delay
 
 @Composable
 fun InputField(
@@ -71,8 +77,12 @@ fun InputField(
     val isLoading = remember {
         mutableStateOf(false)
     }
+    val context=LocalContext.current
     val systemUiController = rememberSystemUiController()
     val text = sharedViewModel.text.value
+    var chatMateResponseText by remember { mutableStateOf("ChatMate is thinking") }
+    val chatMatePadding =
+        if (sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) 10.dp else 0.dp
     val multiplePhotoPickerLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.PickMultipleVisualMedia(),
             onResult = { uris ->
@@ -80,17 +90,20 @@ fun InputField(
             })
     BottomAppBar(
         elevation = 10.dp,
-        modifier = if (sharedViewModel.galleryImageList.value.isEmpty()) Modifier.height(70.dp + badgeCount.dp)
-        else Modifier.height(160.dp + badgeCount.dp),
+        modifier = if (sharedViewModel.galleryImageList.value.isEmpty()) Modifier.height(70.dp + badgeCount.dp + chatMatePadding)
+        else Modifier.height(160.dp + badgeCount.dp + chatMatePadding),
         backgroundColor = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Bottom
         ) {
             if (sharedViewModel.galleryImageList.value.isNotEmpty()) {
-                LazyRow(modifier = Modifier.fillMaxWidth().padding(start=5.dp, end = 5.dp)) {
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 5.dp, end = 5.dp)
+                ) {
                     items(sharedViewModel.galleryImageList.value.size) { index ->
                         Box(
                             modifier = Modifier
@@ -123,7 +136,9 @@ fun InputField(
                                 SubcomposeAsyncImage(
                                     model = R.drawable.close_svgrepo_com,
                                     contentDescription = null,
-                                    modifier = Modifier.size(10.dp).align(Alignment.Center),
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .align(Alignment.Center),
                                     colorFilter = ColorFilter.tint(Color.White)
                                 )
                             }
@@ -131,6 +146,27 @@ fun InputField(
                     }
                 }
             }
+            if (sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
+                LaunchedEffect(sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
+                    while (true) {
+                        delay(750)
+                        chatMateResponseText = "ChatMate is thinking."
+                        delay(750)
+                        chatMateResponseText = "ChatMate is thinking.."
+                        delay(750)
+                        chatMateResponseText = "ChatMate is thinking..."
+                    }
+                }
+                Text(
+                    text = chatMateResponseText,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Start,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Light,
+                    modifier = Modifier.padding(start = 30.dp)
+                )
+            }
+
             BasicTextField(
                 // TODO  enabled = sharedViewModel.isConnected.value,
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
@@ -221,32 +257,32 @@ fun InputField(
                                     ), RoundedCornerShape(24.dp)
                                 )
                         ) {
-
                             if (text.isEmpty()) {
-                                IconButton(enabled = !chatMateChat, onClick = {
-                                    systemUiController.setStatusBarColor(
-                                        color = Color.Black, darkIcons = false
-                                    )
-                                    navController.navigate(Screens.CameraViewScreen.route)
+                                IconButton(onClick = {
+                                    if (chatMateChat) createToast(true, context) else {
+                                        systemUiController.setStatusBarColor(
+                                            color = Color.Black,
+                                            darkIcons = false
+                                        )
+                                        navController.navigate(Screens.CameraViewScreen.route)
+                                    }
                                 }) {
                                     SubcomposeAsyncImage(
                                         model = R.drawable.camera_svgrepo_com_5_,
                                         contentDescription = null,
-                                        colorFilter = ColorFilter.tint(Color.White),
+                                        colorFilter = ColorFilter.tint(Color.White.copy(alpha=if (chatMateChat) 0.7f else 1f)),
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
                             } else {
-                                IconButton(enabled = !chatMateChat, onClick = {
-                                    multiplePhotoPickerLauncher.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                    )
+                                IconButton(onClick = {
+                                    if (chatMateChat) createToast(false, context) else multiplePhotoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                                 }) {
                                     SubcomposeAsyncImage(
                                         model = R.drawable.gallery_svgrepo_com,
                                         contentDescription = null,
                                         modifier = Modifier.size(28.dp),
-                                        colorFilter = ColorFilter.tint(Color.White),
+                                        colorFilter = ColorFilter.tint(Color.White.copy(alpha=if (chatMateChat) 0.7f else 1f)),
                                     )
                                 }
                             }
@@ -298,15 +334,15 @@ fun InputField(
                                     }
                                 })
                         } else {
-                            IconButton(enabled = !chatMateChat, onClick = {
-                                multiplePhotoPickerLauncher.launch(
+                            IconButton(onClick = {
+                                if (chatMateChat) createToast(false,context) else multiplePhotoPickerLauncher.launch(
                                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                                 )
                             }) {
                                 SubcomposeAsyncImage(
                                     model = R.drawable.gallery_svgrepo_com,
                                     contentDescription = null,
-                                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
+                                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary.copy(alpha=if (chatMateChat) 0.7f else 1f)),
                                     modifier = Modifier.size(30.dp)
                                 )
                             }
@@ -319,6 +355,14 @@ fun InputField(
             Spacer(modifier = Modifier.height(10.dp))
         }
     }
+}
+fun createToast(camera:Boolean, context: Context) {
+    Log.println(Log.INFO, "Camera", "Permission denied")
+    Toast.makeText(
+       context,
+        if (camera) "Camera not available" else "Gallery not available",
+        Toast.LENGTH_SHORT
+    ).show()
 }
 
 fun uploadImage(selectedImageUris: List<Uri>, onUploadSuccess: (List<String>) -> Unit) {

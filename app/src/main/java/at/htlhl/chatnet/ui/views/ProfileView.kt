@@ -2,12 +2,16 @@ package at.htlhl.chatnet.ui.views
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -58,7 +62,9 @@ import at.htlhl.chatnet.navigation.Screens
 import coil.compose.SubcomposeAsyncImage
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import okhttp3.internal.wait
 
 class ProfileView {
 
@@ -88,6 +94,9 @@ class ProfileView {
             }
         }
         BottomSheetScaffold(
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding(),
             sheetContent = {
                 Column(modifier = Modifier.background(Color.White)) {
                     Text(
@@ -121,7 +130,7 @@ class ProfileView {
                             modifier = Modifier
                                 .clickable {
                                     coroutineScope.launch {
-                                        sharedViewModel.bottomBarState.value = false
+                                        sharedViewModel.bottomBarState.value = true
                                     }
                                 }
                                 .padding(top = 20.dp, end = 40.dp)
@@ -226,7 +235,11 @@ class ProfileView {
                             fontFamily = FontFamily.Monospace,
                             modifier = Modifier
                                 .padding(bottom = 5.dp)
-                                .clickable { coroutineScope.launch { bottomSheetScaffoldState.bottomSheetState.expand() } }
+                                .clickable {
+                                    coroutineScope.launch {
+                                        bottomSheetScaffoldState.bottomSheetState.expand()
+                                    }
+                                }
 
                         )
                         Text(

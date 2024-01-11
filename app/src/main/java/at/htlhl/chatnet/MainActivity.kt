@@ -11,7 +11,8 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
-import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.core.view.WindowCompat
 import androidx.navigation.compose.rememberNavController
@@ -20,8 +21,6 @@ import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.LocationUpdateService
 import at.htlhl.chatnet.ui.theme.TestingTheme
 import at.htlhl.chatnet.viewmodels.SharedViewModel
-import com.google.firebase.FirebaseApp
-import com.google.firebase.storage.FirebaseStorage
 
 class MainActivity : ComponentActivity() {
     private var serviceConnection: ServiceConnection? = null
@@ -43,14 +42,13 @@ class MainActivity : ComponentActivity() {
                     context = applicationContext
                 )
                 LaunchedEffect(Unit) {
-                    FirebaseApp.initializeApp(this@MainActivity);
                     if (viewModel.checkIfUserIsLoggedIn()) {
                         Log.println(Log.INFO, "User", "User is logged in!!!!!!!!!")
                         viewModel.updateOnlineStatus("online")
                         viewModel.getUserData()
                         viewModel.fetchFriendsFromUser()
                         viewModel.fetchChatsWithMessages {
-                            viewModel.fetchFriendsFromFriend()
+                            viewModel.fetchRandomFriendsFromFriend()
                             if (navController.currentDestination?.route == Screens.LoadingScreen.route && start.value) {
                                 start.value = false
                                 navController.navigate(Screens.ChatsViewScreen.route)

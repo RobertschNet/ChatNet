@@ -1,6 +1,5 @@
 package at.htlhl.chatnet.ui.components.mixed
 
-import android.content.Context
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -59,7 +58,6 @@ import java.util.Locale
 fun ChatViewMessageComponent(
     sharedViewModel: SharedViewModel,
     isUser: Boolean,
-    context: Context,
     message: InternalMessageInstance,
     chatMateChat: Boolean,
     onLongPress: () -> Unit,
@@ -184,7 +182,7 @@ fun ChatViewMessageComponent(
                                 )
                             }
                         }
-                    }else if (message.images.size>=4){
+                    } else if (message.images.size >= 4) {
                         Column {
                             Row {
                                 SubcomposeAsyncImage(
@@ -363,7 +361,7 @@ fun ChatViewMessageComponent(
                         lines.append(currentLine)
                     }
                     Text(
-                        text = buildAnnotatedStringWithOttoHighlight(
+                        text = buildAnnotatedStringWithColorHighlight(
                             lines.toString(),
                             searchValue
                         ),
@@ -518,33 +516,26 @@ fun findAllOccurrences(main: String, sub: String): List<Int> {
     return indices
 }
 
-fun buildAnnotatedStringWithOttoHighlight(content: String, otto: String): AnnotatedString {
-    val ottoLower = otto.lowercase(Locale.getDefault())
-    val ottoOccurrences = if (otto.isNotEmpty()) {
-        findAllOccurrences(content.lowercase(Locale.getDefault()), ottoLower)
+fun buildAnnotatedStringWithColorHighlight(content: String, text: String): AnnotatedString {
+    val lowercase = text.lowercase(Locale.getDefault())
+    val occurrences = if (text.isNotEmpty()) {
+        findAllOccurrences(content.lowercase(Locale.getDefault()), lowercase)
     } else {
         emptyList()
     }
 
     return buildAnnotatedString {
         var lastIndex = 0
-
-        ottoOccurrences.forEach { ottoIndex ->
-            // Append the text before the otto occurrence
+        occurrences.forEach { ottoIndex ->
             append(content.substring(lastIndex, ottoIndex))
-
-            // Append the otto occurrence with yellow color
-            if (otto.isNotEmpty()) {
-                withStyle(style = SpanStyle(color = Color.Yellow)) {
-                    val ottoLength = otto.length
+            if (text.isNotEmpty()) {
+                withStyle(style = SpanStyle(background = Color.Yellow, color = Color.Black)) {
+                    val ottoLength = text.length
                     append(content.substring(ottoIndex, ottoIndex + ottoLength))
                 }
             }
-
-            lastIndex = ottoIndex + otto.length
+            lastIndex = ottoIndex + text.length
         }
-
-        // Append the remaining text after the last otto occurrence
         if (lastIndex < content.length) {
             append(content.substring(lastIndex))
         }
