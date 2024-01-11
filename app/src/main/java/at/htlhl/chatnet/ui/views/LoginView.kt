@@ -106,7 +106,7 @@ class LoginView {
                                             sharedViewModel.getUserData()
                                             sharedViewModel.fetchFriendsFromUser()
                                             sharedViewModel.fetchChatsWithMessages {
-                                                sharedViewModel.fetchFriendsFromFriend()
+                                                sharedViewModel.fetchFriendsFriends()
                                                 navController.navigate(Screens.ChatsViewScreen.route)
                                             }
                                         } else {
@@ -145,7 +145,7 @@ class LoginView {
                                     sharedViewModel.getUserData()
                                     sharedViewModel.fetchFriendsFromUser()
                                     sharedViewModel.fetchChatsWithMessages {
-                                        sharedViewModel.fetchFriendsFromFriend()
+                                        sharedViewModel.fetchFriendsFriends()
                                         navController.navigate(Screens.ChatsViewScreen.route)
                                     }
                                 }
