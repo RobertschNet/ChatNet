@@ -104,7 +104,7 @@ class RegisterView {
                                 sharedViewModel.getUserData()
                                 sharedViewModel.fetchFriendsFromUser()
                                 sharedViewModel.fetchChatsWithMessages {
-                                    sharedViewModel.fetchFriendsFriends()
+                                    sharedViewModel.fetchRandomFriendsFromFriend()
                                     navController.navigate(Screens.ChatsViewScreen.route)
                                 }
                             } else {

@@ -106,7 +106,7 @@ class LoginView {
                                             sharedViewModel.getUserData()
                                             sharedViewModel.fetchFriendsFromUser()
                                             sharedViewModel.fetchChatsWithMessages {
-                                                sharedViewModel.fetchFriendsFriends()
+                                                sharedViewModel.fetchRandomFriendsFromFriend()
                                                 navController.navigate(Screens.ChatsViewScreen.route)
                                             }
                                         } else {
@@ -145,7 +145,7 @@ class LoginView {
                                     sharedViewModel.getUserData()
                                     sharedViewModel.fetchFriendsFromUser()
                                     sharedViewModel.fetchChatsWithMessages {
-                                        sharedViewModel.fetchFriendsFriends()
+                                        sharedViewModel.fetchRandomFriendsFromFriend()
                                         navController.navigate(Screens.ChatsViewScreen.route)
                                     }
                                 }
@@ -256,10 +256,13 @@ class LoginView {
                                 if (task.isSuccessful) {
                                     Log.d(ContentValues.TAG, "createUserWithEmail:success")
                                     if (!isUserEmailVerified()) {
+                                        sharedViewModel.updateOnlineStatus("online")
+                                        sharedViewModel.getUserData()
                                         sharedViewModel.fetchFriendsFromUser()
-                                        sharedViewModel.fetchChatsWithMessages {}
-                                        sharedViewModel.gpsState.value = false
-                                        navController.navigate(Screens.ChatsViewScreen.route)
+                                        sharedViewModel.fetchChatsWithMessages {
+                                            sharedViewModel.fetchRandomFriendsFromFriend()
+                                            navController.navigate(Screens.ChatsViewScreen.route)
+                                        }
                                     } else {
                                         Toast.makeText(
                                             activity,

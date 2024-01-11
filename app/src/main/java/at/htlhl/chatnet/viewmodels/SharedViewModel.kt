@@ -530,6 +530,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         MutableStateFlow(FirebaseUsers())
     val user: StateFlow<FirebaseUsers> get() = _user
     fun getUserData() {
+        Log.println(Log.INFO, "$§$§User", auth.currentUser!!.uid)
         if (auth.currentUser == null) {
             return
         }
