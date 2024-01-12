@@ -56,7 +56,7 @@ fun CreateUserWithGoogle(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background, RoundedCornerShape(20.dp))
                 .width(250.dp)
-                .height(350.dp),
+                .height(360.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -99,12 +99,10 @@ fun CreateUserWithGoogle(
                         checkIfUsernameExists(
                             name = email,
                             contextForToast = context
-                        ) { success, value ->
+                        ) { success ->
                             usernameTexFieldColor = if (success) {
-                                println("Retrieved value: $value")
                                 Color.Red
                             } else {
-                                println("Failed to retrieve value")
                                 Color.Green
                             }
                         }
@@ -127,12 +125,31 @@ fun CreateUserWithGoogle(
                 modifier = Modifier
                     .fillMaxWidth()
             ) {
-                Button(onClick = {  onClose.invoke(email)},modifier=Modifier.fillMaxWidth(), shape = RectangleShape, colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)) {
+                Button(
+                    onClick = {
+                        checkIfUsernameExists(email, context) {
+                            if (it) {
+                                usernameTexFieldColor = Color.Red
+                                Toast.makeText(
+                                    context,
+                                    "Username already exists",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                onClose.invoke(email)
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RectangleShape,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
+                ) {
                     Text(
                         text = "Create Account",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 15.sp,
-                        color = Color(0xFF00A0E8))
+                        color = Color(0xFF00A0E8)
+                    )
                 }
             }
             Divider(
@@ -161,7 +178,7 @@ fun CreateUserWithGoogle(
 private fun checkIfUsernameExists(
     name: String,
     contextForToast: Context,
-    callback: (Boolean, String?) -> Unit
+    callback: (Boolean) -> Unit
 ) {
     val query = FirebaseFirestore.getInstance().collection("users")
         .whereEqualTo("username.lowercase", name.lowercase(Locale.ROOT))
@@ -178,18 +195,18 @@ private fun checkIfUsernameExists(
                         "Username already exists",
                         Toast.LENGTH_SHORT
                     ).show()
-                    callback(true, usernameField)
+                    callback(true)
                 } else {
                     println("Field 'username.value' is not a String")
-                    callback(false, null)
+                    callback(false)
                 }
             } else {
                 println("Document not found")
-                callback(false, null)
+                callback(false)
             }
         }
         .addOnFailureListener { exception ->
             println("Error retrieving document: ${exception.message}")
-            callback(false, exception.message)
+            callback(false)
         }
 }

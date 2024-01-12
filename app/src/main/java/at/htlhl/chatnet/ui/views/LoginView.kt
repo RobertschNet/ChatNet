@@ -4,11 +4,9 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -26,6 +24,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,7 +32,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -60,6 +58,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -75,8 +74,6 @@ class LoginView {
     @Composable
     fun LoginScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         sharedViewModel.bottomBarState.value = false
-        val createAccountWithGoogleDialog = remember { mutableStateOf(false) }
-        val authentication = FirebaseAuth.getInstance()
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
         val googleSignInOptions = remember {
@@ -85,44 +82,7 @@ class LoginView {
                 .requestEmail()
                 .build()
         }
-        val signInLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.StartActivityForResult()
-        ) { result ->
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            Log.println(Log.INFO, "GoogleSignIn", task.toString())
-            try {
-                val account = task.getResult(ApiException::class.java)
-                Log.println(Log.INFO, "GoogleSignIn2", account.idToken.toString())
-                if (account != null) {
-                    val credential = GoogleAuthProvider.getCredential(account.idToken, null)
-                    authentication.signInWithCredential(credential)
-                        .addOnCompleteListener { signInTask ->
-                            if (signInTask.isSuccessful) {
-                                account.email?.let {
-                                    checkIfUserExists(it) {
-                                        println("Sign-in successful")
-                                        if (it) {
-                                            sharedViewModel.updateOnlineStatus("online")
-                                            sharedViewModel.getUserData()
-                                            sharedViewModel.fetchFriendsFromUser()
-                                            sharedViewModel.fetchChatsWithMessages {
-                                                sharedViewModel.fetchRandomFriendsFromFriend()
-                                                navController.navigate(Screens.ChatsViewScreen.route)
-                                            }
-                                        } else {
-                                            createAccountWithGoogleDialog.value = true
-                                        }
-                                    }
-                                }
-                            } else {
-                                println("Sign-in failed")
-                            }
-                        }
-                }
-            } catch (e: ApiException) {
-                e.stackTrace
-            }
-        }
+
         val googleSignInClient = GoogleSignIn.getClient(context, googleSignInOptions)
         Scaffold(
             containerColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
@@ -132,30 +92,9 @@ class LoginView {
                     scope,
                     context,
                     googleSignInClient,
-                    signInLauncher,
                     sharedViewModel
                 )
-                if (createAccountWithGoogleDialog.value) {
-                    CreateUserWithGoogle(
-                        onClose = {
-                            createAccountWithGoogleDialog.value = false
-                            if (it != "") {
-                                createUserEntry(auth, it) {
-                                    sharedViewModel.updateOnlineStatus("online")
-                                    sharedViewModel.getUserData()
-                                    sharedViewModel.fetchFriendsFromUser()
-                                    sharedViewModel.fetchChatsWithMessages {
-                                        sharedViewModel.fetchRandomFriendsFromFriend()
-                                        navController.navigate(Screens.ChatsViewScreen.route)
-                                    }
-                                }
-                            } else {
-                                googleSignInClient.signOut()
-                                authentication.signOut()
-                            }
-                        },
-                    )
-                }
+
             },
             bottomBar = { BottomScreen(navController) })
     }
@@ -204,14 +143,64 @@ class LoginView {
         scope: CoroutineScope,
         context: Context,
         googleSignInClient: GoogleSignInClient,
-        signInLauncher: ActivityResultLauncher<Intent>,
-        sharedViewModel: SharedViewModel
+        sharedViewModel: SharedViewModel,
     ) {
-        var email by rememberSaveable { mutableStateOf("") }
-        var password by rememberSaveable { mutableStateOf("") }
+        val createAccountWithGoogleDialog = remember { mutableStateOf(false) }
+        var emailIsNotVerifiedText by remember { mutableStateOf(false) }
+        var wrongPasswordText by remember { mutableStateOf(false) }
+        var wrongEmailText by remember { mutableStateOf(false) }
+        var loginErrorText by remember { mutableStateOf(false) }
+        var accountDisabledOrNotFoundText by remember { mutableStateOf(false) }
+        var email by remember { mutableStateOf("") }
+        var password by remember { mutableStateOf("") }
+        var emailTexFieldColor by remember { mutableStateOf(Color.Gray) }
+        var passwordTexFieldColor by remember { mutableStateOf(Color.Gray) }
+        var isLoading by remember { mutableStateOf(false) }
         val activity = LocalContext.current as Activity
         val controller = LocalSoftwareKeyboardController.current
+        val authentication = FirebaseAuth.getInstance()
         auth = Firebase.auth
+        val signInLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode != Activity.RESULT_OK) {
+               isLoading = false
+            }
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)
+                if (account != null) {
+                    val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+                    authentication.signInWithCredential(credential)
+                        .addOnCompleteListener { signInTask ->
+                            if (signInTask.isSuccessful) {
+                                account.email?.let { it ->
+                                    checkIfUserExists(it) {
+                                        println("Sign-in successful")
+                                        if (it) {
+                                            sharedViewModel.updateOnlineStatus("online")
+                                            sharedViewModel.getUserData()
+                                            sharedViewModel.fetchFriendsFromUser()
+                                            sharedViewModel.fetchChatsWithMessages {
+                                                sharedViewModel.fetchRandomFriendsFromFriend()
+                                                navController.navigate(Screens.ChatsViewScreen.route)
+                                            }
+                                        } else {
+                                            createAccountWithGoogleDialog.value = true
+                                        }
+                                    }
+                                }
+                            } else {
+                                println("Sign-in failed")
+                                isLoading = false
+                                loginErrorText= true
+                            }
+                        }
+                }
+            } catch (e: ApiException) {
+                e.stackTrace
+            }
+        }
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Text(
                 modifier = Modifier.padding(top = 100.dp),
@@ -228,19 +217,85 @@ class LoginView {
                 .fillMaxWidth()
                 .padding(top = 165.dp, start = 30.dp, end = 30.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(15.dp)
         ) {
-
             OutlinedTextField(
-                value = email, onValueChange = { email = it },
+                colors = OutlinedTextFieldDefaults.colors(
+                    cursorColor = emailTexFieldColor,
+                    focusedBorderColor = emailTexFieldColor,
+                    unfocusedBorderColor = emailTexFieldColor,
+                    focusedLabelColor = emailTexFieldColor,
+                    unfocusedLabelColor = emailTexFieldColor,
+                ),
+                value = email,
+                supportingText = {
+                    if (!checkIfValueIsValid("email", email) && email.isNotEmpty()) {
+                        Text(
+                            text = "Email is invalid",
+                            color = Color.Red,
+                            fontSize = 14.sp,
+                            fontWeight = Light,
+                            fontFamily = SansSerif,
+                        )
+                    }
+                },
+                onValueChange = {
+                    email = it
+                    emailTexFieldColor = if (checkIfValueIsValid("email", email)) {
+                        Color.White
+                    } else {
+                        Color.Red
+                    }
+                    if (email.isEmpty()) {
+                        emailTexFieldColor = Color.Gray
+                    }
+                    emailIsNotVerifiedText = false
+                    wrongEmailText = false
+                    wrongPasswordText = false
+                    accountDisabledOrNotFoundText = false
+                    loginErrorText = false
+                },
                 modifier = Modifier
                     .fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
                 singleLine = true,
-                label = { Text(text = "Email/Username") },
+                label = { Text(text = "Email") },
             )
             OutlinedTextField(
-                value = password, onValueChange = { password = it },
+                colors = OutlinedTextFieldDefaults.colors(
+                    cursorColor = passwordTexFieldColor,
+                    focusedBorderColor = passwordTexFieldColor,
+                    unfocusedBorderColor = passwordTexFieldColor,
+                    focusedLabelColor = passwordTexFieldColor,
+                    unfocusedLabelColor = passwordTexFieldColor,
+                ),
+                value = password,
+                supportingText = {
+                    if (!checkIfValueIsValid("password", password) && password.isNotEmpty()) {
+                        Text(
+                            text = "Password is invalid",
+                            color = Color.Red,
+                            fontSize = 14.sp,
+                            fontWeight = Light,
+                            fontFamily = SansSerif,
+                        )
+                    }
+                },
+                onValueChange = {
+                    password = it
+                    passwordTexFieldColor = if (checkIfValueIsValid("password", password)) {
+                        Color.White
+                    } else {
+                        Color.Red
+                    }
+                    if (password.isEmpty()) {
+                        passwordTexFieldColor = Color.Gray
+                    }
+                    emailIsNotVerifiedText = false
+                    wrongEmailText = false
+                    wrongPasswordText = false
+                    accountDisabledOrNotFoundText = false
+                    loginErrorText = false
+                },
                 modifier = Modifier
                     .fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
@@ -249,13 +304,14 @@ class LoginView {
             )
             Button(
                 onClick = {
+                    isLoading = true
                     controller?.hide()
                     try {
                         auth.signInWithEmailAndPassword(email, password)
                             .addOnCompleteListener(activity) { task ->
                                 if (task.isSuccessful) {
                                     Log.d(ContentValues.TAG, "createUserWithEmail:success")
-                                    if (!isUserEmailVerified()) {
+                                    if (isUserEmailVerified()) {
                                         sharedViewModel.updateOnlineStatus("online")
                                         sharedViewModel.getUserData()
                                         sharedViewModel.fetchFriendsFromUser()
@@ -264,47 +320,105 @@ class LoginView {
                                             navController.navigate(Screens.ChatsViewScreen.route)
                                         }
                                     } else {
-                                        Toast.makeText(
-                                            activity,
-                                            "Please verify your email.",
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
+                                        isLoading = false
+                                        emailIsNotVerifiedText = true
                                         auth.signOut()
                                     }
                                 } else {
-                                    Log.w(
-                                        ContentValues.TAG,
-                                        "createUserWithEmail:failure",
-                                        task.exception
-                                    )
-                                    Toast.makeText(
-                                        activity,
-                                        task.exception.toString(),
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
+                                    isLoading = false
+                                    val exception = task.exception
+                                    if (exception is FirebaseAuthException) {
+                                        when (exception.errorCode) {
+                                            "ERROR_INVALID_EMAIL" -> {
+                                                wrongEmailText = true
+                                            }
+                                            "ERROR_USER_DISABLED", "ERROR_USER_NOT_FOUND" -> {
+                                                accountDisabledOrNotFoundText = true
+                                            }
+                                            "ERROR_WRONG_PASSWORD" -> {
+                                                wrongPasswordText = true
+                                            }
+                                        }
+                                    } else {
+                                        loginErrorText = true
+                                    }
                                 }
                             }
                     } catch (e: Exception) {
-                        Toast.makeText(
-                            activity,
-                            e.toString(),
-                            Toast.LENGTH_SHORT,
-                        ).show()
+                        isLoading = false
+                        loginErrorText = true
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 10.dp),
-                enabled = email.isNotEmpty() && password.isNotEmpty(),
+                enabled = passwordTexFieldColor == Color.White && emailTexFieldColor == Color.White && !isLoading,
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
             ) {
-                Text(text = "Sign In", color = Color.White, modifier = Modifier.padding(7.dp))
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(35.dp)
+                    )
+                } else {
+                    Text(text = "Sign In", color = Color.White, modifier = Modifier.padding(7.dp))
+                }
+            }
+            if (emailIsNotVerifiedText) {
+                Text(
+                    text = "Please verify your email first!",
+                    color = Color.Red,
+                    fontSize = 14.sp,
+                    fontWeight = Light,
+                    fontFamily = SansSerif,
+                    modifier = Modifier.padding(top = 10.dp)
+                )
+            }
+            if (wrongEmailText){
+                Text(
+                    text = "Email does not exist!",
+                    color = Color.Red,
+                    fontSize = 14.sp,
+                    fontWeight = Light,
+                    fontFamily = SansSerif,
+                    modifier = Modifier.padding(top = 10.dp)
+                )
+            }
+            if (wrongPasswordText){
+                Text(
+                    text = "Wrong password!",
+                    color = Color.Red,
+                    fontSize = 14.sp,
+                    fontWeight = Light,
+                    fontFamily = SansSerif,
+                    modifier = Modifier.padding(top = 10.dp)
+                )
+            }
+            if (loginErrorText){
+                Text(
+                    text = "Login failed please try again later!",
+                    color = Color.Red,
+                    fontSize = 14.sp,
+                    fontWeight = Light,
+                    fontFamily = SansSerif,
+                    modifier = Modifier.padding(top = 10.dp)
+                )
+            }
+            if (accountDisabledOrNotFoundText){
+                Text(
+                    text = "Account disabled or not found!",
+                    color = Color.Red,
+                    fontSize = 14.sp,
+                    fontWeight = Light,
+                    fontFamily = SansSerif,
+                    modifier = Modifier.padding(top = 10.dp)
+                )
             }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 10.dp),
+                    .padding(top = 25.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
@@ -327,7 +441,8 @@ class LoginView {
             }
             Row(
                 modifier = Modifier
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .padding(top = 15.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
@@ -357,11 +472,15 @@ class LoginView {
             }
             Column(
                 modifier = Modifier
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .padding(top = 15.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                IconButton(onClick = {
+                IconButton(
+                    enabled = !isLoading,
+                    onClick = {
+                    isLoading = true
                     scope.launch {
                         val signInIntent = googleSignInClient.signInIntent
                         signInLauncher.launch(signInIntent)
@@ -393,11 +512,32 @@ class LoginView {
                 }
             }
         }
+        if (createAccountWithGoogleDialog.value) {
+            CreateUserWithGoogle(
+                onClose = {
+                    isLoading = false
+                    createAccountWithGoogleDialog.value = false
+                    if (it != "") {
+                        createUserEntry(auth, it) {
+                            sharedViewModel.updateOnlineStatus("online")
+                            sharedViewModel.getUserData()
+                            sharedViewModel.fetchFriendsFromUser()
+                            sharedViewModel.fetchChatsWithMessages {
+                                sharedViewModel.fetchRandomFriendsFromFriend()
+                                navController.navigate(Screens.ChatsViewScreen.route)
+                            }
+                        }
+                    } else {
+                        googleSignInClient.signOut()
+                        FirebaseAuth.getInstance().signOut()
+                    }
+                },
+            )
+        }
     }
 
     private fun isUserEmailVerified(): Boolean {
         val user = auth.currentUser
-        println(user)
         return user?.isEmailVerified == true
     }
 
@@ -454,5 +594,22 @@ class LoginView {
             .addOnFailureListener { e ->
                 println("Error creating user: $e")
             }
+    }
+
+    private fun checkIfValueIsValid(type: String, value: String): Boolean {
+        return when (type) {
+            "email" -> {
+                value.matches("^(?=.{1,320})(?!.*[+._-]{2})(?![+._-])[a-zA-Z0-9+._-]{1,64}(?<![+._-])@(?![+._-])[a-zA-Z0-9.-]*\\.[a-zA-Z]{2,63}(?<![+._-])$".toRegex())
+            }
+
+
+            "password" -> {
+                value.matches("^(?!.*\\s).{6,4096}$".toRegex())
+            }
+
+            else -> {
+                false
+            }
+        }
     }
 }

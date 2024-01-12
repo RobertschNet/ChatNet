@@ -4,13 +4,9 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -18,16 +14,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
-import androidx.compose.material.Surface
-import androidx.compose.material.TextButton
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Drafts
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -49,19 +39,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.navigation.Screens
+import at.htlhl.chatnet.ui.components.mixed.CreateUserWithGoogle
+import at.htlhl.chatnet.ui.components.mixed.SecondFADialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
@@ -80,7 +71,6 @@ class RegisterView {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @Composable
     fun RegisterScreen(navController: NavController, sharedViewModel: SharedViewModel) {
-        val authentication = FirebaseAuth.getInstance()
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
         val googleSignInOptions = remember {
@@ -89,33 +79,7 @@ class RegisterView {
                 .requestEmail()
                 .build()
         }
-        val signInLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.StartActivityForResult()
-        ) { result ->
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            try {
-                val account = task.getResult(ApiException::class.java)
-                if (account != null) {
-                    val credential = GoogleAuthProvider.getCredential(account.idToken, null)
-                    authentication.signInWithCredential(credential)
-                        .addOnCompleteListener { signInTask ->
-                            if (signInTask.isSuccessful) {
-                                sharedViewModel.updateOnlineStatus("online")
-                                sharedViewModel.getUserData()
-                                sharedViewModel.fetchFriendsFromUser()
-                                sharedViewModel.fetchChatsWithMessages {
-                                    sharedViewModel.fetchRandomFriendsFromFriend()
-                                    navController.navigate(Screens.ChatsViewScreen.route)
-                                }
-                            } else {
-                                println("Sign-in failed")
-                            }
-                        }
-                }
-            } catch (e: ApiException) {
-                e.stackTrace
-            }
-        }
+        val googleSignInClient = GoogleSignIn.getClient(context, googleSignInOptions)
         Scaffold(
             containerColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
             content = {
@@ -123,8 +87,8 @@ class RegisterView {
                     navController,
                     scope,
                     context,
-                    googleSignInOptions,
-                    signInLauncher
+                    googleSignInClient,
+                    sharedViewModel
                 )
             },
             bottomBar = { BottomScreen(navController) })
@@ -173,20 +137,63 @@ class RegisterView {
         navController: NavController,
         scope: CoroutineScope,
         context: Context,
-        googleSignInOptions: GoogleSignInOptions,
-        signInLauncher: ActivityResultLauncher<Intent>
+        googleSignInClient: GoogleSignInClient,
+        sharedViewModel: SharedViewModel
     ) {
-        var name by rememberSaveable { mutableStateOf("") }
-        var email by rememberSaveable { mutableStateOf("") }
-        var password by rememberSaveable { mutableStateOf("") }
+        val createAccountWithGoogleDialog = remember { mutableStateOf(false) }
+        var registerErrorText by remember { mutableStateOf(false) }
+        var name by remember { mutableStateOf("") }
+        var email by remember { mutableStateOf("") }
+        var password by remember { mutableStateOf("") }
         var openDialog by remember { mutableStateOf(false) }
-        val regexPattern = "[A-Za-z0-9]+".toRegex()
+        var usernameExists by remember { mutableStateOf(false) }
+        var emailExists by remember { mutableStateOf(false) }
+        var isLoading by remember { mutableStateOf(false) }
         var usernameTexFieldColor by remember { mutableStateOf(Color.Gray) }
-        var addressTexFieldColor by remember { mutableStateOf(Color.Gray) }
+        var emailTexFieldColor by remember { mutableStateOf(Color.Gray) }
+        var passwordTexFieldColor by remember { mutableStateOf(Color.Gray) }
         val activity = LocalContext.current as Activity
-        val toastContext = LocalContext.current
         val controller = LocalSoftwareKeyboardController.current
         auth = Firebase.auth
+        val signInLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode != Activity.RESULT_OK) {
+                isLoading = false
+            }
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)
+                if (account != null) {
+                    val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+                    FirebaseAuth.getInstance().signInWithCredential(credential)
+                        .addOnCompleteListener { signInTask ->
+                            if (signInTask.isSuccessful) {
+                                account.email?.let { it ->
+                                    checkIfUserExists(it) {
+                                        println("Sign-in successful")
+                                        if (it) {
+                                            sharedViewModel.updateOnlineStatus("online")
+                                            sharedViewModel.getUserData()
+                                            sharedViewModel.fetchFriendsFromUser()
+                                            sharedViewModel.fetchChatsWithMessages {
+                                                sharedViewModel.fetchRandomFriendsFromFriend()
+                                                navController.navigate(Screens.ChatsViewScreen.route)
+                                            }
+                                        } else {
+                                            createAccountWithGoogleDialog.value = true
+                                        }
+                                    }
+                                }
+                            } else {
+                               registerErrorText = true
+                            }
+                        }
+                }
+            } catch (e: ApiException) {
+               registerErrorText = true
+            }
+        }
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Text(
                 modifier = Modifier.padding(top = 100.dp),
@@ -203,7 +210,6 @@ class RegisterView {
                 .fillMaxWidth()
                 .padding(top = 160.dp, start = 30.dp, end = 30.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(15.dp)
         ) {
             OutlinedTextField(
                 colors = OutlinedTextFieldDefaults.colors(
@@ -213,26 +219,47 @@ class RegisterView {
                     focusedLabelColor = usernameTexFieldColor,
                     unfocusedLabelColor = usernameTexFieldColor,
                 ),
-                value = name,
-                onValueChange = { newValue ->
-                    name = newValue
-                    if (name.isEmpty()) {
-                        usernameTexFieldColor = Color.Gray
-                    } else {
-                        checkIfUsernameExists(
-                            name = name,
-                            contextForToast = toastContext
-                        ) { success, value ->
-                            usernameTexFieldColor = if (success) {
-                                println("Retrieved value: $value")
-                                Color.Red
-                            } else {
-                                println("Failed to retrieve value")
-                                Color.Green
+                supportingText = {
+                    if (name.isNotEmpty()) {
+                        Column {
+                            if (usernameExists) {
+                                Text(
+                                    text = "Username already exists",
+                                    color = Color.Red,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Light,
+                                    fontFamily = FontFamily.SansSerif,
+                                )
+                            } else if (!checkIfValueIsValid("username", name)) {
+                                Text(
+                                    text = "Username is invalid",
+                                    color = Color.Red,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Light,
+                                    fontFamily = FontFamily.SansSerif,
+                                )
                             }
                         }
                     }
-
+                },
+                value = name,
+                onValueChange = { newValue ->
+                    name = newValue
+                    checkIfUsernameExists(
+                        name = name,
+                    ) { success ->
+                        usernameExists = success
+                        usernameTexFieldColor =
+                            if (success || !checkIfValueIsValid("username", name)) {
+                                Color.Red
+                            } else {
+                                Color.White
+                            }
+                        if (name.isEmpty()) {
+                            usernameTexFieldColor = Color.Gray
+                        }
+                    }
+                    registerErrorText = false
                 },
                 modifier = Modifier
                     .fillMaxWidth(),
@@ -242,16 +269,51 @@ class RegisterView {
             )
             OutlinedTextField(
                 colors = OutlinedTextFieldDefaults.colors(
-                    cursorColor = addressTexFieldColor,
-                    focusedBorderColor = addressTexFieldColor,
-                    unfocusedBorderColor = addressTexFieldColor,
-                    focusedLabelColor = addressTexFieldColor,
-                    unfocusedLabelColor = addressTexFieldColor,
+                    cursorColor = emailTexFieldColor,
+                    focusedBorderColor = emailTexFieldColor,
+                    unfocusedBorderColor = emailTexFieldColor,
+                    focusedLabelColor = emailTexFieldColor,
+                    unfocusedLabelColor = emailTexFieldColor,
                 ),
                 value = email,
+                supportingText = {
+                    if (email.isNotEmpty()) {
+                        Column {
+                            if (emailExists) {
+                                Text(
+                                    text = "Email is already in use",
+                                    color = Color.Red,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Light,
+                                    fontFamily = FontFamily.SansSerif,
+                                )
+                            } else if (!checkIfValueIsValid("email", email)) {
+                                Text(
+                                    text = "Email is invalid",
+                                    color = Color.Red,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Light,
+                                    fontFamily = FontFamily.SansSerif,
+                                )
+                            }
+                        }
+                    }
+                },
                 onValueChange = {
                     email = it
-                    addressTexFieldColor = Color.Gray
+                    checkIfEmailExists(email = email) { success ->
+                        emailExists = success
+                        emailTexFieldColor =
+                            if (success || !checkIfValueIsValid("email", email)) {
+                                Color.Red
+                            } else {
+                                Color.White
+                            }
+                        if (email.isEmpty()) {
+                            emailTexFieldColor = Color.Gray
+                        }
+                    }
+                    registerErrorText = false
                 },
                 modifier = Modifier
                     .fillMaxWidth(),
@@ -261,16 +323,36 @@ class RegisterView {
             )
             OutlinedTextField(
                 colors = OutlinedTextFieldDefaults.colors(
-                    cursorColor = addressTexFieldColor,
-                    focusedBorderColor = addressTexFieldColor,
-                    unfocusedBorderColor = addressTexFieldColor,
-                    focusedLabelColor = addressTexFieldColor,
-                    unfocusedLabelColor = addressTexFieldColor,
+                    cursorColor = passwordTexFieldColor,
+                    focusedBorderColor = passwordTexFieldColor,
+                    unfocusedBorderColor = passwordTexFieldColor,
+                    focusedLabelColor = passwordTexFieldColor,
+                    unfocusedLabelColor = passwordTexFieldColor,
                 ),
+                supportingText = {
+                    if (!checkIfValueIsValid("password", password) && password.isNotEmpty()) {
+                        Text(
+                            text = "Password is invalid",
+                            color = Color.Red,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Light,
+                            fontFamily = FontFamily.SansSerif,
+                        )
+                    }
+                },
                 value = password,
                 onValueChange = {
                     password = it
-                    addressTexFieldColor = Color.Gray
+                    passwordTexFieldColor =
+                        if (!checkIfValueIsValid("password", password)) {
+                            Color.Red
+                        } else {
+                            Color.White
+                        }
+                    if (password.isEmpty()) {
+                        passwordTexFieldColor = Color.Gray
+                    }
+                    registerErrorText = false
                 },
                 modifier = Modifier
                     .fillMaxWidth(),
@@ -280,60 +362,70 @@ class RegisterView {
             )
             Button(
                 onClick = {
+                    isLoading = true
                     controller?.hide()
                     try {
                         auth.createUserWithEmailAndPassword(email, password)
                             .addOnCompleteListener(activity) { task ->
                                 if (task.isSuccessful) {
                                     Log.d(ContentValues.TAG, "createUserWithEmail:success")
-                                    Toast.makeText(
-                                        activity,
-                                        "Authentication Successful.",
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
-                                    openDialog = true
-                                    //sendVerificationEmail()
-                                    createUserEntry(name)
-                                    //navController.navigate(Screens.DropInScreen.Route)
+                                    createUserEntry(auth, name) {
+                                        sendVerificationEmail {
+                                            if (it) {
+                                                openDialog = true
+                                                auth.signOut()
+                                            } else {
+                                               auth.currentUser?.delete()
+                                            }
+                                            isLoading = false
+                                        }
+                                    }
                                 } else {
-                                    Log.w(
-                                        ContentValues.TAG,
-                                        "createUserWithEmail:failure",
-                                        task.exception
-                                    )
-                                    Toast.makeText(
-                                        activity,
-                                        task.exception.toString(),
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
-                                    addressTexFieldColor = Color.Red
+                                    registerErrorText = true
                                 }
                             }
                     } catch (e: Exception) {
-                        Toast.makeText(
-                            activity,
-                            e.toString(),
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                        addressTexFieldColor = Color.Red
+                     registerErrorText = true
                     }
 
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 10.dp),
-                enabled = email.isNotEmpty() && password.isNotEmpty() && usernameTexFieldColor == Color.Green,
+                enabled = usernameTexFieldColor == Color.White && emailTexFieldColor == Color.White && passwordTexFieldColor == Color.White&& !isLoading,
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
             ) {
-                Text(text = "Sign Up", color = Color.White, modifier = Modifier.padding(7.dp))
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(35.dp),
+                        color = Color.White
+                    )
+                } else {
+                    Text(text = "Sign Up", color = Color.White, modifier = Modifier.padding(7.dp))
+                }
+            }
+            if (registerErrorText){
+                Text(
+                    text = "Registration failed please try again later!",
+                    color = Color.Red,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Light,
+                    fontFamily = FontFamily.SansSerif,
+                    modifier = Modifier.padding(top = 10.dp)
+                )
             }
             if (openDialog) {
-                DialogBox2FA({ openDialog = false }, navController)
+                SecondFADialog {
+                    navController.navigate(Screens.LoginScreen.route)
+                    openDialog = false
+                }
             }
             Row(
                 modifier = Modifier
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .padding(top = 15.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
@@ -363,17 +455,18 @@ class RegisterView {
             }
             Column(
                 modifier = Modifier
+                    .padding(top = 10.dp)
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                IconButton(onClick = {
+                IconButton(
+                    enabled = !isLoading,
+                    onClick = {
+                    isLoading = true
                     scope.launch {
-                        val googleSignInClient =
-                            GoogleSignIn.getClient(context, googleSignInOptions)
                         val signInIntent = googleSignInClient.signInIntent
                         signInLauncher.launch(signInIntent)
-
                     }
                 }) {
                     Row(
@@ -402,131 +495,51 @@ class RegisterView {
                 }
             }
         }
+        if (createAccountWithGoogleDialog.value) {
+            CreateUserWithGoogle(
+                onClose = {
+                    isLoading = false
+                    createAccountWithGoogleDialog.value = false
+                    if (it != "") {
+                        createUserEntry(auth, it) {
+                            sharedViewModel.updateOnlineStatus("online")
+                            sharedViewModel.getUserData()
+                            sharedViewModel.fetchFriendsFromUser()
+                            sharedViewModel.fetchChatsWithMessages {
+                                sharedViewModel.fetchRandomFriendsFromFriend()
+                                navController.navigate(Screens.ChatsViewScreen.route)
+                            }
+                        }
+                    } else {
+                        googleSignInClient.signOut()
+                        FirebaseAuth.getInstance().signOut()
+                    }
+                },
+            )
+        }
     }
 
-    @Composable
-    fun DialogBox2FA(onDismiss: () -> Unit, navController: NavController) {
-        val contextForToast = LocalContext.current.applicationContext
-        Dialog(
-            onDismissRequest = {
-                onDismiss()
-                navController.navigate(Screens.LoginScreen.route)
-            }
-        ) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                elevation = 4.dp
-            ) {
-                Column(
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(150.dp)
-                            .background(color = Color(0xFF35898f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            modifier = Modifier
-                                .padding(top = 16.dp, bottom = 16.dp)
-                                .align(Alignment.Center),
-                            imageVector = Icons.Default.Drafts,
-                            contentDescription = "2-Step Verification",
-                        )
-                    }
-
-                    Text(
-                        modifier = Modifier.padding(top = 16.dp, bottom = 16.dp),
-                        text = "2-Step Verification",
-                        textAlign = TextAlign.Center,
-                        style = TextStyle(
-                            fontFamily = FontFamily.SansSerif,
-                            fontSize = 20.sp
-                        )
-                    )
-
-                    Text(
-                        modifier = Modifier.padding(start = 12.dp, end = 12.dp),
-                        text = "Setup 2-Step Verification to add additional layer of security to your account.",
-                        textAlign = TextAlign.Center,
-                        style = TextStyle(
-                            fontFamily = FontFamily.SansSerif,
-                            fontSize = 14.sp
-                        )
-                    )
-
-                    Button(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 36.dp, start = 36.dp, end = 36.dp, bottom = 8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF35898f)),
-                        onClick = {
-                            onDismiss()
-                            Toast.makeText(
-                                contextForToast,
-                                "Click: Setup Now",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }) {
-                        Text(
-                            text = "Setup Now",
-                            color = Color.White,
-                            style = TextStyle(
-                                fontFamily = FontFamily.SansSerif,
-                                fontSize = 16.sp
-                            )
-                        )
-                    }
-
-                    TextButton(
-                        onClick = {
-                            onDismiss()
-                            Toast.makeText(
-                                contextForToast,
-                                "Click: I'll Do It Later",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }) {
-                        Text(
-                            text = "I'll Do It Later",
-                            color = Color(0xFF35898f),
-                            style = TextStyle(
-                                fontFamily = FontFamily.SansSerif,
-                                fontSize = 14.sp
-                            )
-                        )
+    private fun sendVerificationEmail(onComplete: (Boolean) -> Unit) {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        user?.let {
+            it.sendEmailVerification()
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        println("Email sent.")
+                        onComplete.invoke(true)
+                    } else {
+                        println("Email not sent.")
+                        onComplete.invoke(false)
                     }
                 }
-            }
         }
     }
-    /* TODO: Implement email verification
 
-        private fun sendVerificationEmail() {
-            val auth = FirebaseAuth.getInstance()
-            val user = auth.currentUser
-            user?.let {
-                it.sendEmailVerification()
-                    .addOnCompleteListener { task ->
-                        if (task.isSuccessful) {
-                            println("Email sent.")
-                        } else {
-                            println("Email not sent.")
-                        }
-                    }
-            }
-        }
-
-     */
 
     private fun checkIfUsernameExists(
         name: String,
-        contextForToast: Context,
-        callback: (Boolean, String?) -> Unit
+        callback: (Boolean) -> Unit
     ) {
         val query = db.collection("users")
             .whereEqualTo("username.lowercase", name.lowercase(Locale.ROOT))
@@ -538,39 +551,67 @@ class RegisterView {
                     val usernameField = documentSnapshot.get("username.lowercase")
                     if (usernameField is String) {
                         println("Retrieved value: $usernameField")
-                        Toast.makeText(
-                            contextForToast,
-                            "Username already exists",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        callback(true, usernameField)
+                        callback(true)
                     } else {
                         println("Field 'username.value' is not a String")
-                        callback(false, null)
+                        callback(false)
                     }
                 } else {
                     println("Document not found")
-                    callback(false, null)
+                    callback(false)
                 }
             }
             .addOnFailureListener { exception ->
                 println("Error retrieving document: ${exception.message}")
-                callback(false, exception.message)
+                callback(false)
+            }
+    }
+
+    private fun checkIfEmailExists(
+        email: String,
+        callback: (Boolean) -> Unit
+    ) {
+        val query = db.collection("users")
+            .whereEqualTo("email", email)
+            .limit(1)
+        query.get()
+            .addOnSuccessListener { querySnapshot ->
+                if (!querySnapshot.isEmpty) {
+                    val documentSnapshot = querySnapshot.documents[0]
+                    val usernameField = documentSnapshot.get("username.lowercase")
+                    if (usernameField is String) {
+                        println("Retrieved value: $usernameField")
+                        callback(true)
+                    } else {
+                        println("Field 'username.value' is not a String")
+                        callback(false)
+                    }
+                } else {
+                    println("Document not found")
+                    callback(false)
+                }
+            }
+            .addOnFailureListener { exception ->
+                println("Error retrieving document: ${exception.message}")
+                callback(false)
             }
     }
 
 
-    private fun createUserEntry(name: String) {
-        val user = FirebaseAuth.getInstance().currentUser
+    private fun createUserEntry(
+        account: FirebaseAuth,
+        name: String,
+        onSuccess: () -> Unit
+    ) {
         val db = FirebaseFirestore.getInstance()
-        val userRef = db.collection("users").document(user!!.uid)
+        val userRef = db.collection("users").document(account.currentUser?.uid.toString())
         val userData = hashMapOf(
             "blocked" to emptyList<String>(),
             "pinned" to emptyList<String>(),
             "color" to "",
             "connected" to false,
-            "email" to user.email,
-            "id" to user.uid,
+            "email" to account.currentUser?.email.toString(),
+            "id" to account.currentUser?.uid.toString(),
             "image" to "https://www.w3schools.com/howto/img_avatar2.png",
             "status" to "online",
             "username" to mapOf(
@@ -581,10 +622,54 @@ class RegisterView {
         userRef.set(userData)
             .addOnSuccessListener {
                 println("User successfully created")
+                onSuccess.invoke()
             }
             .addOnFailureListener { e ->
                 println("Error creating user: $e")
             }
     }
 
+    private fun checkIfUserExists(
+        email: String,
+        callback: (Boolean) -> Unit
+    ) {
+        val query = FirebaseFirestore.getInstance().collection("users")
+            .whereEqualTo("email", email)
+            .limit(1)
+
+        query.get()
+            .addOnSuccessListener { querySnapshot ->
+                if (!querySnapshot.isEmpty) {
+                    println("Document found")
+                    callback(true)
+                } else {
+                    println("Document not found")
+                    callback(false)
+                }
+            }
+            .addOnFailureListener { exception ->
+                println("Error retrieving document: ${exception.message}")
+                callback(false)
+            }
+    }
+
+    private fun checkIfValueIsValid(type: String, value: String): Boolean {
+        return when (type) {
+            "email" -> {
+                value.matches("^(?=.{1,320})(?!.*[+._-]{2})(?![+._-])[a-zA-Z0-9+._-]{1,64}(?<![+._-])@(?![+._-])[a-zA-Z0-9.-]*\\.[a-zA-Z]{2,63}(?<![+._-])$".toRegex())
+            }
+
+            "username" -> {
+                value.matches("^(?!.*[._-]{2})(?![._-])[a-zA-Z0-9._-]{1,30}(?<![._-])$".toRegex())
+            }
+
+            "password" -> {
+                value.matches("^(?!.*\\s).{6,4096}$".toRegex())
+            }
+
+            else -> {
+                false
+            }
+        }
+    }
 }
