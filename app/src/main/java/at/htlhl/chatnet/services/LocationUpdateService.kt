@@ -8,6 +8,8 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
 import android.location.Location
 import android.os.Binder
 import android.os.Build
@@ -48,7 +50,12 @@ class LocationUpdateService : Service() {
     override fun onCreate() {
         super.onCreate()
         val notification = createNotification()
-        startForeground(11, notification)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            startForeground(11, notification)
+        } else {
+            startForeground(11, notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+        }
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         locationRequest = LocationRequest.create()
             .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)

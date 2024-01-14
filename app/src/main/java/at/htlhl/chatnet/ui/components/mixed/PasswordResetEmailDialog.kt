@@ -20,15 +20,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
-@Preview
 @Composable
-fun SecondFADialog(onDismiss: () -> Unit = {}) {
+fun PasswordResetEmailDialog(onDismiss: () -> Unit) {
     Dialog(
         onDismissRequest = { onDismiss.invoke() },
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
@@ -42,7 +40,7 @@ fun SecondFADialog(onDismiss: () -> Unit = {}) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "2 Factor Authentication",
+                text = "Password Reset Email Sent",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 overflow = TextOverflow.Ellipsis,
@@ -50,7 +48,7 @@ fun SecondFADialog(onDismiss: () -> Unit = {}) {
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                text = "Set up 2FA to secure your account. You will need to click the link in the email we sent you to complete the process.",
+                text = "We sent you an email with a link to reset your password. Please check your inbox and spam folder.",
                 fontWeight = FontWeight.Light,
                 color = MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center,

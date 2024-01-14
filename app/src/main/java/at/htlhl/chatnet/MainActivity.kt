@@ -51,11 +51,19 @@ class MainActivity : ComponentActivity() {
                             viewModel.fetchRandomFriendsFromFriend()
                             if (navController.currentDestination?.route == Screens.LoadingScreen.route && start.value) {
                                 start.value = false
-                                navController.navigate(Screens.ChatsViewScreen.route)
+                                navController.navigate("MainFlow"){
+                                    popUpTo("LoadingScreen"){
+                                        inclusive = true
+                                    }
+                                }
                             }
                         }
                     } else {
-                        navController.navigate(Screens.LoginScreen.route)
+                        navController.navigate("LoginFlow"){
+                            popUpTo("LoadingScreen"){
+                                inclusive = true
+                            }
+                        }
                     }
                 }
             }

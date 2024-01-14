@@ -2,8 +2,6 @@ package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.ContentValues
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -17,10 +15,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.IconButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -39,11 +37,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.font.FontFamily.Companion.Cursive
-import androidx.compose.ui.text.font.FontFamily.Companion.SansSerif
-import androidx.compose.ui.text.font.FontWeight.Companion.Bold
-import androidx.compose.ui.text.font.FontWeight.Companion.Light
-import androidx.compose.ui.text.font.FontWeight.Companion.Medium
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,6 +47,7 @@ import at.chatnet.R
 import at.htlhl.chatnet.data.AccountDataState
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.mixed.CreateUserWithGoogle
+import at.htlhl.chatnet.ui.components.mixed.PasswordResetEmailDialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -59,7 +55,6 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -68,14 +63,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-class LoginView {
+class ForgotPasswordView {
     private lateinit var auth: FirebaseAuth
 
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @Composable
-    fun LoginScreen(navController: NavController, sharedViewModel: SharedViewModel) {
-        sharedViewModel.bottomBarState.value = false
-        val context = LocalContext.current
+    fun ForgotPasswordScreen(sharedViewModel: SharedViewModel, navController: NavController) {
         val scope = rememberCoroutineScope()
         val googleSignInOptions = remember {
             GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -83,8 +76,7 @@ class LoginView {
                 .requestEmail()
                 .build()
         }
-
-        val googleSignInClient = GoogleSignIn.getClient(context, googleSignInOptions)
+        val googleSignInClient = GoogleSignIn.getClient(LocalContext.current, googleSignInOptions)
         Scaffold(
             containerColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
             content = {
@@ -94,9 +86,9 @@ class LoginView {
                     googleSignInClient,
                     sharedViewModel
                 )
-
             },
-            bottomBar = { BottomScreen(navController) })
+            bottomBar = { BottomScreen(navController) }
+        )
     }
 
     @Composable
@@ -114,27 +106,22 @@ class LoginView {
             horizontalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "Don't have an account?",
-                fontWeight = Light,
-                fontFamily = SansSerif,
-                fontSize = 14.sp,
-                color = if (isSystemInDarkTheme()) Color.LightGray else Color.DarkGray,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = " Sign up.",
-                fontWeight = Bold,
-                fontFamily = SansSerif,
+                text = "Back to Login",
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.SansSerif,
                 fontSize = 14.sp,
                 color = if (isSystemInDarkTheme()) Color.White else Color.Black,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.clickable {
-                    navController.navigate(Screens.RegisterScreen.route)
+                    navController.navigate(Screens.LoginScreen.route){
+                        popUpTo(Screens.ForgotPasswordScreen.route){
+                            inclusive = true
+                        }
+                    }
                 }
             )
         }
     }
-
 
     @OptIn(ExperimentalComposeUiApi::class)
     @Composable
@@ -142,26 +129,19 @@ class LoginView {
         navController: NavController,
         scope: CoroutineScope,
         googleSignInClient: GoogleSignInClient,
-        sharedViewModel: SharedViewModel,
+        sharedViewModel: SharedViewModel
     ) {
         val createAccountWithGoogleDialog = remember { mutableStateOf(false) }
-        var emailIsNotVerifiedText by remember { mutableStateOf(false) }
-        var wrongPasswordText by remember { mutableStateOf(false) }
-        var wrongEmailText by remember { mutableStateOf(false) }
-        var loginErrorText by remember { mutableStateOf(false) }
-        var accountDisabledOrNotFoundText by remember { mutableStateOf(false) }
+        val forgotPasswordDialog = remember { mutableStateOf(false) }
+        var registerErrorText by remember { mutableStateOf(false) }
+        var passwordResetErrorText by remember { mutableStateOf(false) }
         var email by remember { mutableStateOf("") }
-        var password by remember { mutableStateOf("") }
+        var emailExists by remember { mutableStateOf(false) }
+        var isLoading by remember { mutableStateOf(false) }
         var emailTexFieldColor by remember { mutableStateOf(AccountDataState.Empty) }
-        var passwordTexFieldColor by remember { mutableStateOf(AccountDataState.Empty) }
         val emailColor =
             if (emailTexFieldColor == AccountDataState.Empty) Color.Gray else if (emailTexFieldColor == AccountDataState.Valid) MaterialTheme.colorScheme.primary else Color.Red
-        val passwordColor =
-            if (passwordTexFieldColor == AccountDataState.Empty) Color.Gray else if (passwordTexFieldColor == AccountDataState.Valid) MaterialTheme.colorScheme.primary else Color.Red
-        var isLoading by remember { mutableStateOf(false) }
-        val activity = LocalContext.current as Activity
         val controller = LocalSoftwareKeyboardController.current
-        val authentication = FirebaseAuth.getInstance()
         auth = Firebase.auth
         val signInLauncher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.StartActivityForResult()
@@ -174,7 +154,7 @@ class LoginView {
                 val account = task.getResult(ApiException::class.java)
                 if (account != null) {
                     val credential = GoogleAuthProvider.getCredential(account.idToken, null)
-                    authentication.signInWithCredential(credential)
+                    FirebaseAuth.getInstance().signInWithCredential(credential)
                         .addOnCompleteListener { signInTask ->
                             if (signInTask.isSuccessful) {
                                 account.email?.let { it ->
@@ -186,11 +166,7 @@ class LoginView {
                                             sharedViewModel.fetchFriendsFromUser()
                                             sharedViewModel.fetchChatsWithMessages {
                                                 sharedViewModel.fetchRandomFriendsFromFriend()
-                                                navController.navigate("MainFlow"){
-                                                    popUpTo("LoginFlow"){
-                                                        inclusive = true
-                                                    }
-                                                }
+                                                navController.navigate(Screens.ChatsViewScreen.route)
                                             }
                                         } else {
                                             navController.navigate(Screens.RegisterWithGoogleScreen.route){
@@ -198,35 +174,51 @@ class LoginView {
                                                     inclusive = true
                                                 }
                                             }
-                                            Log.println(Log.INFO, "User", "User does not exist")
                                         }
                                     }
                                 }
                             } else {
-                                Log.println(Log.ERROR, "User", "Sign-in failed")
-                                isLoading = false
-                                loginErrorText = true
+                                registerErrorText = true
                             }
                         }
                 }
             } catch (e: ApiException) {
-                Log.println(Log.ERROR, "User", e.status.toString())
-                loginErrorText = true
+                registerErrorText = true
             }
         }
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 30.dp, start = 30.dp, end = 30.dp),
+                    .padding(start = 30.dp, end = 30.dp, bottom = 30.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Box(modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = "ChatNet",
-                        fontWeight = Bold,
-                        fontFamily = Cursive,
-                        fontSize = 45.sp,
+                        text = "Reset Password",
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 30.sp,
+                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                        textAlign = TextAlign.Center
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Enter your email and we will send you a link to reset your password.",
+                        fontWeight = FontWeight.ExtraLight,
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 16.sp,
                         color = if (isSystemInDarkTheme()) Color.White else Color.Black,
                         textAlign = TextAlign.Center
                     )
@@ -241,31 +233,44 @@ class LoginView {
                     ),
                     value = email,
                     supportingText = {
-                        if (!checkIfValueIsValid("email", email) && email.isNotEmpty()) {
-                            Text(
-                                text = "Email is invalid",
-                                color = Color.Red,
-                                fontSize = 14.sp,
-                                fontWeight = Light,
-                                fontFamily = SansSerif,
-                            )
+                        if (email.isNotEmpty()) {
+                            Column {
+                                if (!checkIfValueIsValid(email)) {
+                                    Text(
+                                        text = "Email is invalid",
+                                        color = Color.Red,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Light,
+                                        fontFamily = FontFamily.SansSerif,
+                                    )
+                                } else if (!emailExists) {
+                                    Text(
+                                        text = "Email is not registered",
+                                        color = Color.Red,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Light,
+                                        fontFamily = FontFamily.SansSerif,
+                                    )
+                                }
+                            }
                         }
                     },
                     onValueChange = {
                         email = it
-                        emailTexFieldColor = if (checkIfValueIsValid("email", email)) {
-                            AccountDataState.Valid
-                        } else {
-                            AccountDataState.Invalid
+                        checkIfEmailExists(email = email) { success ->
+                            emailExists = success
+                            emailTexFieldColor =
+                                if (!success || !checkIfValueIsValid(email)) {
+                                    AccountDataState.Invalid
+                                } else {
+                                    AccountDataState.Valid
+                                }
+                            if (email.isEmpty()) {
+                                emailTexFieldColor = AccountDataState.Empty
+                            }
                         }
-                        if (email.isEmpty()) {
-                            emailTexFieldColor = AccountDataState.Empty
-                        }
-                        emailIsNotVerifiedText = false
-                        wrongEmailText = false
-                        wrongPasswordText = false
-                        accountDisabledOrNotFoundText = false
-                        loginErrorText = false
+                        registerErrorText = false
+                        passwordResetErrorText = false
                     },
                     modifier = Modifier
                         .fillMaxWidth(),
@@ -273,196 +278,59 @@ class LoginView {
                     singleLine = true,
                     label = { Text(text = "Email") },
                 )
-                OutlinedTextField(
-                    colors = OutlinedTextFieldDefaults.colors(
-                        cursorColor = passwordColor,
-                        focusedBorderColor = passwordColor,
-                        unfocusedBorderColor = passwordColor,
-                        focusedLabelColor = passwordColor,
-                        unfocusedLabelColor = passwordColor,
-                    ),
-                    value = password,
-                    supportingText = {
-                        if (!checkIfValueIsValid("password", password) && password.isNotEmpty()) {
-                            Text(
-                                text = "Password is invalid",
-                                color = Color.Red,
-                                fontSize = 14.sp,
-                                fontWeight = Light,
-                                fontFamily = SansSerif,
-                            )
-                        }
-                    },
-                    onValueChange = {
-                        password = it
-                        passwordTexFieldColor = if (checkIfValueIsValid("password", password)) {
-                            AccountDataState.Valid
-                        } else {
-                            AccountDataState.Invalid
-                        }
-                        if (password.isEmpty()) {
-                            passwordTexFieldColor = AccountDataState.Empty
-                        }
-                        emailIsNotVerifiedText = false
-                        wrongEmailText = false
-                        wrongPasswordText = false
-                        accountDisabledOrNotFoundText = false
-                        loginErrorText = false
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    singleLine = true,
-                    label = { Text(text = "Password") },
-                )
                 Button(
                     onClick = {
                         isLoading = true
                         controller?.hide()
-                        try {
-                            auth.signInWithEmailAndPassword(email, password)
-                                .addOnCompleteListener(activity) { task ->
-                                    if (task.isSuccessful) {
-                                        Log.d(ContentValues.TAG, "createUserWithEmail:success")
-                                        if (!isUserEmailVerified()) {
-                                            sharedViewModel.updateOnlineStatus("online")
-                                            sharedViewModel.getUserData()
-                                            sharedViewModel.fetchFriendsFromUser()
-                                            sharedViewModel.fetchChatsWithMessages {
-                                                sharedViewModel.fetchRandomFriendsFromFriend()
-                                                navController.navigate("MainFlow"){
-                                                    popUpTo("LoginFlow"){
-                                                        inclusive = true
-                                                    }
-                                                }
-                                            }
-                                        } else {
-                                            isLoading = false
-                                            emailIsNotVerifiedText = true
-                                            auth.signOut()
-                                        }
-                                    } else {
-                                        isLoading = false
-                                        val exception = task.exception
-                                        if (exception is FirebaseAuthException) {
-                                            when (exception.errorCode) {
-                                                "ERROR_INVALID_EMAIL" -> {
-                                                    wrongEmailText = true
-                                                }
-
-                                                "ERROR_USER_DISABLED", "ERROR_USER_NOT_FOUND" -> {
-                                                    accountDisabledOrNotFoundText = true
-                                                }
-
-                                                "ERROR_WRONG_PASSWORD" -> {
-                                                    wrongPasswordText = true
-                                                }
-                                            }
-                                        } else {
-                                            loginErrorText = true
-                                        }
-                                    }
+                        auth.sendPasswordResetEmail(email)
+                            .addOnCompleteListener { task ->
+                                if (task.isSuccessful) {
+                                    forgotPasswordDialog.value = true
+                                } else {
+                                    isLoading = false
+                                    passwordResetErrorText = true
                                 }
-                        } catch (e: Exception) {
-                            isLoading = false
-                            loginErrorText = true
-                        }
+                            }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 10.dp),
-                    enabled = passwordTexFieldColor == AccountDataState.Valid && emailTexFieldColor == AccountDataState.Valid && !isLoading,
+                    enabled = emailTexFieldColor == AccountDataState.Valid && !isLoading,
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
-                            color = Color.White,
-                            modifier = Modifier.size(35.dp)
+                            modifier = Modifier
+                                .size(35.dp),
+                            color = Color.White
                         )
                     } else {
                         Text(
-                            text = "Sign In",
+                            text = "Reset Password",
                             color = Color.White,
                             modifier = Modifier.padding(7.dp)
                         )
                     }
                 }
-                if (emailIsNotVerifiedText) {
+                if (registerErrorText) {
                     Text(
-                        text = "Please verify your email first!",
+                        text = "Registration failed please try again later!",
                         color = Color.Red,
                         fontSize = 14.sp,
-                        fontWeight = Light,
-                        fontFamily = SansSerif,
+                        fontWeight = FontWeight.Light,
+                        fontFamily = FontFamily.SansSerif,
                         modifier = Modifier.padding(top = 10.dp)
                     )
                 }
-                if (wrongEmailText) {
+                if (passwordResetErrorText) {
                     Text(
-                        text = "Email does not exist!",
+                        text = "Password reset failed please try again later!",
                         color = Color.Red,
                         fontSize = 14.sp,
-                        fontWeight = Light,
-                        fontFamily = SansSerif,
+                        fontWeight = FontWeight.Light,
+                        fontFamily = FontFamily.SansSerif,
                         modifier = Modifier.padding(top = 10.dp)
-                    )
-                }
-                if (wrongPasswordText) {
-                    Text(
-                        text = "Wrong password!",
-                        color = Color.Red,
-                        fontSize = 14.sp,
-                        fontWeight = Light,
-                        fontFamily = SansSerif,
-                        modifier = Modifier.padding(top = 10.dp)
-                    )
-                }
-                if (loginErrorText) {
-                    Text(
-                        text = "Login failed please try again later!",
-                        color = Color.Red,
-                        fontSize = 14.sp,
-                        fontWeight = Light,
-                        fontFamily = SansSerif,
-                        modifier = Modifier.padding(top = 10.dp)
-                    )
-                }
-                if (accountDisabledOrNotFoundText) {
-                    Text(
-                        text = "Account disabled or not found!",
-                        color = Color.Red,
-                        fontSize = 14.sp,
-                        fontWeight = Light,
-                        fontFamily = SansSerif,
-                        modifier = Modifier.padding(top = 10.dp)
-                    )
-                }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 25.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "Forgot your password?",
-                        fontWeight = Light,
-                        fontFamily = SansSerif,
-                        fontSize = 14.sp,
-                        color = if (isSystemInDarkTheme()) Color.LightGray else Color.DarkGray,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = " Reset password.",
-                        fontWeight = Bold,
-                        fontFamily = SansSerif,
-                        fontSize = 14.sp,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.clickable {
-                            navController.navigate(Screens.ForgotPasswordScreen.route)
-                        }
                     )
                 }
                 Row(
@@ -481,8 +349,8 @@ class LoginView {
                     )
                     Text(
                         text = "OR",
-                        fontWeight = Medium,
-                        fontFamily = SansSerif,
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = FontFamily.SansSerif,
                         fontSize = 14.sp,
                         color = if (isSystemInDarkTheme()) Color.LightGray else Color.DarkGray,
                         textAlign = TextAlign.Center,
@@ -498,8 +366,8 @@ class LoginView {
                 }
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 15.dp),
+                        .padding(top = 10.dp)
+                        .fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -524,17 +392,26 @@ class LoginView {
                                 modifier = Modifier.size(45.dp)
                             )
                             Text(
-                                text = "Sign in with Google",
+                                text = "Sign up with Google",
                                 color = if (isSystemInDarkTheme()) Color.White else Color.DarkGray,
                                 fontSize = 16.sp,
-                                fontWeight = Medium,
-                                fontFamily = SansSerif,
+                                fontWeight = FontWeight.Medium,
+                                fontFamily = FontFamily.SansSerif,
                                 modifier = Modifier.padding(start = 10.dp)
                             )
                         }
                     }
                 }
             }
+        }
+        if (forgotPasswordDialog.value) {
+            PasswordResetEmailDialog(
+                onDismiss = {
+                    isLoading = false
+                    forgotPasswordDialog.value = false
+                    navController.navigate(Screens.LoginScreen.route)
+                }
+            )
         }
         if (createAccountWithGoogleDialog.value) {
             CreateUserWithGoogle(
@@ -548,11 +425,7 @@ class LoginView {
                             sharedViewModel.fetchFriendsFromUser()
                             sharedViewModel.fetchChatsWithMessages {
                                 sharedViewModel.fetchRandomFriendsFromFriend()
-                                navController.navigate("MainFlow"){
-                                    popUpTo("LoginFlow"){
-                                        inclusive = true
-                                    }
-                                }
+                                navController.navigate(Screens.ChatsViewScreen.route)
                             }
                         }
                     } else {
@@ -562,10 +435,6 @@ class LoginView {
                 },
             )
         }
-    }
-
-    private fun isUserEmailVerified(): Boolean {
-        return auth.currentUser?.isEmailVerified == true
     }
 
     private fun checkIfUserExists(
@@ -623,20 +492,37 @@ class LoginView {
             }
     }
 
-    private fun checkIfValueIsValid(type: String, value: String): Boolean {
-        return when (type) {
-            "email" -> {
-                value.matches("^(?=.{1,320})(?!.*[+._-]{2})(?![+._-])[a-zA-Z0-9+._-]{1,64}(?<![+._-])@(?![+._-])[a-zA-Z0-9.-]*\\.[a-zA-Z]{2,63}(?<![+._-])$".toRegex())
+    private fun checkIfEmailExists(
+        email: String,
+        callback: (Boolean) -> Unit
+    ) {
+        val query = FirebaseFirestore.getInstance().collection("users")
+            .whereEqualTo("email", email)
+            .limit(1)
+        query.get()
+            .addOnSuccessListener { querySnapshot ->
+                if (!querySnapshot.isEmpty) {
+                    val documentSnapshot = querySnapshot.documents[0]
+                    val usernameField = documentSnapshot.get("username.lowercase")
+                    if (usernameField is String) {
+                        println("Retrieved value: $usernameField")
+                        callback(true)
+                    } else {
+                        println("Field 'username.value' is not a String")
+                        callback(false)
+                    }
+                } else {
+                    println("Document not found")
+                    callback(false)
+                }
             }
-
-
-            "password" -> {
-                value.matches("^(?!.*\\s).{6,4096}$".toRegex())
+            .addOnFailureListener { exception ->
+                println("Error retrieving document: ${exception.message}")
+                callback(false)
             }
+    }
 
-            else -> {
-                false
-            }
-        }
+    private fun checkIfValueIsValid(value: String): Boolean {
+        return value.matches("^(?=.{1,320})(?!.*[+._-]{2})(?![+._-])[a-zA-Z0-9+._-]{1,64}(?<![+._-])@(?![+._-])[a-zA-Z0-9.-]*\\.[a-zA-Z]{2,63}(?<![+._-])$".toRegex())
     }
 }

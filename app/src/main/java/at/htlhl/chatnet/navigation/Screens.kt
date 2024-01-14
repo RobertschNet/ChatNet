@@ -16,4 +16,6 @@ sealed class Screens(val route: String) {
     object FindUserScreen : Screens("FindUserScreen")
     object ProfileInfoScreen : Screens("ProfileInfoScreen")
     object ImageViewScreen : Screens("ImageViewScreen")
+    object ForgotPasswordScreen : Screens("ForgotPasswordScreen")
+    object RegisterWithGoogleScreen : Screens("RegisterWithGoogleScreen")
 }

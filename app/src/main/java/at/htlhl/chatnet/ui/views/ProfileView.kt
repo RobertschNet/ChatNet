@@ -2,9 +2,6 @@ package at.htlhl.chatnet.ui.views
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,17 +51,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import at.htlhl.chatnet.MyApplication
 import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseUsers
-import at.htlhl.chatnet.viewmodels.SharedViewModel
 import at.htlhl.chatnet.navigation.Screens
+import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import okhttp3.internal.wait
 
 class ProfileView {
 
@@ -193,7 +187,7 @@ class ProfileView {
                             modifier = Modifier
                                 .size(40.dp)
                                 .clickable {
-                                    // TODO: Change profile picture
+                                    //TODO: Change profile picture
                                 }
                                 .align(Alignment.Center)
                                 .clip(CircleShape)
@@ -358,7 +352,11 @@ class ProfileView {
                         sharedViewModel.reset()
                         sharedViewModel.auth.signOut()
                         sharedViewModel.gpsState.value = true
-                        navController.navigate(Screens.LoginScreen.route)
+                        navController.navigate("LoginFlow") {
+                            popUpTo("MainFlow") {
+                                inclusive = true
+                            }
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth(),

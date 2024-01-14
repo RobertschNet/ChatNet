@@ -3,7 +3,6 @@ package at.htlhl.chatnet.ui.views
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ContentValues
-import android.content.Context
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -13,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,6 +22,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -31,7 +32,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
+import at.htlhl.chatnet.data.AccountDataState
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.mixed.CreateUserWithGoogle
 import at.htlhl.chatnet.ui.components.mixed.SecondFADialog
@@ -66,7 +67,6 @@ import java.util.Locale
 
 class RegisterView {
     private lateinit var auth: FirebaseAuth
-    private val db = FirebaseFirestore.getInstance()
 
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @Composable
@@ -75,7 +75,7 @@ class RegisterView {
         val scope = rememberCoroutineScope()
         val googleSignInOptions = remember {
             GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken("1077068573755-8dqkdh2upl4h7rgkeab8slnv5dlps6c5.apps.googleusercontent.com")
+                .requestIdToken(R.string.web_client_id.toString())
                 .requestEmail()
                 .build()
         }
@@ -86,12 +86,12 @@ class RegisterView {
                 ContentView(
                     navController,
                     scope,
-                    context,
                     googleSignInClient,
                     sharedViewModel
                 )
             },
-            bottomBar = { BottomScreen(navController) })
+            bottomBar = { BottomScreen(navController) }
+        )
     }
 
     @Composable
@@ -124,7 +124,11 @@ class RegisterView {
                 color = if (isSystemInDarkTheme()) Color.White else Color.Black,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.clickable {
-                    navController.navigate(Screens.LoginScreen.route)
+                    navController.navigate(Screens.LoginScreen.route){
+                        popUpTo(Screens.RegisterScreen.route){
+                            inclusive = true
+                        }
+                    }
                 }
             )
         }
@@ -136,7 +140,6 @@ class RegisterView {
     fun ContentView(
         navController: NavController,
         scope: CoroutineScope,
-        context: Context,
         googleSignInClient: GoogleSignInClient,
         sharedViewModel: SharedViewModel
     ) {
@@ -149,9 +152,15 @@ class RegisterView {
         var usernameExists by remember { mutableStateOf(false) }
         var emailExists by remember { mutableStateOf(false) }
         var isLoading by remember { mutableStateOf(false) }
-        var usernameTexFieldColor by remember { mutableStateOf(Color.Gray) }
-        var emailTexFieldColor by remember { mutableStateOf(Color.Gray) }
-        var passwordTexFieldColor by remember { mutableStateOf(Color.Gray) }
+        var usernameTexFieldColor by remember { mutableStateOf(AccountDataState.Empty) }
+        var emailTexFieldColor by remember { mutableStateOf(AccountDataState.Empty) }
+        var passwordTexFieldColor by remember { mutableStateOf(AccountDataState.Empty) }
+        val emailColor =
+            if (emailTexFieldColor == AccountDataState.Empty) Color.Gray else if (emailTexFieldColor == AccountDataState.Valid) MaterialTheme.colorScheme.primary else Color.Red
+        val passwordColor =
+            if (passwordTexFieldColor == AccountDataState.Empty) Color.Gray else if (passwordTexFieldColor == AccountDataState.Valid) MaterialTheme.colorScheme.primary else Color.Red
+        val usernameColor =
+            if (usernameTexFieldColor == AccountDataState.Empty) Color.Gray else if (usernameTexFieldColor == AccountDataState.Valid) MaterialTheme.colorScheme.primary else Color.Red
         val activity = LocalContext.current as Activity
         val controller = LocalSoftwareKeyboardController.current
         auth = Firebase.auth
@@ -181,316 +190,327 @@ class RegisterView {
                                                 navController.navigate(Screens.ChatsViewScreen.route)
                                             }
                                         } else {
-                                            createAccountWithGoogleDialog.value = true
+                                            navController.navigate(Screens.RegisterWithGoogleScreen.route) {
+                                                popUpTo("LoginFlow") {
+                                                    inclusive = true
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             } else {
-                               registerErrorText = true
+                                registerErrorText = true
                             }
                         }
                 }
             } catch (e: ApiException) {
-               registerErrorText = true
+                registerErrorText = true
             }
         }
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Text(
-                modifier = Modifier.padding(top = 100.dp),
-                text = "Create an Account",
-                fontWeight = FontWeight.SemiBold,
-                fontFamily = FontFamily.SansSerif,
-                fontSize = 30.sp,
-                color = if (isSystemInDarkTheme()) Color.White else Color.Black,
-                textAlign = TextAlign.Center
-            )
-        }
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 160.dp, start = 30.dp, end = 30.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            OutlinedTextField(
-                colors = OutlinedTextFieldDefaults.colors(
-                    cursorColor = usernameTexFieldColor,
-                    focusedBorderColor = usernameTexFieldColor,
-                    unfocusedBorderColor = usernameTexFieldColor,
-                    focusedLabelColor = usernameTexFieldColor,
-                    unfocusedLabelColor = usernameTexFieldColor,
-                ),
-                supportingText = {
-                    if (name.isNotEmpty()) {
-                        Column {
-                            if (usernameExists) {
-                                Text(
-                                    text = "Username already exists",
-                                    color = Color.Red,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Light,
-                                    fontFamily = FontFamily.SansSerif,
-                                )
-                            } else if (!checkIfValueIsValid("username", name)) {
-                                Text(
-                                    text = "Username is invalid",
-                                    color = Color.Red,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Light,
-                                    fontFamily = FontFamily.SansSerif,
-                                )
-                            }
-                        }
-                    }
-                },
-                value = name,
-                onValueChange = { newValue ->
-                    name = newValue
-                    checkIfUsernameExists(
-                        name = name,
-                    ) { success ->
-                        usernameExists = success
-                        usernameTexFieldColor =
-                            if (success || !checkIfValueIsValid("username", name)) {
-                                Color.Red
-                            } else {
-                                Color.White
-                            }
-                        if (name.isEmpty()) {
-                            usernameTexFieldColor = Color.Gray
-                        }
-                    }
-                    registerErrorText = false
-                },
-                modifier = Modifier
-                    .fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                singleLine = true,
-                label = { Text(text = "Username") },
-            )
-            OutlinedTextField(
-                colors = OutlinedTextFieldDefaults.colors(
-                    cursorColor = emailTexFieldColor,
-                    focusedBorderColor = emailTexFieldColor,
-                    unfocusedBorderColor = emailTexFieldColor,
-                    focusedLabelColor = emailTexFieldColor,
-                    unfocusedLabelColor = emailTexFieldColor,
-                ),
-                value = email,
-                supportingText = {
-                    if (email.isNotEmpty()) {
-                        Column {
-                            if (emailExists) {
-                                Text(
-                                    text = "Email is already in use",
-                                    color = Color.Red,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Light,
-                                    fontFamily = FontFamily.SansSerif,
-                                )
-                            } else if (!checkIfValueIsValid("email", email)) {
-                                Text(
-                                    text = "Email is invalid",
-                                    color = Color.Red,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Light,
-                                    fontFamily = FontFamily.SansSerif,
-                                )
-                            }
-                        }
-                    }
-                },
-                onValueChange = {
-                    email = it
-                    checkIfEmailExists(email = email) { success ->
-                        emailExists = success
-                        emailTexFieldColor =
-                            if (success || !checkIfValueIsValid("email", email)) {
-                                Color.Red
-                            } else {
-                                Color.White
-                            }
-                        if (email.isEmpty()) {
-                            emailTexFieldColor = Color.Gray
-                        }
-                    }
-                    registerErrorText = false
-                },
-                modifier = Modifier
-                    .fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                singleLine = true,
-                label = { Text(text = "Email") },
-            )
-            OutlinedTextField(
-                colors = OutlinedTextFieldDefaults.colors(
-                    cursorColor = passwordTexFieldColor,
-                    focusedBorderColor = passwordTexFieldColor,
-                    unfocusedBorderColor = passwordTexFieldColor,
-                    focusedLabelColor = passwordTexFieldColor,
-                    unfocusedLabelColor = passwordTexFieldColor,
-                ),
-                supportingText = {
-                    if (!checkIfValueIsValid("password", password) && password.isNotEmpty()) {
-                        Text(
-                            text = "Password is invalid",
-                            color = Color.Red,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Light,
-                            fontFamily = FontFamily.SansSerif,
-                        )
-                    }
-                },
-                value = password,
-                onValueChange = {
-                    password = it
-                    passwordTexFieldColor =
-                        if (!checkIfValueIsValid("password", password)) {
-                            Color.Red
-                        } else {
-                            Color.White
-                        }
-                    if (password.isEmpty()) {
-                        passwordTexFieldColor = Color.Gray
-                    }
-                    registerErrorText = false
-                },
-                modifier = Modifier
-                    .fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                singleLine = true,
-                label = { Text(text = "Password") },
-            )
-            Button(
-                onClick = {
-                    isLoading = true
-                    controller?.hide()
-                    try {
-                        auth.createUserWithEmailAndPassword(email, password)
-                            .addOnCompleteListener(activity) { task ->
-                                if (task.isSuccessful) {
-                                    Log.d(ContentValues.TAG, "createUserWithEmail:success")
-                                    createUserEntry(auth, name) {
-                                        sendVerificationEmail {
-                                            if (it) {
-                                                openDialog = true
-                                                auth.signOut()
-                                            } else {
-                                               auth.currentUser?.delete()
-                                            }
-                                            isLoading = false
-                                        }
-                                    }
-                                } else {
-                                    registerErrorText = true
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 30.dp, start = 30.dp, end = 30.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Create an Account",
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 30.sp,
+                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                        textAlign = TextAlign.Center
+                    )
+                }
+                OutlinedTextField(
+                    colors = OutlinedTextFieldDefaults.colors(
+                        cursorColor = usernameColor,
+                        focusedBorderColor = usernameColor,
+                        unfocusedBorderColor = usernameColor,
+                        focusedLabelColor = usernameColor,
+                        unfocusedLabelColor = usernameColor,
+                    ),
+                    supportingText = {
+                        if (name.isNotEmpty()) {
+                            Column {
+                                if (usernameExists) {
+                                    Text(
+                                        text = "Username already exists",
+                                        color = Color.Red,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Light,
+                                        fontFamily = FontFamily.SansSerif,
+                                    )
+                                } else if (!checkIfValueIsValid("username", name)) {
+                                    Text(
+                                        text = "Username is invalid",
+                                        color = Color.Red,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Light,
+                                        fontFamily = FontFamily.SansSerif,
+                                    )
                                 }
                             }
-                    } catch (e: Exception) {
-                     registerErrorText = true
-                    }
-
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 10.dp),
-                enabled = usernameTexFieldColor == Color.White && emailTexFieldColor == Color.White && passwordTexFieldColor == Color.White&& !isLoading,
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .size(35.dp),
-                        color = Color.White
-                    )
-                } else {
-                    Text(text = "Sign Up", color = Color.White, modifier = Modifier.padding(7.dp))
-                }
-            }
-            if (registerErrorText){
-                Text(
-                    text = "Registration failed please try again later!",
-                    color = Color.Red,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Light,
-                    fontFamily = FontFamily.SansSerif,
-                    modifier = Modifier.padding(top = 10.dp)
-                )
-            }
-            if (openDialog) {
-                SecondFADialog {
-                    navController.navigate(Screens.LoginScreen.route)
-                    openDialog = false
-                }
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 15.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Divider(
-                    thickness = 0.3f.dp,
-                    color = Color.DarkGray,
-                    modifier = Modifier
-                        .padding(start = 15.dp)
-                        .weight(1f)
-                )
-                Text(
-                    text = "OR",
-                    fontWeight = FontWeight.Medium,
-                    fontFamily = FontFamily.SansSerif,
-                    fontSize = 14.sp,
-                    color = if (isSystemInDarkTheme()) Color.LightGray else Color.DarkGray,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(start = 10.dp, end = 10.dp)
-                )
-                Divider(
-                    thickness = 0.3f.dp,
-                    color = Color.DarkGray,
-                    modifier = Modifier
-                        .padding(end = 15.dp)
-                        .weight(1f)
-                )
-            }
-            Column(
-                modifier = Modifier
-                    .padding(top = 10.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                IconButton(
-                    enabled = !isLoading,
-                    onClick = {
-                    isLoading = true
-                    scope.launch {
-                        val signInIntent = googleSignInClient.signInIntent
-                        signInLauncher.launch(signInIntent)
-                    }
-                }) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        SubcomposeAsyncImage(
-                            model = R.drawable.icon_google,
-                            contentDescription = "Google",
-                            modifier = Modifier.size(45.dp),
-                            loading = {
-                                CircularProgressIndicator()
+                        }
+                    },
+                    value = name,
+                    onValueChange = { newValue ->
+                        name = newValue
+                        checkIfUsernameExists(
+                            name = name,
+                        ) { success ->
+                            usernameExists = success
+                            usernameTexFieldColor =
+                                if (success || !checkIfValueIsValid("username", name)) {
+                                    AccountDataState.Invalid
+                                } else {
+                                    AccountDataState.Valid
+                                }
+                            if (name.isEmpty()) {
+                                usernameTexFieldColor = AccountDataState.Empty
                             }
+                        }
+                        registerErrorText = false
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    singleLine = true,
+                    label = { Text(text = "Username") },
+                )
+                OutlinedTextField(
+                    colors = OutlinedTextFieldDefaults.colors(
+                        cursorColor = emailColor,
+                        focusedBorderColor = emailColor,
+                        unfocusedBorderColor = emailColor,
+                        focusedLabelColor = emailColor,
+                        unfocusedLabelColor = emailColor,
+                    ),
+                    value = email,
+                    supportingText = {
+                        if (email.isNotEmpty()) {
+                            Column {
+                                if (emailExists) {
+                                    Text(
+                                        text = "Email is already in use",
+                                        color = Color.Red,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Light,
+                                        fontFamily = FontFamily.SansSerif,
+                                    )
+                                } else if (!checkIfValueIsValid("email", email)) {
+                                    Text(
+                                        text = "Email is invalid",
+                                        color = Color.Red,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Light,
+                                        fontFamily = FontFamily.SansSerif,
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    onValueChange = {
+                        email = it
+                        checkIfEmailExists(email = email) { success ->
+                            emailExists = success
+                            emailTexFieldColor =
+                                if (success || !checkIfValueIsValid("email", email)) {
+                                    AccountDataState.Invalid
+                                } else {
+                                    AccountDataState.Valid
+                                }
+                            if (email.isEmpty()) {
+                                emailTexFieldColor = AccountDataState.Empty
+                            }
+                        }
+                        registerErrorText = false
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    singleLine = true,
+                    label = { Text(text = "Email") },
+                )
+                OutlinedTextField(
+                    colors = OutlinedTextFieldDefaults.colors(
+                        cursorColor = passwordColor,
+                        focusedBorderColor = passwordColor,
+                        unfocusedBorderColor = passwordColor,
+                        focusedLabelColor = passwordColor,
+                        unfocusedLabelColor = passwordColor,
+                    ),
+                    supportingText = {
+                        if (!checkIfValueIsValid("password", password) && password.isNotEmpty()) {
+                            Text(
+                                text = "Password is invalid",
+                                color = Color.Red,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Light,
+                                fontFamily = FontFamily.SansSerif,
+                            )
+                        }
+                    },
+                    value = password,
+                    onValueChange = {
+                        password = it
+                        passwordTexFieldColor =
+                            if (!checkIfValueIsValid("password", password)) {
+                                AccountDataState.Invalid
+                            } else {
+                                AccountDataState.Valid
+                            }
+                        if (password.isEmpty()) {
+                            passwordTexFieldColor = AccountDataState.Empty
+                        }
+                        registerErrorText = false
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    singleLine = true,
+                    label = { Text(text = "Password") },
+                )
+                Button(
+                    onClick = {
+                        isLoading = true
+                        controller?.hide()
+                        try {
+                            auth.createUserWithEmailAndPassword(email, password)
+                                .addOnCompleteListener(activity) { task ->
+                                    if (task.isSuccessful) {
+                                        Log.d(ContentValues.TAG, "createUserWithEmail:success")
+                                        createUserEntry(auth, name) {
+                                            sendVerificationEmail {
+                                                if (it) {
+                                                    openDialog = true
+                                                    auth.signOut()
+                                                } else {
+                                                    auth.currentUser?.delete()
+                                                }
+                                                isLoading = false
+                                            }
+                                        }
+                                    } else {
+                                        registerErrorText = true
+                                    }
+                                }
+                        } catch (e: Exception) {
+                            registerErrorText = true
+                        }
+
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp),
+                    enabled = usernameTexFieldColor == AccountDataState.Valid && emailTexFieldColor == AccountDataState.Valid && passwordTexFieldColor == AccountDataState.Valid && !isLoading,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(35.dp),
+                            color = Color.White
                         )
+                    } else {
                         Text(
-                            text = "Sign up with Google",
-                            color = if (isSystemInDarkTheme()) Color.White else Color.DarkGray,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            fontFamily = FontFamily.SansSerif,
-                            modifier = Modifier.padding(start = 10.dp)
+                            text = "Sign Up",
+                            color = Color.White,
+                            modifier = Modifier.padding(7.dp)
                         )
+                    }
+                }
+                if (registerErrorText) {
+                    Text(
+                        text = "Registration failed please try again later!",
+                        color = Color.Red,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Light,
+                        fontFamily = FontFamily.SansSerif,
+                        modifier = Modifier.padding(top = 10.dp)
+                    )
+                }
+                if (openDialog) {
+                    SecondFADialog {
+                        navController.navigate(Screens.LoginScreen.route)
+                        openDialog = false
+                    }
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 15.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Divider(
+                        thickness = 0.3f.dp,
+                        color = Color.DarkGray,
+                        modifier = Modifier
+                            .padding(start = 15.dp)
+                            .weight(1f)
+                    )
+                    Text(
+                        text = "OR",
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 14.sp,
+                        color = if (isSystemInDarkTheme()) Color.LightGray else Color.DarkGray,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(start = 10.dp, end = 10.dp)
+                    )
+                    Divider(
+                        thickness = 0.3f.dp,
+                        color = Color.DarkGray,
+                        modifier = Modifier
+                            .padding(end = 15.dp)
+                            .weight(1f)
+                    )
+                }
+                Column(
+                    modifier = Modifier
+                        .padding(top = 10.dp)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    IconButton(
+                        enabled = !isLoading,
+                        onClick = {
+                            isLoading = true
+                            scope.launch {
+                                val signInIntent = googleSignInClient.signInIntent
+                                signInLauncher.launch(signInIntent)
+                            }
+                        }) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            SubcomposeAsyncImage(
+                                model = R.drawable.icon_google,
+                                contentDescription = "Google",
+                                modifier = Modifier.size(45.dp)
+                            )
+                            Text(
+                                text = "Sign up with Google",
+                                color = if (isSystemInDarkTheme()) Color.White else Color.DarkGray,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                fontFamily = FontFamily.SansSerif,
+                                modifier = Modifier.padding(start = 10.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -541,7 +561,7 @@ class RegisterView {
         name: String,
         callback: (Boolean) -> Unit
     ) {
-        val query = db.collection("users")
+        val query = FirebaseFirestore.getInstance().collection("users")
             .whereEqualTo("username.lowercase", name.lowercase(Locale.ROOT))
             .limit(1)
         query.get()
@@ -571,7 +591,7 @@ class RegisterView {
         email: String,
         callback: (Boolean) -> Unit
     ) {
-        val query = db.collection("users")
+        val query = FirebaseFirestore.getInstance().collection("users")
             .whereEqualTo("email", email)
             .limit(1)
         query.get()

@@ -1,7 +1,5 @@
 package at.htlhl.chatnet.ui.components.mixed
 
-import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,8 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -27,8 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -37,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import at.htlhl.chatnet.data.AccountDataState
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.Locale
 
@@ -45,9 +41,11 @@ import java.util.Locale
 fun CreateUserWithGoogle(
     onClose: (String) -> Unit = {}
 ) {
-    var email by remember { mutableStateOf("") }
-    val context = LocalContext.current
-    var usernameTexFieldColor by remember { mutableStateOf(Color.Gray) }
+    var username by remember { mutableStateOf("") }
+    var usernameTexFieldColor by remember { mutableStateOf(AccountDataState.Empty) }
+    var usernameExists by remember { mutableStateOf(false) }
+    val usernameColor =
+        if (usernameTexFieldColor == AccountDataState.Empty) Color.Gray else if (usernameTexFieldColor == AccountDataState.Valid) MaterialTheme.colorScheme.primary else Color.Red
     Dialog(
         onDismissRequest = { onClose.invoke("") },
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
@@ -56,7 +54,7 @@ fun CreateUserWithGoogle(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background, RoundedCornerShape(20.dp))
                 .width(250.dp)
-                .height(360.dp),
+                .height(300.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -84,33 +82,56 @@ fun CreateUserWithGoogle(
             )
             OutlinedTextField(
                 colors = OutlinedTextFieldDefaults.colors(
-                    cursorColor = usernameTexFieldColor,
-                    focusedBorderColor = usernameTexFieldColor,
-                    unfocusedBorderColor = usernameTexFieldColor,
-                    focusedLabelColor = usernameTexFieldColor,
-                    unfocusedLabelColor = usernameTexFieldColor,
+                    cursorColor = usernameColor,
+                    focusedBorderColor = usernameColor,
+                    unfocusedBorderColor = usernameColor,
+                    focusedLabelColor = usernameColor,
+                    unfocusedLabelColor = usernameColor,
                 ),
-                value = email,
-                onValueChange = { newValue ->
-                    email = newValue
-                    if (email.isEmpty()) {
-                        usernameTexFieldColor = Color.Gray
-                    } else {
-                        checkIfUsernameExists(
-                            name = email,
-                            contextForToast = context
-                        ) { success ->
-                            usernameTexFieldColor = if (success) {
-                                Color.Red
-                            } else {
-                                Color.Green
+                value = username,
+                supportingText = {
+                    if (username.isNotEmpty()) {
+                        Column {
+                            if (usernameExists) {
+                                Text(
+                                    text = "Username already exists",
+                                    color = Color.Red,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Light,
+                                    fontFamily = FontFamily.SansSerif,
+                                )
+                            } else if (!checkIfValueIsValid(username)) {
+                                Text(
+                                    text = "Username is invalid",
+                                    color = Color.Red,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Light,
+                                    fontFamily = FontFamily.SansSerif,
+                                )
                             }
+                        }
+                    }
+                },
+                onValueChange = { newValue ->
+                    username = newValue
+                    checkIfUsernameExists(
+                        name = username,
+                    ) { success ->
+                        usernameExists = success
+                        usernameTexFieldColor =
+                            if (success || !checkIfValueIsValid(username)) {
+                                AccountDataState.Invalid
+                            } else {
+                                AccountDataState.Valid
+                            }
+                        if (username.isEmpty()) {
+                            usernameTexFieldColor = AccountDataState.Empty
                         }
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 10.dp, end = 10.dp, bottom = 20.dp),
+                    .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
                 shape = RoundedCornerShape(8.dp),
                 singleLine = true,
                 label = { Text(text = "Username") },
@@ -125,30 +146,19 @@ fun CreateUserWithGoogle(
                 modifier = Modifier
                     .fillMaxWidth()
             ) {
-                Button(
-                    onClick = {
-                        checkIfUsernameExists(email, context) {
-                            if (it) {
-                                usernameTexFieldColor = Color.Red
-                                Toast.makeText(
-                                    context,
-                                    "Username already exists",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            } else {
-                                onClose.invoke(email)
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RectangleShape,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onClose.invoke(username) }
                 ) {
                     Text(
                         text = "Create Account",
+                        color = Color(0xFF00A0E8),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 15.sp,
-                        color = Color(0xFF00A0E8)
+                        modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
                     )
                 }
             }
@@ -177,7 +187,6 @@ fun CreateUserWithGoogle(
 
 private fun checkIfUsernameExists(
     name: String,
-    contextForToast: Context,
     callback: (Boolean) -> Unit
 ) {
     val query = FirebaseFirestore.getInstance().collection("users")
@@ -190,11 +199,6 @@ private fun checkIfUsernameExists(
                 val usernameField = documentSnapshot.get("username.lowercase")
                 if (usernameField is String) {
                     println("Retrieved value: $usernameField")
-                    Toast.makeText(
-                        contextForToast,
-                        "Username already exists",
-                        Toast.LENGTH_SHORT
-                    ).show()
                     callback(true)
                 } else {
                     println("Field 'username.value' is not a String")
@@ -209,4 +213,8 @@ private fun checkIfUsernameExists(
             println("Error retrieving document: ${exception.message}")
             callback(false)
         }
+}
+
+private fun checkIfValueIsValid(value: String): Boolean {
+    return value.matches("^(?!.*[._-]{2})(?![._-])[a-zA-Z0-9._-]{1,30}(?<![._-])$".toRegex())
 }

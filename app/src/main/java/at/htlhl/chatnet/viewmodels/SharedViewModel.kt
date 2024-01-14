@@ -11,10 +11,8 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.constraintlayout.compose.State
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
@@ -38,7 +36,6 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.QueryDocumentSnapshot
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -82,6 +79,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val chatMateResponseState = mutableStateOf(ChatMateResponseState.Success)
     private val _friend = MutableStateFlow(InternalChatInstance())
     val friend: StateFlow<InternalChatInstance> get() = _friend
+    val unfinishedGoogleRegistration = mutableStateOf(false)
     val bottomBarState = mutableStateOf(false)
     val gpsState = mutableStateOf(false)
     val localChatUserList = mutableStateOf<List<FirebaseUsers>>(emptyList())
@@ -89,13 +87,14 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val text = mutableStateOf("")
     val randState = mutableStateOf(false)
     val isConnected = mutableStateOf(false)
-    val imagePosition= mutableIntStateOf(0)
-    val imageList= mutableStateOf<List<InternalMessageInstance>>(emptyList())
-    val galleryImageList= mutableStateOf<List<Uri>>(emptyList())
+    val imagePosition = mutableIntStateOf(0)
+    val imageList = mutableStateOf<List<InternalMessageInstance>>(emptyList())
+    val galleryImageList = mutableStateOf<List<Uri>>(emptyList())
 
     fun updateFriend(newFriend: InternalChatInstance) {
         _friend.value = newFriend
     }
+
     private fun getUserDocumentRef() = firebaseInstance.collection(USER_COLLECTION)
 
     private fun getChatDocumentRef() = firebaseInstance.collection(CHATS_COLLECTION)
@@ -318,8 +317,12 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         Log.println(Log.INFO, "ChatData!!!", auth.currentUser!!.uid)
         getChatDocumentRef().whereArrayContains("members", auth.currentUser!!.uid)
             .addSnapshotListener { querySnapshot, error ->
-                if (error != null) { return@addSnapshotListener }
-                if (querySnapshot?.documentChanges?.isEmpty() == true) { onComplete.invoke() }
+                if (error != null) {
+                    return@addSnapshotListener
+                }
+                if (querySnapshot?.documentChanges?.isEmpty() == true) {
+                    onComplete.invoke()
+                }
                 // Step 2: For each change in the chats collection, fetch the messages subcollection
                 querySnapshot?.documentChanges?.forEach { documentChange ->
                     // Step 3: Listen for changes in the messages subCollection
@@ -452,7 +455,11 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             }
     }
 
-    suspend fun saveMessages(documentId: String?, message: FirebaseMessage, onComplete: () -> Unit={}) {
+    suspend fun saveMessages(
+        documentId: String?,
+        message: FirebaseMessage,
+        onComplete: () -> Unit = {}
+    ) {
         viewModelScope.launch {
             Log.println(Log.INFO, "Message", message.toString())
             firebaseInstance.collection("$CHATS_COLLECTION/${documentId}/$MESSAGES_COLLECTION")
@@ -571,6 +578,9 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun reset() {
+        if (unfinishedGoogleRegistration.value) {
+            auth.signOut()
+        }
         _chatData.value = emptyList()
         _friend.value = InternalChatInstance(
             FirebaseUsers(),
@@ -769,7 +779,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun sendDataToServer(data: String, onReceived: (String) -> Unit) {
-        chatMateResponseState.value= ChatMateResponseState.Loading
+        chatMateResponseState.value = ChatMateResponseState.Loading
         val url = "https://getresponse-ie4mphraqq-uc.a.run.app/getResponse"
         val client = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -1071,10 +1081,15 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                         }
                                         completedCount++
                                         if (completedCount == totalFriends) {
-                                            _friendFriendsListData.value = personListData.filter { person ->
-                                                friendListData.value.any { friend -> friend.id == person.id }
-                                            }
-                                            Log.println(Log.INFO, "FriendFriendsList", personListData.toString())
+                                            _friendFriendsListData.value =
+                                                personListData.filter { person ->
+                                                    friendListData.value.any { friend -> friend.id == person.id }
+                                                }
+                                            Log.println(
+                                                Log.INFO,
+                                                "FriendFriendsList",
+                                                personListData.toString()
+                                            )
                                         }
                                     } catch (e: Exception) {
                                         e.printStackTrace()
@@ -1091,10 +1106,12 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 exception.printStackTrace()
             }
     }
+
     fun changeMediaVisibility(userContext: Boolean, isMedia: Boolean) {
         for (chat in chatData.value) {
             if (chat.members.contains(friend.value.personList.id) && chat.members.contains(auth.currentUser?.uid.toString())) {
-                val chatRef = getChatDocumentRef().document(chat.chatRoomID).collection(MESSAGES_COLLECTION)
+                val chatRef =
+                    getChatDocumentRef().document(chat.chatRoomID).collection(MESSAGES_COLLECTION)
                 chatRef.get().addOnSuccessListener { querySnapshot ->
                     for (document in querySnapshot.documents) {
                         if (isMedia) {
@@ -1119,7 +1136,11 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private fun handleVisibility(userContext: Boolean, chatRef: CollectionReference, document: DocumentSnapshot) {
+    private fun handleVisibility(
+        userContext: Boolean,
+        chatRef: CollectionReference,
+        document: DocumentSnapshot
+    ) {
         val sender = document.get("visible") as List<*>
         if (auth.currentUser?.uid.toString() in sender) {
             val updatedVisible = sender.toMutableList()
