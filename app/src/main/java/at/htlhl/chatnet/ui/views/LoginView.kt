@@ -51,7 +51,6 @@ import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.AccountDataState
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.mixed.CreateUserWithGoogle
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -68,6 +67,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.util.Locale
 
+
 class LoginView {
     private lateinit var auth: FirebaseAuth
 
@@ -79,7 +79,7 @@ class LoginView {
         val scope = rememberCoroutineScope()
         val googleSignInOptions = remember {
             GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(R.string.web_client_id.toString())
+                .requestIdToken("1077068573755-8dqkdh2upl4h7rgkeab8slnv5dlps6c5.apps.googleusercontent.com")
                 .requestEmail()
                 .build()
         }
@@ -144,7 +144,6 @@ class LoginView {
         googleSignInClient: GoogleSignInClient,
         sharedViewModel: SharedViewModel,
     ) {
-        val createAccountWithGoogleDialog = remember { mutableStateOf(false) }
         var emailIsNotVerifiedText by remember { mutableStateOf(false) }
         var wrongPasswordText by remember { mutableStateOf(false) }
         var wrongEmailText by remember { mutableStateOf(false) }
@@ -172,6 +171,7 @@ class LoginView {
             val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
             try {
                 val account = task.getResult(ApiException::class.java)
+                sharedViewModel.unfinishedGoogleRegistration.value = account.idToken.toString()
                 if (account != null) {
                     val credential = GoogleAuthProvider.getCredential(account.idToken, null)
                     authentication.signInWithCredential(credential)
@@ -186,18 +186,15 @@ class LoginView {
                                             sharedViewModel.fetchFriendsFromUser()
                                             sharedViewModel.fetchChatsWithMessages {
                                                 sharedViewModel.fetchRandomFriendsFromFriend()
-                                                navController.navigate("MainFlow"){
-                                                    popUpTo("LoginFlow"){
+                                                navController.navigate("MainFlow") {
+                                                    popUpTo("LoginFlow") {
                                                         inclusive = true
                                                     }
                                                 }
                                             }
                                         } else {
-                                            navController.navigate(Screens.RegisterWithGoogleScreen.route){
-                                                popUpTo("LoginFlow"){
-                                                    inclusive = true
-                                                }
-                                            }
+                                            auth.signOut()
+                                            navController.navigate(Screens.RegisterWithGoogleScreen.route)
                                             Log.println(Log.INFO, "User", "User does not exist")
                                         }
                                     }
@@ -211,6 +208,7 @@ class LoginView {
                 }
             } catch (e: ApiException) {
                 Log.println(Log.ERROR, "User", e.status.toString())
+                isLoading = false
                 loginErrorText = true
             }
         }
@@ -221,7 +219,11 @@ class LoginView {
                     .padding(bottom = 30.dp, start = 30.dp, end = 30.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Box(modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp), contentAlignment = Alignment.Center
+                ) {
                     Text(
                         text = "ChatNet",
                         fontWeight = Bold,
@@ -330,8 +332,8 @@ class LoginView {
                                             sharedViewModel.fetchFriendsFromUser()
                                             sharedViewModel.fetchChatsWithMessages {
                                                 sharedViewModel.fetchRandomFriendsFromFriend()
-                                                navController.navigate("MainFlow"){
-                                                    popUpTo("LoginFlow"){
+                                                navController.navigate("MainFlow") {
+                                                    popUpTo("LoginFlow") {
                                                         inclusive = true
                                                     }
                                                 }
@@ -507,11 +509,14 @@ class LoginView {
                         enabled = !isLoading,
                         onClick = {
                             isLoading = true
+                            googleSignInClient.signOut()
                             scope.launch {
                                 val signInIntent = googleSignInClient.signInIntent
                                 signInLauncher.launch(signInIntent)
                             }
-                        }) {
+                        }
+                    )
+                    {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth(),
@@ -535,32 +540,6 @@ class LoginView {
                     }
                 }
             }
-        }
-        if (createAccountWithGoogleDialog.value) {
-            CreateUserWithGoogle(
-                onClose = {
-                    isLoading = false
-                    createAccountWithGoogleDialog.value = false
-                    if (it != "") {
-                        createUserEntry(auth, it) {
-                            sharedViewModel.updateOnlineStatus("online")
-                            sharedViewModel.getUserData()
-                            sharedViewModel.fetchFriendsFromUser()
-                            sharedViewModel.fetchChatsWithMessages {
-                                sharedViewModel.fetchRandomFriendsFromFriend()
-                                navController.navigate("MainFlow"){
-                                    popUpTo("LoginFlow"){
-                                        inclusive = true
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        googleSignInClient.signOut()
-                        FirebaseAuth.getInstance().signOut()
-                    }
-                },
-            )
         }
     }
 
@@ -628,7 +607,6 @@ class LoginView {
             "email" -> {
                 value.matches("^(?=.{1,320})(?!.*[+._-]{2})(?![+._-])[a-zA-Z0-9+._-]{1,64}(?<![+._-])@(?![+._-])[a-zA-Z0-9.-]*\\.[a-zA-Z]{2,63}(?<![+._-])$".toRegex())
             }
-
 
             "password" -> {
                 value.matches("^(?!.*\\s).{6,4096}$".toRegex())

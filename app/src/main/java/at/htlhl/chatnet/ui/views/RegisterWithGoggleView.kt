@@ -1,6 +1,7 @@
 package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -37,8 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.accessibility.AccessibilityViewCommand.ScrollToPositionArguments
 import androidx.navigation.NavController
-import at.chatnet.R
 import at.htlhl.chatnet.data.AccountDataState
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
@@ -46,6 +47,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
@@ -57,10 +59,9 @@ class RegisterWithGoggleView {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @Composable
     fun RegisterWithGoggleScreen(sharedViewModel: SharedViewModel, navController: NavController) {
-        sharedViewModel.unfinishedGoogleRegistration.value = true
         val googleSignInOptions = remember {
             GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(R.string.web_client_id.toString())
+                .requestIdToken("1077068573755-8dqkdh2upl4h7rgkeab8slnv5dlps6c5.apps.googleusercontent.com")
                 .requestEmail()
                 .build()
         }
@@ -119,11 +120,11 @@ class RegisterWithGoggleView {
         sharedViewModel: SharedViewModel
     ) {
         var username by remember { mutableStateOf("") }
+        var registerWithGoggleErrorText by remember { mutableStateOf(false) }
         var usernameExists by remember { mutableStateOf(false) }
         var isLoading by remember { mutableStateOf(false) }
         var usernameTextFieldColor by remember { mutableStateOf(AccountDataState.Empty) }
-        val emailColor =
-            if (usernameTextFieldColor == AccountDataState.Empty) Color.Gray else if (usernameTextFieldColor == AccountDataState.Valid) MaterialTheme.colorScheme.primary else Color.Red
+        val usernameColor = if (usernameTextFieldColor == AccountDataState.Empty) Color.Gray else if (usernameTextFieldColor == AccountDataState.Valid) MaterialTheme.colorScheme.primary else Color.Red
         val controller = LocalSoftwareKeyboardController.current
         auth = Firebase.auth
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -165,11 +166,11 @@ class RegisterWithGoggleView {
                 }
                 OutlinedTextField(
                     colors = OutlinedTextFieldDefaults.colors(
-                        cursorColor = emailColor,
-                        focusedBorderColor = emailColor,
-                        unfocusedBorderColor = emailColor,
-                        focusedLabelColor = emailColor,
-                        unfocusedLabelColor = emailColor,
+                        cursorColor = usernameColor,
+                        focusedBorderColor = usernameColor,
+                        unfocusedBorderColor = usernameColor,
+                        focusedLabelColor = usernameColor,
+                        unfocusedLabelColor = usernameColor,
                     ),
                     value = username,
                     supportingText = {
@@ -200,7 +201,7 @@ class RegisterWithGoggleView {
                         checkIfUsernameExists(name = username) { success ->
                             usernameExists = success
                             usernameTextFieldColor =
-                                if (!success || !checkIfValueIsValid(username)) {
+                                if (success || !checkIfValueIsValid(username)) {
                                     AccountDataState.Invalid
                                 } else {
                                     AccountDataState.Valid
@@ -209,40 +210,58 @@ class RegisterWithGoggleView {
                                 usernameTextFieldColor = AccountDataState.Empty
                             }
                         }
+                        if (username.isEmpty()) {
+                            usernameTextFieldColor = AccountDataState.Empty
+                        }
+                        registerWithGoggleErrorText = false
                     },
                     modifier = Modifier
                         .fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
                     singleLine = true,
-                    label = { Text(text = "Email") },
+                    label = { Text(text = "Username") },
                 )
                 Button(
                     onClick = {
                         isLoading = true
                         controller?.hide()
-                        createUserEntry(auth, username, {
-                            sharedViewModel.unfinishedGoogleRegistration.value = false
-                            sharedViewModel.updateOnlineStatus("online")
-                            sharedViewModel.getUserData()
-                            sharedViewModel.fetchFriendsFromUser()
-                            sharedViewModel.fetchChatsWithMessages {
-                                sharedViewModel.fetchRandomFriendsFromFriend()
-                                navController.navigate("MainFlow") {
-                                    popUpTo("LoginFlow") {
-                                        inclusive = true
-                                    }
+                        auth.signInWithCredential( GoogleAuthProvider.getCredential(sharedViewModel.unfinishedGoogleRegistration.value, null))
+                            .addOnCompleteListener{
+                                if (it.isSuccessful) {
+                                   Log.println(Log.INFO, "Google", "Success")
+                                    createUserEntry(auth, username, {
+                                        sharedViewModel.updateOnlineStatus("online")
+                                        sharedViewModel.getUserData()
+                                        sharedViewModel.fetchFriendsFromUser()
+                                        sharedViewModel.fetchChatsWithMessages {
+                                            sharedViewModel.fetchRandomFriendsFromFriend()
+                                            navController.navigate("MainFlow") {
+                                                popUpTo(Screens.RegisterWithGoogleScreen.route) {
+                                                    inclusive = true
+                                                }
+                                            }
+                                        }
+                                    }, {
+                                        isLoading = false
+                                        googleSignInClient.signOut()
+                                        auth.signOut()
+                                        navController.navigate("LoginFlow") {
+                                            popUpTo(Screens.RegisterWithGoogleScreen.route) {
+                                                inclusive = true
+                                            }
+                                        }
+                                    })
+                                } else {
+                                    isLoading = false
+                                    registerWithGoggleErrorText = true
+                                    Log.println(Log.INFO, "Google", "Error: ${it.exception?.message}")
                                 }
                             }
-                        }, {
-                            googleSignInClient.signOut()
-                            auth.signOut()
-                            sharedViewModel.unfinishedGoogleRegistration.value = false
-                            navController.navigate("LoginFlow") {
-                                popUpTo("LoginFlow") {
-                                    inclusive = true
-                                }
+                            .addOnFailureListener { exception ->
+                                isLoading = false
+                                registerWithGoggleErrorText = true
+                                Log.println(Log.INFO, "Google", "Error: ${exception.message}")
                             }
-                        })
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -265,6 +284,17 @@ class RegisterWithGoggleView {
                         )
                     }
                 }
+                if (registerWithGoggleErrorText) {
+                    Text(
+                        text = "Couldn't create account. Try again later.",
+                        color = Color.Red,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Light,
+                        fontFamily = FontFamily.SansSerif,
+                        modifier = Modifier.padding(top = 10.dp)
+                    )
+                }
+
             }
         }
     }
@@ -334,6 +364,6 @@ class RegisterWithGoggleView {
     }
 
     private fun checkIfValueIsValid(value: String): Boolean {
-        return value.matches("^(?=.{1,320})(?!.*[+._-]{2})(?![+._-])[a-zA-Z0-9+._-]{1,64}(?<![+._-])@(?![+._-])[a-zA-Z0-9.-]*\\.[a-zA-Z]{2,63}(?<![+._-])$".toRegex())
+        return value.matches("^(?!.*[._-]{2})(?![._-])[a-zA-Z0-9._-]{1,30}(?<![._-])$".toRegex())
     }
 }

@@ -37,7 +37,7 @@ fun SecondFADialog(onDismiss: () -> Unit = {}) {
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background, RoundedCornerShape(20.dp))
                 .width(250.dp)
-                .height(200.dp),
+                .height(180.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -50,7 +50,7 @@ fun SecondFADialog(onDismiss: () -> Unit = {}) {
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                text = "Set up 2FA to secure your account. You will need to click the link in the email we sent you to complete the process.",
+                text = "We sent you en email you will need to click the link in the email to complete the process.",
                 fontWeight = FontWeight.Light,
                 color = MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center,
@@ -78,25 +78,6 @@ fun SecondFADialog(onDismiss: () -> Unit = {}) {
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
                     color = Color(0xFF00A0E8),
-                    modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
-                )
-            }
-            Divider(
-                thickness = 0.3f.dp,
-                color = Color.LightGray
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onDismiss.invoke() }
-            ) {
-                Text(
-                    text = "Cancel",
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
                     modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
                 )
             }

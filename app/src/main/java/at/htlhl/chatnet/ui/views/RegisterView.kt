@@ -48,7 +48,6 @@ import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.AccountDataState
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.mixed.CreateUserWithGoogle
 import at.htlhl.chatnet.ui.components.mixed.SecondFADialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -124,8 +123,8 @@ class RegisterView {
                 color = if (isSystemInDarkTheme()) Color.White else Color.Black,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.clickable {
-                    navController.navigate(Screens.LoginScreen.route){
-                        popUpTo(Screens.RegisterScreen.route){
+                    navController.navigate(Screens.LoginScreen.route) {
+                        popUpTo(Screens.RegisterScreen.route) {
                             inclusive = true
                         }
                     }
@@ -143,7 +142,6 @@ class RegisterView {
         googleSignInClient: GoogleSignInClient,
         sharedViewModel: SharedViewModel
     ) {
-        val createAccountWithGoogleDialog = remember { mutableStateOf(false) }
         var registerErrorText by remember { mutableStateOf(false) }
         var name by remember { mutableStateOf("") }
         var email by remember { mutableStateOf("") }
@@ -277,6 +275,9 @@ class RegisterView {
                                 usernameTexFieldColor = AccountDataState.Empty
                             }
                         }
+                        if (name.isEmpty()) {
+                            usernameTexFieldColor = AccountDataState.Empty
+                        }
                         registerErrorText = false
                     },
                     modifier = Modifier
@@ -330,6 +331,9 @@ class RegisterView {
                             if (email.isEmpty()) {
                                 emailTexFieldColor = AccountDataState.Empty
                             }
+                        }
+                        if (email.isEmpty()) {
+                            emailTexFieldColor = AccountDataState.Empty
                         }
                         registerErrorText = false
                     },
@@ -399,10 +403,12 @@ class RegisterView {
                                             }
                                         }
                                     } else {
+                                        isLoading = false
                                         registerErrorText = true
                                     }
                                 }
                         } catch (e: Exception) {
+                            isLoading = false
                             registerErrorText = true
                         }
 
@@ -486,6 +492,7 @@ class RegisterView {
                         enabled = !isLoading,
                         onClick = {
                             isLoading = true
+                            googleSignInClient.signOut()
                             scope.launch {
                                 val signInIntent = googleSignInClient.signInIntent
                                 signInLauncher.launch(signInIntent)
@@ -514,28 +521,6 @@ class RegisterView {
                     }
                 }
             }
-        }
-        if (createAccountWithGoogleDialog.value) {
-            CreateUserWithGoogle(
-                onClose = {
-                    isLoading = false
-                    createAccountWithGoogleDialog.value = false
-                    if (it != "") {
-                        createUserEntry(auth, it) {
-                            sharedViewModel.updateOnlineStatus("online")
-                            sharedViewModel.getUserData()
-                            sharedViewModel.fetchFriendsFromUser()
-                            sharedViewModel.fetchChatsWithMessages {
-                                sharedViewModel.fetchRandomFriendsFromFriend()
-                                navController.navigate(Screens.ChatsViewScreen.route)
-                            }
-                        }
-                    } else {
-                        googleSignInClient.signOut()
-                        FirebaseAuth.getInstance().signOut()
-                    }
-                },
-            )
         }
     }
 

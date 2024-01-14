@@ -46,7 +46,6 @@ import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.AccountDataState
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.mixed.CreateUserWithGoogle
 import at.htlhl.chatnet.ui.components.mixed.PasswordResetEmailDialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -72,7 +71,7 @@ class ForgotPasswordView {
         val scope = rememberCoroutineScope()
         val googleSignInOptions = remember {
             GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(R.string.web_client_id.toString())
+                .requestIdToken("1077068573755-8dqkdh2upl4h7rgkeab8slnv5dlps6c5.apps.googleusercontent.com")
                 .requestEmail()
                 .build()
         }
@@ -113,8 +112,8 @@ class ForgotPasswordView {
                 color = if (isSystemInDarkTheme()) Color.White else Color.Black,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.clickable {
-                    navController.navigate(Screens.LoginScreen.route){
-                        popUpTo(Screens.ForgotPasswordScreen.route){
+                    navController.navigate(Screens.LoginScreen.route) {
+                        popUpTo(Screens.ForgotPasswordScreen.route) {
                             inclusive = true
                         }
                     }
@@ -131,7 +130,6 @@ class ForgotPasswordView {
         googleSignInClient: GoogleSignInClient,
         sharedViewModel: SharedViewModel
     ) {
-        val createAccountWithGoogleDialog = remember { mutableStateOf(false) }
         val forgotPasswordDialog = remember { mutableStateOf(false) }
         var registerErrorText by remember { mutableStateOf(false) }
         var passwordResetErrorText by remember { mutableStateOf(false) }
@@ -169,8 +167,8 @@ class ForgotPasswordView {
                                                 navController.navigate(Screens.ChatsViewScreen.route)
                                             }
                                         } else {
-                                            navController.navigate(Screens.RegisterWithGoogleScreen.route){
-                                                popUpTo("LoginFlow"){
+                                            navController.navigate(Screens.RegisterWithGoogleScreen.route) {
+                                                popUpTo("LoginFlow") {
                                                     inclusive = true
                                                 }
                                             }
@@ -178,11 +176,13 @@ class ForgotPasswordView {
                                     }
                                 }
                             } else {
+                                isLoading = false
                                 registerErrorText = true
                             }
                         }
                 }
             } catch (e: ApiException) {
+                isLoading = false
                 registerErrorText = true
             }
         }
@@ -268,6 +268,9 @@ class ForgotPasswordView {
                             if (email.isEmpty()) {
                                 emailTexFieldColor = AccountDataState.Empty
                             }
+                        }
+                        if (email.isEmpty()) {
+                            emailTexFieldColor = AccountDataState.Empty
                         }
                         registerErrorText = false
                         passwordResetErrorText = false
@@ -375,6 +378,7 @@ class ForgotPasswordView {
                         enabled = !isLoading,
                         onClick = {
                             isLoading = true
+                            googleSignInClient.signOut()
                             scope.launch {
                                 val signInIntent = googleSignInClient.signInIntent
                                 signInLauncher.launch(signInIntent)
@@ -411,28 +415,6 @@ class ForgotPasswordView {
                     forgotPasswordDialog.value = false
                     navController.navigate(Screens.LoginScreen.route)
                 }
-            )
-        }
-        if (createAccountWithGoogleDialog.value) {
-            CreateUserWithGoogle(
-                onClose = {
-                    isLoading = false
-                    createAccountWithGoogleDialog.value = false
-                    if (it != "") {
-                        createUserEntry(auth, it) {
-                            sharedViewModel.updateOnlineStatus("online")
-                            sharedViewModel.getUserData()
-                            sharedViewModel.fetchFriendsFromUser()
-                            sharedViewModel.fetchChatsWithMessages {
-                                sharedViewModel.fetchRandomFriendsFromFriend()
-                                navController.navigate(Screens.ChatsViewScreen.route)
-                            }
-                        }
-                    } else {
-                        googleSignInClient.signOut()
-                        FirebaseAuth.getInstance().signOut()
-                    }
-                },
             )
         }
     }

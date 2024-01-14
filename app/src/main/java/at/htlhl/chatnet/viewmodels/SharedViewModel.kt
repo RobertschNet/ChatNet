@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Handler
@@ -24,10 +25,15 @@ import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentChange
@@ -79,7 +85,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val chatMateResponseState = mutableStateOf(ChatMateResponseState.Success)
     private val _friend = MutableStateFlow(InternalChatInstance())
     val friend: StateFlow<InternalChatInstance> get() = _friend
-    val unfinishedGoogleRegistration = mutableStateOf(false)
+    var unfinishedGoogleRegistration = mutableStateOf("")
     val bottomBarState = mutableStateOf(false)
     val gpsState = mutableStateOf(false)
     val localChatUserList = mutableStateOf<List<FirebaseUsers>>(emptyList())
@@ -578,9 +584,6 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun reset() {
-        if (unfinishedGoogleRegistration.value) {
-            auth.signOut()
-        }
         _chatData.value = emptyList()
         _friend.value = InternalChatInstance(
             FirebaseUsers(),

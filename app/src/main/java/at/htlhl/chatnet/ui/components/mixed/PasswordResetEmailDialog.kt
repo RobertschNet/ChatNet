@@ -20,13 +20,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
+@Preview
 @Composable
-fun PasswordResetEmailDialog(onDismiss: () -> Unit) {
+fun PasswordResetEmailDialog(onDismiss: () -> Unit= {}) {
     Dialog(
         onDismissRequest = { onDismiss.invoke() },
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
@@ -35,12 +37,12 @@ fun PasswordResetEmailDialog(onDismiss: () -> Unit) {
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background, RoundedCornerShape(20.dp))
                 .width(250.dp)
-                .height(200.dp),
+                .height(180.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Password Reset Email Sent",
+                text = "Reset Password",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 overflow = TextOverflow.Ellipsis,
@@ -76,25 +78,6 @@ fun PasswordResetEmailDialog(onDismiss: () -> Unit) {
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
                     color = Color(0xFF00A0E8),
-                    modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
-                )
-            }
-            Divider(
-                thickness = 0.3f.dp,
-                color = Color.LightGray
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onDismiss.invoke() }
-            ) {
-                Text(
-                    text = "Cancel",
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
                     modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
                 )
             }

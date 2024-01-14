@@ -31,3 +31,22 @@ ID = QsUf2rjKB6b4bplzoPfJFmaqHjw2
 E-Mail = benjamin.kurt2005@gmail.com
 Password = 123456
 Provider = Password
+
+## TODO List
+
+### 1. Login/Registration
+- [x] Login with Google
+- [x] Login with E-Mail and Password
+- [x] Registration with E-Mail and Password
+- [x] Registration with Google
+- [x] Logout
+- [x] Delete Account
+- [x] Reset Password
+- [x] Confirm E-Mail
+- [x] Change E-Mail
+- [x] Change Password
+- [x] UI for Login/Registration
+- [] UI for Reset Password Dialog
+- [] UI for Confirm E-Mail Dialog
+- [x] UI for Error Handling
+- [x] Error Handling for Login/Registration
