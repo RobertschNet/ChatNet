@@ -118,6 +118,7 @@ class RandChatView {
         val messageListFromMatchingChat: List<InternalMessageInstance> = matchingChat?.let { chat ->
             chat.messages.map { message ->
                 InternalMessageInstance(
+                    isFromCache = message.isFromCache,
                     id = message.id,
                     sender = message.sender,
                     images = message.images,
@@ -174,6 +175,7 @@ class RandChatView {
         chatMateChat: Boolean
     ) {
         val coroutineScope = rememberCoroutineScope()
+        var chatMateResponse by remember { mutableStateOf("") }
         val filteredMessages = messagesForChat.filter { message ->
             message.visible.contains(sharedViewModel.auth.currentUser?.uid.toString())
         }.toMutableList()
@@ -206,28 +208,16 @@ class RandChatView {
                     chatMateChat = chatMateChat,
                     messages = filteredMessages,
                     lazyListState = lazyListState,
-                    chatRoomId = chatRoomId
+                    chatRoomId = chatRoomId,
+                    onChatMateResponseState = { chatMateResponse = it }
+
                 )
             }, bottomBar = {
                 InputField(
+                    onChatMateResponse = chatMateResponse,
                     sharedViewModel = sharedViewModel,
                     navController = navController,
-                    chatMateChat = chatMateChat,
-                    onMessageSent = { messageText, image ->
-                        onMessageSent(
-                            FirebaseMessage(
-                                sender = sharedViewModel.auth.currentUser?.uid.toString(),
-                                text = messageText,
-                                timestamp = Timestamp.now(),
-                                read = false,
-                                images = image,
-                                visible = listOf(
-                                    sharedViewModel.auth.currentUser?.uid.toString(),
-                                    sharedViewModel.friend.value.personList.id
-                                )
-                            )
-                        )
-                    },
+                    chatMateChat = chatMateChat
                 )
             }
         )
@@ -239,7 +229,8 @@ class RandChatView {
         chatMateChat: Boolean,
         messages: List<InternalMessageInstance>,
         lazyListState: LazyListState,
-        chatRoomId: String
+        chatRoomId: String,
+        onChatMateResponseState: (String) -> Unit
     ) {
         var animatedText by remember { mutableStateOf("Robert is writing") }
         LaunchedEffect(sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
@@ -277,6 +268,7 @@ class RandChatView {
                         previousMessage = previousMessageIndex,
                         nextMessage = nextMessageIndex,
                         message = InternalMessageInstance(
+                            isFromCache = message.isFromCache,
                             id = message.id,
                             sender = message.sender,
                             images = message.images,
@@ -285,7 +277,8 @@ class RandChatView {
                             timestamp = message.timestamp,
                             visible = message.visible,
                         ), chatRoomId = chatRoomId
-                    )
+                    ){
+                        onChatMateResponseState.invoke(it)}
                 }
             }
 
@@ -300,7 +293,8 @@ class RandChatView {
         message: InternalMessageInstance,
         previousMessage: InternalMessageInstance?,
         nextMessage: InternalMessageInstance?,
-        chatRoomId: String
+        chatRoomId: String,
+        onChatMateResponseState: (String) -> Unit
     ) {
         val context = LocalContext.current
         var menuDialog by remember { mutableStateOf(false) }
@@ -357,7 +351,7 @@ class RandChatView {
 
                     "generate" -> {
                         sharedViewModel.sendDataToServer(message.text) {
-                            sharedViewModel.text.value = it
+                            onChatMateResponseState.invoke(it)
                         }
                     }
                 }

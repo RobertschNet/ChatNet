@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.BottomAppBar
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,33 +55,42 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.ChatMateResponseState
+import at.htlhl.chatnet.data.FirebaseMessage
+import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.google.firebase.Firebase
+import com.google.firebase.Timestamp
 import com.google.firebase.storage.storage
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 
 @Composable
 fun InputField(
+    onChatMateResponse: String,
     sharedViewModel: SharedViewModel,
     navController: NavController,
-    chatMateChat: Boolean,
-    onMessageSent: (String, List<String>) -> Unit
+    chatMateChat: Boolean
 ) {
+    Log.println(Log.INFO, "InputField", chatMateChat.toString())
     var badgeCount by remember { mutableIntStateOf(0) }
-    val isLoading = remember {
+    var isLoading by remember {
         mutableStateOf(false)
     }
-    val context=LocalContext.current
-    val systemUiController = rememberSystemUiController()
-    val text = sharedViewModel.text.value
+    val context = LocalContext.current
+    var text by rememberSaveable {
+        mutableStateOf("")
+    }
+    if (onChatMateResponse.isNotEmpty()) {
+        text = onChatMateResponse
+    }
     var chatMateResponseText by remember { mutableStateOf("ChatMate is thinking") }
     val chatMatePadding =
         if (sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) 10.dp else 0.dp
@@ -89,9 +100,10 @@ fun InputField(
                 sharedViewModel.galleryImageList.value = uris
             })
     BottomAppBar(
-        elevation = 10.dp,
-        modifier = if (sharedViewModel.galleryImageList.value.isEmpty()) Modifier.height(70.dp + badgeCount.dp + chatMatePadding)
-        else Modifier.height(160.dp + badgeCount.dp + chatMatePadding),
+        elevation = 0.dp,
+        modifier = if (sharedViewModel.galleryImageList.value.isEmpty()) Modifier.height(70.dp + badgeCount.dp + chatMatePadding) else Modifier.height(
+            160.dp + badgeCount.dp + chatMatePadding
+        ),
         backgroundColor = MaterialTheme.colorScheme.background,
     ) {
         Column(
@@ -128,7 +140,7 @@ fun InputField(
                                         sharedViewModel.galleryImageList.value.filterIndexed { i, _ -> i != index }
                                 }
                                 .border(
-                                    width = 1.dp,
+                                    width = Dp.Hairline,
                                     color = Color.White,
                                     shape = CircleShape
                                 )
@@ -147,6 +159,7 @@ fun InputField(
                 }
             }
             if (sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
+                isLoading = true
                 LaunchedEffect(sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
                     while (true) {
                         delay(750)
@@ -165,28 +178,44 @@ fun InputField(
                     fontWeight = FontWeight.Light,
                     modifier = Modifier.padding(start = 30.dp)
                 )
+            } else {
+                isLoading = false
             }
-
             BasicTextField(
                 // TODO  enabled = sharedViewModel.isConnected.value,
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = {
-                    if (text.isNotEmpty() || sharedViewModel.galleryImageList.value.isNotEmpty()) {
-                        if (sharedViewModel.galleryImageList.value.isEmpty()) {
-                            onMessageSent(text, listOf())
-                        } else {
-                            isLoading.value = true
-                            uploadImage(sharedViewModel.galleryImageList.value) {
-                                isLoading.value = false
-                                sharedViewModel.galleryImageList.value = emptyList()
-                                onMessageSent(text, it)
+                    if (!isLoading) {
+                        if (text.isNotEmpty() || sharedViewModel.galleryImageList.value.isNotEmpty()) {
+                            isLoading = true
+                            if (sharedViewModel.galleryImageList.value.isEmpty()) {
+                                uploadMessage(chatMateChat,sharedViewModel, text) {
+                                    isLoading = false
+                                    if (it) {
+                                        text = ""
+                                    } else {
+                                        //TODO Show error message
+                                    }
+                                }
+                                text = ""
+                            } else {
+                                uploadImage(sharedViewModel.galleryImageList.value, { success ->
+                                    sharedViewModel.galleryImageList.value = emptyList()
+                                    uploadMessage(chatMateChat,sharedViewModel, text, success) {
+                                        isLoading = false
+                                        if (it) {
+                                            sharedViewModel.galleryImageList.value = emptyList()
+                                            text = ""
+                                        } else {
+                                            //TODO Show error message
+                                        }
+                                    }
+                                }, {
+                                    isLoading = false
+                                    //TODO Show error message
+                                })
+                                text = ""
                             }
-                        }
-                        if (!sharedViewModel.user.value.blocked.contains(
-                                sharedViewModel.friend.value.personList.id
-                            )
-                        ) {
-                            sharedViewModel.text.value = ""
                         }
                     }
                 }),
@@ -218,7 +247,7 @@ fun InputField(
                         ), Color.White
                     ), Offset.Zero, Offset.Infinite, TileMode.Clamp
                 ),
-                onValueChange = { sharedViewModel.text.value = it },
+                onValueChange = { text = it },
                 textStyle = LocalTextStyle.current.copy(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Normal,
@@ -233,7 +262,7 @@ fun InputField(
                         MaterialTheme.colorScheme.background, RoundedCornerShape(26.dp)
                     )
                     .border(
-                        width = 1.dp,
+                        width = Dp.Hairline,
                         color = MaterialTheme.colorScheme.secondary,
                         shape = RoundedCornerShape(26.dp),
                     ),
@@ -259,30 +288,32 @@ fun InputField(
                         ) {
                             if (text.isEmpty()) {
                                 IconButton(onClick = {
-                                    if (chatMateChat) createToast(true, context) else {
-                                        systemUiController.setStatusBarColor(
-                                            color = Color.Black,
-                                            darkIcons = false
-                                        )
-                                        navController.navigate(Screens.CameraViewScreen.route)
-                                    }
+                                    navController.navigate(Screens.CameraViewScreen.route)
                                 }) {
                                     SubcomposeAsyncImage(
                                         model = R.drawable.camera_svgrepo_com_5_,
                                         contentDescription = null,
-                                        colorFilter = ColorFilter.tint(Color.White.copy(alpha=if (chatMateChat) 0.7f else 1f)),
+                                        colorFilter = ColorFilter.tint(Color.White.copy(alpha = if (chatMateChat) 0.7f else 1f)),
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
                             } else {
                                 IconButton(onClick = {
-                                    if (chatMateChat) createToast(false, context) else multiplePhotoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                    if (chatMateChat) {
+                                        createToast(false, context)
+                                    } else if (!isLoading) {
+                                        multiplePhotoPickerLauncher.launch(
+                                            PickVisualMediaRequest(
+                                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                                            )
+                                        )
+                                    }
                                 }) {
                                     SubcomposeAsyncImage(
                                         model = R.drawable.gallery_svgrepo_com,
                                         contentDescription = null,
                                         modifier = Modifier.size(28.dp),
-                                        colorFilter = ColorFilter.tint(Color.White.copy(alpha=if (chatMateChat) 0.7f else 1f)),
+                                        colorFilter = ColorFilter.tint(Color.White.copy(alpha = if (chatMateChat) 0.7f else 1f)),
                                     )
                                 }
                             }
@@ -307,46 +338,86 @@ fun InputField(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.End,
                     ) {
-                        if (text.isNotEmpty() || sharedViewModel.galleryImageList.value.isNotEmpty()) {
-                            Text(text = "Send",
-                                fontSize = 18.sp,
+                        if (isLoading) {
+                            CircularProgressIndicator(
                                 color = Color(0xFF00A0E8),
-                                fontWeight = Bold,
-                                modifier = Modifier.clickable {
-                                    if (text.isNotEmpty() || sharedViewModel.galleryImageList.value.isNotEmpty()) {
-                                        if (sharedViewModel.galleryImageList.value.isEmpty()) {
-                                            onMessageSent(text, listOf())
-                                        } else {
-                                            isLoading.value = true
-                                            uploadImage(sharedViewModel.galleryImageList.value) {
-                                                isLoading.value = false
-                                                sharedViewModel.galleryImageList.value =
-                                                    emptyList()
-                                                onMessageSent(text, it)
+                                strokeWidth = 4.dp,
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .padding(end = 2.dp)
+                            )
+                        } else {
+                            if (text.isNotEmpty() || sharedViewModel.galleryImageList.value.isNotEmpty()) {
+                                Text(text = "Send",
+                                    fontSize = 18.sp,
+                                    fontFamily = FontFamily.SansSerif,
+                                    color = Color(0xFF00A0E8),
+                                    fontWeight = Bold,
+                                    modifier = Modifier.clickable {
+                                        if (text.isNotEmpty() || sharedViewModel.galleryImageList.value.isNotEmpty()) {
+                                            isLoading = true
+                                            if (sharedViewModel.galleryImageList.value.isEmpty()) {
+                                                uploadMessage(chatMateChat, sharedViewModel, text) {
+                                                    isLoading = false
+                                                    if (it) {
+
+                                                    } else {
+                                                        //TODO Show error message
+                                                    }
+                                                }
+                                                text = ""
+                                            } else {
+                                                uploadImage(sharedViewModel.galleryImageList.value,
+                                                    { success ->
+                                                        sharedViewModel.galleryImageList.value =
+                                                            emptyList()
+                                                        uploadMessage(
+                                                            chatMateChat,
+                                                            sharedViewModel,
+                                                            text,
+                                                            success
+                                                        ) {
+                                                            isLoading = false
+                                                            if (it) {
+                                                                sharedViewModel.galleryImageList.value =
+                                                                    emptyList()
+                                                                text = ""
+                                                            } else {
+                                                                //TODO Show error message
+                                                            }
+                                                        }
+                                                    },
+                                                    {
+                                                        isLoading = false
+                                                        //TODO Show error message
+                                                    })
+                                                text = ""
                                             }
                                         }
-                                        if (!sharedViewModel.user.value.blocked.contains(
-                                                sharedViewModel.friend.value.personList.id
-                                            )
-                                        ) {
-                                            sharedViewModel.text.value = ""
-                                        }
                                     }
-                                })
-                        } else {
-                            IconButton(onClick = {
-                                if (chatMateChat) createToast(false,context) else multiplePhotoPickerLauncher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                                 )
-                            }) {
-                                SubcomposeAsyncImage(
-                                    model = R.drawable.gallery_svgrepo_com,
-                                    contentDescription = null,
-                                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary.copy(alpha=if (chatMateChat) 0.7f else 1f)),
-                                    modifier = Modifier.size(30.dp)
-                                )
-                            }
+                            } else {
+                                IconButton(onClick = {
+                                    if (chatMateChat) createToast(
+                                        false,
+                                        context
+                                    ) else multiplePhotoPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                }) {
+                                    SubcomposeAsyncImage(
+                                        model = R.drawable.gallery_svgrepo_com,
+                                        contentDescription = null,
+                                        colorFilter = ColorFilter.tint(
+                                            MaterialTheme.colorScheme.primary.copy(
+                                                alpha = if (chatMateChat) 0.7f else 1f
+                                            )
+                                        ),
+                                        modifier = Modifier.size(30.dp)
+                                    )
+                                }
 
+                            }
                         }
                     }
 
@@ -356,40 +427,106 @@ fun InputField(
         }
     }
 }
-fun createToast(camera:Boolean, context: Context) {
+
+fun createToast(camera: Boolean, context: Context) {
     Log.println(Log.INFO, "Camera", "Permission denied")
     Toast.makeText(
-       context,
+        context,
         if (camera) "Camera not available" else "Gallery not available",
         Toast.LENGTH_SHORT
     ).show()
 }
 
-fun uploadImage(selectedImageUris: List<Uri>, onUploadSuccess: (List<String>) -> Unit) {
-    val images = arrayListOf<String>()
-    var successCount = 0
-    selectedImageUris.forEach { image ->
-        val storage = Firebase.storage
-        val storageRef = storage.reference
-        val imageRef = storageRef.child("images/${image.lastPathSegment}")
-        val uploadTask = imageRef.putFile(image)
+fun uploadImage(
+    selectedImageUris: List<Uri>,
+    onUploadSuccess: (List<String>) -> Unit,
+    onUploadError: () -> Unit
+) {
+    runBlocking {
+        val images = arrayListOf<String>()
+        var successCount = 0
+        selectedImageUris.forEach { image ->
+            val storage = Firebase.storage
+            val storageRef = storage.reference
+            val imageRef = storageRef.child("images/${image.lastPathSegment}")
+            val uploadTask = imageRef.putFile(image)
 
-        uploadTask.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                imageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-                    Log.d("Image", downloadUrl.toString())
-                    images.add(downloadUrl.toString())
-
-                    successCount++
-                    if (successCount == selectedImageUris.size) {
-                        Log.println(Log.INFO, "Image", images.toString())
-                        onUploadSuccess(images)
+            uploadTask.addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    imageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
+                        images.add(downloadUrl.toString())
+                        successCount++
+                        if (successCount == selectedImageUris.size) {
+                            onUploadSuccess(images)
+                        }
+                    }.addOnFailureListener {
+                        onUploadError.invoke()
                     }
-                }.addOnFailureListener { exception ->
-                    Log.e("Image", exception.toString())
+                } else {
+                    onUploadError.invoke()
                 }
-            } else {
-                // Handle upload failure if needed
+            }
+        }
+    }
+}
+
+fun uploadMessage(
+    chatMateChat: Boolean,
+    sharedViewModel: SharedViewModel,
+    text: String,
+    images: List<String> = arrayListOf(),
+    onSuccess: (Boolean) -> Unit
+) {
+    runBlocking {
+        sharedViewModel.saveMessages(
+            documentId = sharedViewModel.friend.value.chatRoomID,
+            message = FirebaseMessage(
+                sender = sharedViewModel.auth.currentUser?.uid.toString(),
+                text = text,
+                timestamp = Timestamp.now(),
+                read = false,
+                images = images,
+                visible =
+                listOf(
+                    sharedViewModel.friend.value.personList.id,
+                    sharedViewModel.auth.currentUser?.uid.toString(),
+                )
+            ),
+            {
+                onSuccess.invoke(true)
+                Log.println(Log.INFO, "Message", "Message sent")
+            },
+            {
+                onSuccess.invoke(false)
+                Log.println(Log.INFO, "Message", "Message not sent")
+            }
+        )
+    }
+    //TODO: ChatMate loading when offline
+    if (chatMateChat) {
+        sharedViewModel.chatMateResponseState.value = ChatMateResponseState.Loading
+        sharedViewModel.sendDataToServer(text){
+            runBlocking {
+                sharedViewModel.saveMessages(
+                    documentId = sharedViewModel.friend.value.chatRoomID,
+                    message = FirebaseMessage(
+                        sender = "chatmate",
+                        text = it,
+                        timestamp = Timestamp.now(),
+                        read = false,
+                        images = arrayListOf(),
+                        visible =
+                        listOf(
+                            sharedViewModel.auth.currentUser?.uid.toString(),
+                        )
+                    ),
+                    {
+                        onSuccess.invoke(true)
+                    },
+                    {
+                        onSuccess.invoke(false)
+                    }
+                )
             }
         }
     }

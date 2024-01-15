@@ -222,7 +222,7 @@ class RegisterView {
                         text = "Create an Account",
                         fontWeight = FontWeight.SemiBold,
                         fontFamily = FontFamily.SansSerif,
-                        fontSize = 30.sp,
+                        fontSize = 34.sp,
                         color = if (isSystemInDarkTheme()) Color.White else Color.Black,
                         textAlign = TextAlign.Center
                     )
@@ -418,7 +418,7 @@ class RegisterView {
                         .padding(top = 10.dp),
                     enabled = usernameTexFieldColor == AccountDataState.Valid && emailTexFieldColor == AccountDataState.Valid && passwordTexFieldColor == AccountDataState.Valid && !isLoading,
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF05C205))
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
@@ -429,6 +429,8 @@ class RegisterView {
                     } else {
                         Text(
                             text = "Sign Up",
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 18.sp,
                             color = Color.White,
                             modifier = Modifier.padding(7.dp)
                         )

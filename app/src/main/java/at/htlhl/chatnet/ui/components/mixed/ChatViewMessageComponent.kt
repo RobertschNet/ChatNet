@@ -71,7 +71,7 @@ fun ChatViewMessageComponent(
         message.timestamp.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalTime()
             .format(formatter)
     val backgroundColor = if (isUser) {
-        if (isSystemInDarkTheme()) Color(0xFF00A0E8) else Color(0xFF00A0E8)
+        if (message.isFromCache) Color(0xFF000000) else Color(0xFF00A0E8)
     } else {
         if (isSystemInDarkTheme()) Color.DarkGray else Color.White
     }

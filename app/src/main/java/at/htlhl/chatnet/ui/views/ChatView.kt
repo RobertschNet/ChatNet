@@ -76,10 +76,12 @@ class ChatView : ViewModel() {
         }
         val chatMateChat = matchingChat?.tab == "chatmate"
         val chatRoomId = matchingChat?.chatRoomID ?: ""
+        Log.println(Log.ERROR, "ssssss", matchingChat.toString())
 
         val messageListFromMatchingChat: List<InternalMessageInstance> = matchingChat?.let { chat ->
             chat.messages.map { message ->
                 InternalMessageInstance(
+                    isFromCache = message.isFromCache,
                     id = message.id,
                     sender = message.sender,
                     images = message.images,
@@ -90,39 +92,12 @@ class ChatView : ViewModel() {
                 )
             }
         } ?: emptyList()
-        val onMessageSent: (FirebaseMessage) -> Unit = { message ->
-            if (chatMateChat) {
-                sharedViewModel.sendDataToServer(message.text) { response ->
-                    runBlocking {
-                        sharedViewModel.saveMessages(
-                            documentId = chatRoomId,
-                            message = FirebaseMessage(
-                                sender = "chatmate",
-                                text = response,
-                                timestamp = Timestamp.now(),
-                                read = false,
-                                images = arrayListOf(),
-                                visible = listOf(
-                                    sharedViewModel.auth.currentUser?.uid.toString(),
-                                )
-                            )
-                        )
-                    }
-                }
-            }
-            runBlocking {
-                sharedViewModel.saveMessages(documentId = chatRoomId, message = message)
-            }
-        }
-        sharedViewModel.imageList.value =
-            createImageList(messageListFromMatchingChat, sharedViewModel)
-        Log.println(Log.ERROR, "ChatViewMab", messageListFromMatchingChat.toString())
+        sharedViewModel.imageList.value = createImageList(messageListFromMatchingChat, sharedViewModel)
         sharedViewModel.markMessagesAsRead(user = sharedViewModel.friend.value)
         sharedViewModel.updateMarkAsReadStatus(isAlreadyUnread = true)
         ChatViewContentStructure(
             sharedViewModel = sharedViewModel,
             messagesForChat = messageListFromMatchingChat,
-            onMessageSent = onMessageSent,
             navController = navController,
             chatRoomId = chatRoomId,
             chatMateChat = chatMateChat
@@ -134,12 +109,12 @@ class ChatView : ViewModel() {
     fun ChatViewContentStructure(
         navController: NavController,
         messagesForChat: List<InternalMessageInstance>,
-        onMessageSent: (FirebaseMessage) -> Unit,
         sharedViewModel: SharedViewModel,
         chatRoomId: String,
         chatMateChat: Boolean
     ) {
         val coroutineScope = rememberCoroutineScope()
+        var chatMateResponse by remember { mutableStateOf("") }
         var blockDialog by remember { mutableStateOf(false) }
         var unblockDialog by remember { mutableStateOf(false) }
         val filteredMessages = messagesForChat.filter { message ->
@@ -158,9 +133,7 @@ class ChatView : ViewModel() {
                     sharedViewModel = sharedViewModel
                 ) {
                     if (it == "return") {
-                        navController.navigate(
-                            if (chatMateChat) Screens.ChatMateScreen.route else Screens.ChatsViewScreen.route
-                        )
+                        navController.navigate(if (chatMateChat) Screens.ChatMateScreen.route else Screens.ChatsViewScreen.route)
                     } else {
                         blockDialog = true
                     }
@@ -177,43 +150,17 @@ class ChatView : ViewModel() {
                     messages = filteredMessages,
                     lazyListState = lazyListState,
                     chatRoomId = chatRoomId,
-                    navController = navController
+                    navController = navController,
+                    chatMateResponse = { chatMateResponse = it }
                 )
             }, bottomBar = {
                 InputField(
+                    onChatMateResponse=chatMateResponse,
                     sharedViewModel = sharedViewModel,
                     navController = navController,
                     chatMateChat = chatMateChat,
-                    onMessageSent = { messageText, image ->
-                        if (!sharedViewModel.user.value.blocked.contains(sharedViewModel.friend.value.personList.id)) {
-                            onMessageSent(
-                                FirebaseMessage(
-                                    sender = sharedViewModel.auth.currentUser?.uid.toString(),
-                                    text = messageText,
-                                    timestamp = Timestamp.now(),
-                                    read = false,
-                                    images = image,
-                                    visible =
-                                    if (sharedViewModel.friend.value.personList.blocked.contains(
-                                            sharedViewModel.user.value.id
-                                        )
-                                    ) {
-                                        listOf(
-                                            sharedViewModel.auth.currentUser?.uid.toString(),
-                                        )
-                                    } else {
-                                        listOf(
-                                            sharedViewModel.auth.currentUser?.uid.toString(),
-                                            sharedViewModel.friend.value.personList.id
-                                        )
-                                    }
-                                )
-                            )
-                        } else {
-                            unblockDialog = true
-                        }
-                    },
                 )
+                //TODO reimplement the cannot send message dialog when the user is blocked
             }
         )
         if (blockDialog) {
@@ -251,7 +198,8 @@ class ChatView : ViewModel() {
         chatMateChat: Boolean,
         messages: List<InternalMessageInstance>,
         lazyListState: LazyListState,
-        chatRoomId: String
+        chatRoomId: String,
+        chatMateResponse: (String) -> Unit
     ) {
         var animatedText by remember { mutableStateOf("Robert is writing") }
         var unblockDialog by remember { mutableStateOf(false) }
@@ -309,6 +257,7 @@ class ChatView : ViewModel() {
                         previousMessage = previousMessageIndex,
                         nextMessage = nextMessageIndex,
                         message = InternalMessageInstance(
+                            isFromCache = message.isFromCache,
                             id = message.id,
                             sender = message.sender,
                             images = message.images,
@@ -316,13 +265,11 @@ class ChatView : ViewModel() {
                             text = message.text,
                             timestamp = message.timestamp,
                             visible = message.visible,
-                        ), chatRoomId = chatRoomId
-                    ) { image ->
-                        sharedViewModel.imagePosition.intValue =
-                            sharedViewModel.imageList.value.find { it.images[0] == image }
-                                ?.let { sharedViewModel.imageList.value.indexOf(it) } ?: 0
-                        navController.navigate(Screens.ImageViewScreen.route)
-                    }
+                        ), chatRoomId = chatRoomId, onClick= { image ->
+                            sharedViewModel.imagePosition.intValue = sharedViewModel.imageList.value.find { it.images[0] == image }?.let { sharedViewModel.imageList.value.indexOf(it) } ?: 0
+                            navController.navigate(Screens.ImageViewScreen.route)}, chatMateResponse = { chatMateResponse.invoke(it) }
+                    )
+
                 }
                 item {
                     if (isBlockSeparatorNeeded(sharedViewModel)) {
@@ -368,7 +315,8 @@ class ChatView : ViewModel() {
         previousMessage: InternalMessageInstance?,
         nextMessage: InternalMessageInstance?,
         chatRoomId: String,
-        onClick: (String) -> Unit
+        onClick: (String) -> Unit,
+        chatMateResponse: (String) -> Unit
     ) {
         val context = LocalContext.current
         var menuDialog by remember { mutableStateOf(false) }
@@ -428,7 +376,7 @@ class ChatView : ViewModel() {
 
                     "generate" -> {
                         sharedViewModel.sendDataToServer(message.text) {
-                            sharedViewModel.text.value = it
+                            chatMateResponse.invoke(it)
                         }
                     }
                 }
@@ -454,6 +402,7 @@ class ChatView : ViewModel() {
                     if (it.visible.contains(sharedViewModel.auth.currentUser?.uid.toString())) {
                         imageList.add(
                             InternalMessageInstance(
+                                isFromCache = it.isFromCache,
                                 id = it.id,
                                 sender = it.sender,
                                 images = arrayListOf(image),

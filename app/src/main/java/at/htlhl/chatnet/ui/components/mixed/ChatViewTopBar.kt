@@ -74,6 +74,7 @@ fun ChatViewTopBar(
     val offset by animateOffsetAsState(targetValue = offsetState, label = "")
     TopAppBar(
         backgroundColor = MaterialTheme.colorScheme.background,
+        elevation = 2.dp,
         modifier = Modifier
             .fillMaxWidth(),
     ) {

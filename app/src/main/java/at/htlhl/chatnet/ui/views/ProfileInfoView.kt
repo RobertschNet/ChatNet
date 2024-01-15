@@ -105,6 +105,7 @@ class ProfileInfoView {
         val messageListFromMatchingChat: List<InternalMessageInstance> = chat.let {
             it.messages.map { message ->
                 InternalMessageInstance(
+                    isFromCache = message.isFromCache,
                     id = message.id,
                     sender = message.sender,
                     images = message.images,
@@ -910,6 +911,7 @@ private fun createImageList(
                 if (it.visible.contains(sharedViewModel.auth.currentUser!!.uid)) {
                     imageList.add(
                         InternalMessageInstance(
+                            isFromCache = it.isFromCache,
                             id = it.id,
                             sender = it.sender,
                             images = arrayListOf(image),

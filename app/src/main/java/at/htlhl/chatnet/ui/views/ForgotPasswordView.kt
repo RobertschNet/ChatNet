@@ -300,7 +300,7 @@ class ForgotPasswordView {
                         .padding(top = 10.dp),
                     enabled = emailTexFieldColor == AccountDataState.Valid && !isLoading,
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF05C205))
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
@@ -311,6 +311,8 @@ class ForgotPasswordView {
                     } else {
                         Text(
                             text = "Reset Password",
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 18.sp,
                             color = Color.White,
                             modifier = Modifier.padding(7.dp)
                         )
@@ -440,37 +442,6 @@ class ForgotPasswordView {
             .addOnFailureListener { exception ->
                 println("Error retrieving document: ${exception.message}")
                 callback(false)
-            }
-    }
-
-    private fun createUserEntry(
-        account: FirebaseAuth,
-        name: String,
-        onSuccess: () -> Unit
-    ) {
-        val db = FirebaseFirestore.getInstance()
-        val userRef = db.collection("users").document(account.currentUser?.uid.toString())
-        val userData = hashMapOf(
-            "blocked" to emptyList<String>(),
-            "pinned" to emptyList<String>(),
-            "color" to "",
-            "connected" to false,
-            "email" to account.currentUser?.email.toString(),
-            "id" to account.currentUser?.uid.toString(),
-            "image" to "https://www.w3schools.com/howto/img_avatar2.png",
-            "status" to "online",
-            "username" to mapOf(
-                "lowercase" to name.lowercase(Locale.ROOT),
-                "mixedcase" to name,
-            ),
-        )
-        userRef.set(userData)
-            .addOnSuccessListener {
-                println("User successfully created")
-                onSuccess.invoke()
-            }
-            .addOnFailureListener { e ->
-                println("Error creating user: $e")
             }
     }
 

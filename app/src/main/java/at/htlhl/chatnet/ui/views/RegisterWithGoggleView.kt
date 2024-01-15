@@ -268,7 +268,7 @@ class RegisterWithGoggleView {
                         .padding(top = 10.dp),
                     enabled = usernameTextFieldColor == AccountDataState.Valid && !isLoading,
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF05C205))
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
@@ -279,6 +279,8 @@ class RegisterWithGoggleView {
                     } else {
                         Text(
                             text = "Create Account",
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 18.sp,
                             color = Color.White,
                             modifier = Modifier.padding(7.dp)
                         )

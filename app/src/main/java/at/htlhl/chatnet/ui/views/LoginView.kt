@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontFamily.Companion.SansSerif
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
 import androidx.compose.ui.text.font.FontWeight.Companion.Light
 import androidx.compose.ui.text.font.FontWeight.Companion.Medium
+import androidx.compose.ui.text.font.FontWeight.Companion.SemiBold
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -226,8 +227,8 @@ class LoginView {
                 ) {
                     Text(
                         text = "ChatNet",
-                        fontWeight = Bold,
-                        fontFamily = Cursive,
+                        fontWeight = Medium,
+                        fontFamily = SansSerif,
                         fontSize = 45.sp,
                         color = if (isSystemInDarkTheme()) Color.White else Color.Black,
                         textAlign = TextAlign.Center
@@ -375,7 +376,7 @@ class LoginView {
                         .padding(top = 10.dp),
                     enabled = passwordTexFieldColor == AccountDataState.Valid && emailTexFieldColor == AccountDataState.Valid && !isLoading,
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF05C205))
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
@@ -385,6 +386,8 @@ class LoginView {
                     } else {
                         Text(
                             text = "Sign In",
+                            fontFamily = SansSerif,
+                            fontSize = 18.sp,
                             color = Color.White,
                             modifier = Modifier.padding(7.dp)
                         )
@@ -568,37 +571,6 @@ class LoginView {
             .addOnFailureListener { exception ->
                 println("Error retrieving document: ${exception.message}")
                 callback(false)
-            }
-    }
-
-    private fun createUserEntry(
-        account: FirebaseAuth,
-        name: String,
-        onSuccess: () -> Unit
-    ) {
-        val db = FirebaseFirestore.getInstance()
-        val userRef = db.collection("users").document(account.currentUser?.uid.toString())
-        val userData = hashMapOf(
-            "blocked" to emptyList<String>(),
-            "pinned" to emptyList<String>(),
-            "color" to "",
-            "connected" to false,
-            "email" to account.currentUser?.email.toString(),
-            "id" to account.currentUser?.uid.toString(),
-            "image" to "https://www.w3schools.com/howto/img_avatar2.png",
-            "status" to "online",
-            "username" to mapOf(
-                "lowercase" to name.lowercase(Locale.ROOT),
-                "mixedcase" to name,
-            ),
-        )
-        userRef.set(userData)
-            .addOnSuccessListener {
-                println("User successfully created")
-                onSuccess.invoke()
-            }
-            .addOnFailureListener { e ->
-                println("Error creating user: $e")
             }
     }
 

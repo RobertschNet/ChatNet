@@ -464,15 +464,21 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     suspend fun saveMessages(
         documentId: String?,
         message: FirebaseMessage,
-        onComplete: () -> Unit = {}
+        onComplete: () -> Unit = {},
+        onError: (Exception) -> Unit = {}
     ) {
         viewModelScope.launch {
-            Log.println(Log.INFO, "Message", message.toString())
-            firebaseInstance.collection("$CHATS_COLLECTION/${documentId}/$MESSAGES_COLLECTION")
-                .add(message).await()
-            onComplete.invoke()
+            try {
+                firebaseInstance.collection("$CHATS_COLLECTION/${documentId}/$MESSAGES_COLLECTION")
+                    .add(message)
+                    .await()
+                onComplete.invoke()
+            } catch (e: Exception) {
+                onError.invoke(e)
+            }
         }
     }
+
 
     /**
      * This section contains the logic for the Firebase communication, used for searching for users,

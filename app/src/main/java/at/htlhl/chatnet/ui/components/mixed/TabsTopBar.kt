@@ -58,15 +58,16 @@ fun TabsTopBar(
     val isSearchMode = remember { mutableStateOf(false) }
     TopAppBar(
         backgroundColor = MaterialTheme.colorScheme.background,
+        elevation = 2.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         if (!isSearchMode.value) {
             Text(
                 text = tab,
-                fontWeight = FontWeight.Bold,
-                fontSize = 36.sp,
+                fontWeight = FontWeight.Medium,
+                fontSize = 30.sp,
                 color = MaterialTheme.colorScheme.primary,
-                fontFamily = FontFamily.Cursive,
+                fontFamily = FontFamily.SansSerif,
                 modifier = Modifier.padding(start = 10.dp)
             )
             Spacer(
@@ -202,4 +203,5 @@ fun TabsTopBar(
             }
         }
     }
+
 }
