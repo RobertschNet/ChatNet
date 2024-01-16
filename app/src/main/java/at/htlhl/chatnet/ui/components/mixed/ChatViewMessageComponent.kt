@@ -1,5 +1,6 @@
 package at.htlhl.chatnet.ui.components.mixed
 
+import android.media.Image
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -11,8 +12,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,6 +25,10 @@ import androidx.compose.material.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
@@ -29,23 +36,34 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.chatnet.R
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
+import coil.ImageLoader
+import coil.compose.LocalImageLoader
 import coil.compose.SubcomposeAsyncImage
+import coil.compose.rememberImagePainter
+import coil.executeBlocking
+import coil.request.ImageRequest
+import coil.size.ViewSizeResolver
 import com.google.firebase.Timestamp
+import io.grpc.Context
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -66,6 +84,9 @@ fun ChatViewMessageComponent(
 ) {
     val formatter = DateTimeFormatter.ofPattern("HH:mm")
     val searchValue = sharedViewModel.searchValue.value
+    var imageHeight by remember {
+        mutableStateOf(false)
+    }
     val formattedTime =
         message.timestamp.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalTime()
             .format(formatter)
@@ -106,7 +127,7 @@ fun ChatViewMessageComponent(
             ) {
                 Card(
                     elevation = 10.dp,
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(18.dp),
                     modifier = Modifier
                         .padding(
                             start = if (isUser) 90.dp else 10.dp,
@@ -129,10 +150,10 @@ fun ChatViewMessageComponent(
                     if (message.images.size >= 4) {
                         Card(
                             elevation = 10.dp,
-                            shape = RoundedCornerShape(24.dp),
+                            shape = RoundedCornerShape(18.dp),
                             backgroundColor = backgroundColor,
                             modifier = Modifier
-                                .width(210.dp)
+                                .width(270.dp)
                         ) {
                             Column {
                                 Row(
@@ -144,7 +165,7 @@ fun ChatViewMessageComponent(
                                         model = message.images[0],
                                         alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
                                         contentDescription = null,
-                                        contentScale = ContentScale.FillBounds,
+                                        contentScale = ContentScale.Crop,
                                         modifier = Modifier
                                             .padding(end = 2.dp, start = 4.dp)
                                             .pointerInput(Unit) {
@@ -157,16 +178,16 @@ fun ChatViewMessageComponent(
                                                     }
                                                 )
                                             }
-                                            .clip(RoundedCornerShape(24.dp))
-                                            .height(100.dp)
-                                            .width(100.dp)
+                                            .clip(RoundedCornerShape(18.dp))
+                                            .height(130.dp)
+                                            .width(130.dp)
                                             .shimmerEffect()
                                     )
                                     SubcomposeAsyncImage(
                                         model = message.images[1],
                                         alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
                                         contentDescription = null,
-                                        contentScale = ContentScale.FillBounds,
+                                        contentScale = ContentScale.Crop,
                                         modifier = Modifier
                                             .padding(end = 4.dp)
                                             .pointerInput(Unit) {
@@ -179,9 +200,9 @@ fun ChatViewMessageComponent(
                                                     }
                                                 )
                                             }
-                                            .clip(RoundedCornerShape(24.dp))
-                                            .height(100.dp)
-                                            .width(100.dp)
+                                            .clip(RoundedCornerShape(18.dp))
+                                            .height(130.dp)
+                                            .width(130.dp)
                                             .shimmerEffect()
                                     )
                                 }
@@ -194,7 +215,7 @@ fun ChatViewMessageComponent(
                                         model = message.images[2],
                                         alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
                                         contentDescription = null,
-                                        contentScale = ContentScale.FillBounds,
+                                        contentScale = ContentScale.Crop,
                                         modifier = Modifier
                                             .padding(end = 2.dp, start = 4.dp)
                                             .pointerInput(Unit) {
@@ -207,18 +228,21 @@ fun ChatViewMessageComponent(
                                                     }
                                                 )
                                             }
-                                            .clip(RoundedCornerShape(24.dp))
-                                            .height(100.dp)
-                                            .width(100.dp)
+                                            .clip(RoundedCornerShape(18.dp))
+                                            .height(130.dp)
+                                            .width(130.dp)
                                             .shimmerEffect()
                                     )
                                     if (message.images.size > 4) {
                                         Box(
                                             modifier = Modifier
-                                                .height(100.dp)
-                                                .width(100.dp)
+                                                .height(130.dp)
+                                                .width(130.dp)
                                                 .padding(end = 4.dp)
-                                                .background(Color.Black.copy(alpha = 0.6f), shape = RoundedCornerShape(24.dp))
+                                                .background(
+                                                    Color.Black.copy(alpha = 0.6f),
+                                                    shape = RoundedCornerShape(18.dp)
+                                                )
                                                 .pointerInput(Unit) {
                                                     detectTapGestures(
                                                         onLongPress = {
@@ -229,18 +253,18 @@ fun ChatViewMessageComponent(
                                                         }
                                                     )
                                                 }
-                                                .clip(RoundedCornerShape(24.dp))
+                                                .clip(RoundedCornerShape(18.dp))
 
                                         ) {
                                             SubcomposeAsyncImage(
                                                 model = message.images[3],
                                                 alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
                                                 contentDescription = null,
-                                                contentScale = ContentScale.FillBounds,
+                                                contentScale = ContentScale.Crop,
                                                 modifier = Modifier
-                                                    .height(100.dp)
-                                                    .width(100.dp)
-                                                    .clip(RoundedCornerShape(24.dp))
+                                                    .height(130.dp)
+                                                    .width(130.dp)
+                                                    .clip(RoundedCornerShape(18.dp))
                                                     .alpha(0.6f)
                                             )
                                             Text(
@@ -257,7 +281,7 @@ fun ChatViewMessageComponent(
                                             model = message.images[3],
                                             alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
                                             contentDescription = null,
-                                            contentScale = ContentScale.FillBounds,
+                                            contentScale = ContentScale.Crop,
                                             modifier = Modifier
                                                 .padding(end = 4.dp)
                                                 .pointerInput(Unit) {
@@ -270,9 +294,9 @@ fun ChatViewMessageComponent(
                                                         }
                                                     )
                                                 }
-                                                .clip(RoundedCornerShape(24.dp))
-                                                .height(100.dp)
-                                                .width(100.dp)
+                                                .clip(RoundedCornerShape(18.dp))
+                                                .height(130.dp)
+                                                .width(130.dp)
                                                 .shimmerEffect()
                                         )
                                     }
@@ -296,12 +320,23 @@ fun ChatViewMessageComponent(
                             shape = RoundedCornerShape(24.dp),
                             backgroundColor = backgroundColor,
                             modifier = Modifier
-                                .width(210.dp)
+                                .width(if (imageHeight) 200.dp else 270.dp)
                         ) {
                             Column(modifier = Modifier.padding(5.dp)) {
                                 message.images.forEachIndexed { index, image ->
                                     SubcomposeAsyncImage(
                                         model = image,
+                                        onSuccess = { imageAsset ->
+                                            val aspectRatio = imageAsset.result.drawable.intrinsicWidth.toFloat() / imageAsset.result.drawable.intrinsicHeight.toFloat()
+                                            imageHeight = if (aspectRatio > 1) {
+                                                Log.println(Log.DEBUG, "aspectRatio", "landscape")
+                                                false
+                                            }else{
+                                                Log.println(Log.DEBUG, "aspectRatio", "portrait")
+                                                true
+                                            }
+
+                                        },
                                         alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
                                         contentDescription = null,
                                         contentScale = ContentScale.FillBounds,
@@ -317,8 +352,8 @@ fun ChatViewMessageComponent(
                                                 )
                                             }
                                             .clip(RoundedCornerShape(24.dp))
-                                            .height(250.dp)
-                                            .width(200.dp)
+                                            .height(if (imageHeight) 300.dp else 200.dp)
+                                            .width(if (imageHeight) 200.dp else 270.dp)
                                             .shimmerEffect()
                                     )
                                     if (index != message.images.size - 1) {
@@ -335,6 +370,7 @@ fun ChatViewMessageComponent(
                                             start = 10.dp,
                                             end = 10.dp
                                         )
+
                                     )
                                 }
                             }
@@ -354,7 +390,7 @@ fun ChatViewMessageComponent(
                     contentColor = backgroundColor,
                     shape = RoundedCornerShape(18.dp),
                     modifier = Modifier
-                        .widthIn(min=140.dp)
+                        .widthIn(min = 140.dp)
                         .padding(
                             start = if (isUser) 80.dp else 10.dp,
                             end = if (isUser) 10.dp else 80.dp,

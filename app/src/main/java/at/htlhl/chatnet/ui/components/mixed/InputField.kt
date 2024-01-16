@@ -1,6 +1,8 @@
 package at.htlhl.chatnet.ui.components.mixed
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
@@ -71,6 +73,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.storage.storage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import java.io.ByteArrayOutputStream
 
 @Composable
 fun InputField(
@@ -199,7 +202,7 @@ fun InputField(
                                 }
                                 text = ""
                             } else {
-                                uploadImage(sharedViewModel.galleryImageList.value, { success ->
+                                uploadImage(context,sharedViewModel.galleryImageList.value, { success ->
                                     sharedViewModel.galleryImageList.value = emptyList()
                                     uploadMessage(chatMateChat,sharedViewModel, text, success) {
                                         isLoading = false
@@ -366,7 +369,8 @@ fun InputField(
                                                 }
                                                 text = ""
                                             } else {
-                                                uploadImage(sharedViewModel.galleryImageList.value,
+                                                uploadImage(
+                                                    context,sharedViewModel.galleryImageList.value,
                                                     { success ->
                                                         sharedViewModel.galleryImageList.value =
                                                             emptyList()
@@ -435,36 +439,47 @@ fun createToast(camera: Boolean, context: Context) {
 }
 
 fun uploadImage(
+    context: Context,
     selectedImageUris: List<Uri>,
     onUploadSuccess: (List<String>) -> Unit,
     onUploadError: () -> Unit
 ) {
     runBlocking {
-        val images = arrayListOf<String>()
-        var successCount = 0
-        selectedImageUris.forEach { image ->
-            val storage = Firebase.storage
-            val storageRef = storage.reference
-            val imageRef = storageRef.child("images/${image.lastPathSegment}")
-            val uploadTask = imageRef.putFile(image)
-
-            uploadTask.addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    imageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-                        images.add(downloadUrl.toString())
-                        successCount++
-                        if (successCount == selectedImageUris.size) {
-                            onUploadSuccess(images)
-                        }
-                    }.addOnFailureListener {
-                        onUploadError.invoke()
-                    }
-                } else {
-                    onUploadError.invoke()
-                }
-            }
+        selectedImageUris.forEach { imageUri ->
+            val inputStream = context.contentResolver.openInputStream(imageUri)
+            val bitmap = BitmapFactory.decodeStream(inputStream)
+            val webpByteArray = convertBitmapToWebP(bitmap)
+            uploadWebPImage(webpByteArray, onUploadSuccess, onUploadError)
         }
     }
+}
+
+private fun convertBitmapToWebP(bitmap: Bitmap): ByteArray {
+    val outputStream = ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.WEBP, 100, outputStream)
+    return outputStream.toByteArray()
+}
+
+private fun uploadWebPImage(
+    webpByteArray: ByteArray,
+    onUploadSuccess: (List<String>) -> Unit,
+    onUploadError: () -> Unit
+) {
+    val storage = Firebase.storage
+    val storageRef = storage.reference
+    val webpImageRef = storageRef.child("images/${webpByteArray.hashCode()}\"")
+
+    webpImageRef.putBytes(webpByteArray)
+        .addOnSuccessListener {
+            webpImageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
+                onUploadSuccess.invoke(listOf(downloadUrl.toString()))
+            }.addOnFailureListener {
+                onUploadError.invoke()
+            }
+        }
+        .addOnFailureListener {
+            onUploadError.invoke()
+        }
 }
 
 fun uploadMessage(

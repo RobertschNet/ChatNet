@@ -77,7 +77,7 @@ class ImageView {
         val pagerState =
             rememberPagerState(initialPage = sharedViewModel.imagePosition.intValue) { pageCount }
 
-        Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
             HorizontalPager(
                 beyondBoundsPageCount = 1,
                 modifier = Modifier
@@ -173,7 +173,7 @@ class ImageView {
             model = image,
             modifier = Modifier
                 .fillMaxSize(),
-            contentScale = ContentScale.FillHeight,
+            contentScale = ContentScale.Fit,
             contentDescription = null,
         )
     }
