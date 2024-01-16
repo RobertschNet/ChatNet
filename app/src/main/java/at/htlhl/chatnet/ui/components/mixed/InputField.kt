@@ -360,7 +360,6 @@ fun InputField(
                                                 uploadMessage(chatMateChat, sharedViewModel, text) {
                                                     isLoading = false
                                                     if (it) {
-
                                                     } else {
                                                         //TODO Show error message
                                                     }
@@ -416,11 +415,9 @@ fun InputField(
                                         modifier = Modifier.size(30.dp)
                                     )
                                 }
-
                             }
                         }
                     }
-
                 },
             )
             Spacer(modifier = Modifier.height(10.dp))

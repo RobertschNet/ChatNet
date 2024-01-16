@@ -4,8 +4,6 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -15,12 +13,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,6 +34,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
@@ -71,15 +70,16 @@ fun ChatViewMessageComponent(
         message.timestamp.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalTime()
             .format(formatter)
     val backgroundColor = if (isUser) {
-        if (message.isFromCache) Color(0xFF000000) else Color(0xFF00A0E8)
+        if (isSystemInDarkTheme()) Color(0xFF00A0E8) else Color(0xFF00A0E8)
     } else {
         if (isSystemInDarkTheme()) Color.DarkGray else Color.White
     }
     val alignment = if (isUser) Arrangement.End else Arrangement.Start
     Column {
         if (isDateSeparatorNeeded(message, previousMessage, searchValue)) {
-            Box(
-                contentAlignment = Alignment.Center, modifier = Modifier
+            Card(
+                elevation = 10.dp,
+                modifier = Modifier
                     .background(
                         if (isSystemInDarkTheme()) Color.DarkGray else Color(0xFFF5F5F5),
                         RoundedCornerShape(30)
@@ -104,203 +104,13 @@ fun ChatViewMessageComponent(
                 horizontalArrangement = alignment,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(modifier =
-                Modifier
-                    .padding(
-                        start = if (isUser) 90.dp else 10.dp,
-                        end = if (isUser) 10.dp else 90.dp,
-                        top = if (isTopPaddingNeeded(
-                                message,
-                                previousMessage
-                            )
-                        ) 20.dp else 5.dp,
-                    )
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onLongPress = {
-                                onLongPress.invoke()
-                            }
-                        )
-                    }
-
-                ) {
-                    if (message.images.isNotEmpty() && message.images.size == 4) {
-                        Column {
-                            Row {
-                                SubcomposeAsyncImage(
-                                    model = message.images[0],
-                                    alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(24.dp))
-                                        .height(100.dp)
-                                        .width(100.dp)
-                                        .clickable { onClick.invoke(message.images[0]) }
-                                        .shimmerEffect()
-                                )
-                                Spacer(modifier = Modifier.width(5.dp))
-                                SubcomposeAsyncImage(
-                                    model = message.images[1],
-                                    alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(24.dp))
-                                        .height(100.dp)
-                                        .width(100.dp)
-                                        .clickable { onClick.invoke(message.images[1]) }
-                                        .shimmerEffect()
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(5.dp))
-                            Row {
-                                SubcomposeAsyncImage(
-                                    model = message.images[2],
-                                    alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(24.dp))
-                                        .height(100.dp)
-                                        .width(100.dp)
-                                        .clickable { onClick.invoke(message.images[2]) }
-                                        .shimmerEffect()
-                                )
-                                Spacer(modifier = Modifier.width(5.dp))
-                                SubcomposeAsyncImage(
-                                    model = message.images[3],
-                                    alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(24.dp))
-                                        .height(100.dp)
-                                        .width(100.dp)
-                                        .clickable { onClick.invoke(message.images[3]) }
-                                        .shimmerEffect()
-                                )
-                            }
-                        }
-                    } else if (message.images.size >= 4) {
-                        Column {
-                            Row {
-                                SubcomposeAsyncImage(
-                                    model = message.images[0],
-                                    alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(24.dp))
-                                        .height(100.dp)
-                                        .width(100.dp)
-                                        .clickable { onClick.invoke(message.images[0]) }
-                                        .shimmerEffect()
-                                )
-                                Spacer(modifier = Modifier.width(5.dp))
-                                SubcomposeAsyncImage(
-                                    model = message.images[1],
-                                    alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(24.dp))
-                                        .height(100.dp)
-                                        .width(100.dp)
-                                        .clickable { onClick.invoke(message.images[1]) }
-                                        .shimmerEffect()
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(5.dp))
-                            Row {
-                                SubcomposeAsyncImage(
-                                    model = message.images[2],
-                                    alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(24.dp))
-                                        .height(100.dp)
-                                        .width(100.dp)
-                                        .clickable { onClick.invoke(message.images[2]) }
-                                        .shimmerEffect()
-                                )
-                                Spacer(modifier = Modifier.width(5.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(24.dp))
-                                        .height(100.dp)
-                                        .width(100.dp)
-                                        .background(Color.Black.copy(alpha = 0.6f))
-                                        .clickable { onClick.invoke(message.images[3]) }
-                                ) {
-                                    SubcomposeAsyncImage(
-                                        model = message.images[3],
-                                        alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(24.dp))
-                                            .height(100.dp)
-                                            .width(100.dp)
-                                            .clickable { onClick.invoke(message.images[3]) }
-                                            .alpha(0.6f)
-                                    )
-                                    Text(
-                                        text = "+${message.images.size - 3}",
-                                        fontSize = 20.sp,
-                                        modifier = Modifier
-                                            .align(Alignment.Center)
-                                            .padding(4.dp),
-                                        color = Color.White
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        Column(horizontalAlignment = if (isUser) Alignment.End else Alignment.Start) {
-                            message.images.forEachIndexed { index, image ->
-                                SubcomposeAsyncImage(
-                                    model = image,
-                                    alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .pointerInput(Unit) {
-                                            detectTapGestures(
-                                                onLongPress = {
-                                                    onLongPress.invoke()
-                                                },
-                                                onTap = {
-                                                    onClick.invoke(image)
-                                                }
-                                            )
-                                        }
-                                        .clip(RoundedCornerShape(24.dp))
-                                        .heightIn(min = 50.dp, max = 250.dp)
-                                        .widthIn(min = 50.dp, max = 250.dp)
-                                        .shimmerEffect()
-                                )
-                                if (index != message.images.size - 1) {
-                                    Spacer(modifier = Modifier.height(5.dp))
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        if (message.text.isNotEmpty()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = alignment,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier =
-                    Modifier
+                Card(
+                    elevation = 10.dp,
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier
                         .padding(
-                            start = if (isUser) 80.dp else 10.dp,
-                            end = if (isUser) 10.dp else 80.dp,
+                            start = if (isUser) 90.dp else 10.dp,
+                            end = if (isUser) 10.dp else 90.dp,
                             top = if (isTopPaddingNeeded(
                                     message,
                                     previousMessage
@@ -314,14 +124,251 @@ fun ChatViewMessageComponent(
                                 }
                             )
                         }
-                        .border(
-                            if (isUser) 0.dp else 0.5f.dp,
-                            if (isUser) Color.White else Color.Black,
-                            RoundedCornerShape(20.dp)
-                        )
-                        .background(backgroundColor, shape = RoundedCornerShape(20.dp))
-                        .padding(top = 4.dp, start = 4.dp, end = 4.dp, bottom = 4.dp)
+                )
+                {
+                    if (message.images.size >= 4) {
+                        Card(
+                            elevation = 10.dp,
+                            shape = RoundedCornerShape(24.dp),
+                            backgroundColor = backgroundColor,
+                            modifier = Modifier
+                                .width(210.dp)
+                        ) {
+                            Column {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 4.dp, bottom = 2.dp)
+                                ) {
+                                    SubcomposeAsyncImage(
+                                        model = message.images[0],
+                                        alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.FillBounds,
+                                        modifier = Modifier
+                                            .padding(end = 2.dp, start = 4.dp)
+                                            .pointerInput(Unit) {
+                                                detectTapGestures(
+                                                    onLongPress = {
+                                                        onLongPress.invoke()
+                                                    },
+                                                    onTap = {
+                                                        onClick.invoke(message.images[0])
+                                                    }
+                                                )
+                                            }
+                                            .clip(RoundedCornerShape(24.dp))
+                                            .height(100.dp)
+                                            .width(100.dp)
+                                            .shimmerEffect()
+                                    )
+                                    SubcomposeAsyncImage(
+                                        model = message.images[1],
+                                        alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.FillBounds,
+                                        modifier = Modifier
+                                            .padding(end = 4.dp)
+                                            .pointerInput(Unit) {
+                                                detectTapGestures(
+                                                    onLongPress = {
+                                                        onLongPress.invoke()
+                                                    },
+                                                    onTap = {
+                                                        onClick.invoke(message.images[1])
+                                                    }
+                                                )
+                                            }
+                                            .clip(RoundedCornerShape(24.dp))
+                                            .height(100.dp)
+                                            .width(100.dp)
+                                            .shimmerEffect()
+                                    )
+                                }
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = if (message.text.isEmpty()) 4.dp else 2.dp)
+                                ) {
+                                    SubcomposeAsyncImage(
+                                        model = message.images[2],
+                                        alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.FillBounds,
+                                        modifier = Modifier
+                                            .padding(end = 2.dp, start = 4.dp)
+                                            .pointerInput(Unit) {
+                                                detectTapGestures(
+                                                    onLongPress = {
+                                                        onLongPress.invoke()
+                                                    },
+                                                    onTap = {
+                                                        onClick.invoke(message.images[2])
+                                                    }
+                                                )
+                                            }
+                                            .clip(RoundedCornerShape(24.dp))
+                                            .height(100.dp)
+                                            .width(100.dp)
+                                            .shimmerEffect()
+                                    )
+                                    if (message.images.size > 4) {
+                                        Box(
+                                            modifier = Modifier
+                                                .height(100.dp)
+                                                .width(100.dp)
+                                                .padding(end = 4.dp)
+                                                .background(Color.Black.copy(alpha = 0.6f), shape = RoundedCornerShape(24.dp))
+                                                .pointerInput(Unit) {
+                                                    detectTapGestures(
+                                                        onLongPress = {
+                                                            onLongPress.invoke()
+                                                        },
+                                                        onTap = {
+                                                            onClick.invoke(message.images[3])
+                                                        }
+                                                    )
+                                                }
+                                                .clip(RoundedCornerShape(24.dp))
 
+                                        ) {
+                                            SubcomposeAsyncImage(
+                                                model = message.images[3],
+                                                alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
+                                                contentDescription = null,
+                                                contentScale = ContentScale.FillBounds,
+                                                modifier = Modifier
+                                                    .height(100.dp)
+                                                    .width(100.dp)
+                                                    .clip(RoundedCornerShape(24.dp))
+                                                    .alpha(0.6f)
+                                            )
+                                            Text(
+                                                text = "+${message.images.size - 4}",
+                                                fontSize = 24.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontFamily = FontFamily.SansSerif,
+                                                modifier = Modifier.align(Alignment.Center),
+                                                color = Color.White
+                                            )
+                                        }
+                                    } else {
+                                        SubcomposeAsyncImage(
+                                            model = message.images[3],
+                                            alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
+                                            contentDescription = null,
+                                            contentScale = ContentScale.FillBounds,
+                                            modifier = Modifier
+                                                .padding(end = 4.dp)
+                                                .pointerInput(Unit) {
+                                                    detectTapGestures(
+                                                        onLongPress = {
+                                                            onLongPress.invoke()
+                                                        },
+                                                        onTap = {
+                                                            onClick.invoke(message.images[3])
+                                                        }
+                                                    )
+                                                }
+                                                .clip(RoundedCornerShape(24.dp))
+                                                .height(100.dp)
+                                                .width(100.dp)
+                                                .shimmerEffect()
+                                        )
+                                    }
+                                }
+                                if (message.text.isNotEmpty()) {
+                                    Text(
+                                        text = message.text,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(
+                                            bottom = 9.dp,
+                                            start = 14.dp,
+                                            end = 14.dp
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Card(
+                            elevation = 10.dp,
+                            shape = RoundedCornerShape(24.dp),
+                            backgroundColor = backgroundColor,
+                            modifier = Modifier
+                                .width(210.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(5.dp)) {
+                                message.images.forEachIndexed { index, image ->
+                                    SubcomposeAsyncImage(
+                                        model = image,
+                                        alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.FillBounds,
+                                        modifier = Modifier
+                                            .pointerInput(Unit) {
+                                                detectTapGestures(
+                                                    onLongPress = {
+                                                        onLongPress.invoke()
+                                                    },
+                                                    onTap = {
+                                                        onClick.invoke(image)
+                                                    }
+                                                )
+                                            }
+                                            .clip(RoundedCornerShape(24.dp))
+                                            .height(250.dp)
+                                            .width(200.dp)
+                                            .shimmerEffect()
+                                    )
+                                    if (index != message.images.size - 1) {
+                                        Spacer(modifier = Modifier.height(5.dp))
+                                    }
+                                }
+                                if (message.text.isNotEmpty()) {
+                                    Text(
+                                        text = message.text,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(
+                                            top = 4.dp,
+                                            bottom = 4.dp,
+                                            start = 10.dp,
+                                            end = 10.dp
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (message.text.isNotEmpty() && message.images.isEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = alignment,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Card(
+                    backgroundColor = backgroundColor,
+                    contentColor = backgroundColor,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier
+                        .widthIn(min=140.dp)
+                        .padding(
+                            start = if (isUser) 80.dp else 10.dp,
+                            end = if (isUser) 10.dp else 80.dp,
+                            top = if (isTopPaddingNeeded(message, previousMessage)) 20.dp else 5.dp,
+                        )
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    onLongPress.invoke()
+                                }
+                            )
+                        }
+                        .background(backgroundColor, shape = RoundedCornerShape(18.dp)),
+                    elevation = 10.dp
                 ) {
                     val messageContent = message.text
                     val maxLineLength = 30
@@ -367,9 +414,9 @@ fun ChatViewMessageComponent(
                         ),
                         fontSize = 14.sp,
                         modifier = Modifier
-                            .padding(8.dp)
-                            .background(backgroundColor, shape = RoundedCornerShape(24.dp)),
-                        textAlign = TextAlign.Start,
+                            .padding(12.dp)
+                            .background(backgroundColor, shape = RoundedCornerShape(18.dp)),
+                        textAlign = TextAlign.Center,
                         color = if (isUser) Color.White else Color.Black // Set color based on user
                     )
                 }
@@ -385,7 +432,8 @@ fun ChatViewMessageComponent(
             if (isUser) {
                 if (!chatMateChat) {
                     SubcomposeAsyncImage(
-                        model = if (message.read) R.drawable.eye_1_svgrepo_com else R.drawable.eye_hide_1_svgrepo_com,
+                        model =
+                        if (message.isFromCache) R.drawable.clock_svgrepo_com else if (message.read) R.drawable.eye_1_svgrepo_com else R.drawable.eye_hide_1_svgrepo_com,
                         contentDescription = null,
                         colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
                         modifier = Modifier

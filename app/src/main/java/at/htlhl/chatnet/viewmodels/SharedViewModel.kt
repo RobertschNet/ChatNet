@@ -41,6 +41,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.ktx.Firebase
@@ -322,7 +323,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         // Step 1: Listen for changes in the chats collection
         Log.println(Log.INFO, "ChatData!!!", auth.currentUser!!.uid)
         getChatDocumentRef().whereArrayContains("members", auth.currentUser!!.uid)
-            .addSnapshotListener { querySnapshot, error ->
+            .addSnapshotListener(MetadataChanges.INCLUDE) { querySnapshot, error ->
                 if (error != null) {
                     return@addSnapshotListener
                 }
@@ -343,7 +344,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                             getChatDocumentRef().document(documentChange.document.id)
                                 .collection("/$MESSAGES_COLLECTION")
                                 .orderBy("timestamp", Query.Direction.ASCENDING)
-                        subCollectionRef.addSnapshotListener { subQuerySnapshot, exception ->
+                        subCollectionRef.addSnapshotListener(MetadataChanges.INCLUDE) { subQuerySnapshot, exception ->
                             if (exception != null) {
                                 return@addSnapshotListener
                             }
@@ -352,16 +353,27 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                             subQuerySnapshot?.let { subSnapshot ->
                                 val subCollectionData =
                                     subSnapshot.documents.map { messageDocument ->
-                                        val message =
-                                            messageDocument.toObject(InternalMessageInstance::class.java)
-                                        message?.copy(id = messageDocument.id)
+                                         InternalMessageInstance(
+                                            id = messageDocument.id,
+                                            sender = messageDocument.data!!["sender"] as String,
+                                            images = messageDocument.data!!["images"] as List<String>,
+                                            read = messageDocument.data!!["read"] as Boolean,
+                                            text = messageDocument.data!!["text"] as String,
+                                            timestamp = messageDocument.data!!["timestamp"] as Timestamp,
+                                            visible = messageDocument.data!!["visible"] as List<String>,
+                                            isFromCache = if (subQuerySnapshot.metadata.isFromCache) {
+                                                messageDocument.metadata.hasPendingWrites()
+                                            } else {
+                                                false
+                                            }
+                                        )
                                     }
                                 val chat = FirebaseChat(
                                     members = documentChange.document.data["members"] as List<String>,
                                     unread = documentChange.document.data["unread"] as List<String>,
                                     tab = documentChange.document.data["tab"] as String,
                                     chatRoomID = documentChange.document.id,
-                                    messages = subCollectionData.filterNotNull()
+                                    messages = subCollectionData
                                 )
                                 // Step 5: Update the chatDataSet
                                 val existingChat =
