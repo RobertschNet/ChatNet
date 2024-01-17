@@ -218,7 +218,9 @@ class RandChatView {
                     sharedViewModel = sharedViewModel,
                     navController = navController,
                     chatMateChat = chatMateChat
-                )
+                ){
+                    //TODO blocked is not implemented yet
+                }
             }
         )
     }

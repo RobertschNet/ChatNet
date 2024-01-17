@@ -1,6 +1,5 @@
 package at.htlhl.chatnet.ui.components.mixed
 
-import android.media.Image
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -12,10 +11,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -36,34 +33,23 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.chatnet.R
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
-import coil.ImageLoader
-import coil.compose.LocalImageLoader
 import coil.compose.SubcomposeAsyncImage
-import coil.compose.rememberImagePainter
-import coil.executeBlocking
-import coil.request.ImageRequest
-import coil.size.ViewSizeResolver
 import com.google.firebase.Timestamp
-import io.grpc.Context
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -304,7 +290,8 @@ fun ChatViewMessageComponent(
                                 if (message.text.isNotEmpty()) {
                                     Text(
                                         text = message.text,
-                                        color = Color.White,
+                                        fontFamily = FontFamily.SansSerif,
+                                        color = if (isUser) Color.White else Color.Black,
                                         modifier = Modifier.padding(
                                             bottom = 9.dp,
                                             start = 14.dp,
@@ -317,7 +304,7 @@ fun ChatViewMessageComponent(
                     } else {
                         Card(
                             elevation = 10.dp,
-                            shape = RoundedCornerShape(24.dp),
+                            shape = RoundedCornerShape(18.dp),
                             backgroundColor = backgroundColor,
                             modifier = Modifier
                                 .width(if (imageHeight) 200.dp else 270.dp)
@@ -331,7 +318,7 @@ fun ChatViewMessageComponent(
                                             imageHeight = if (aspectRatio > 1) {
                                                 Log.println(Log.DEBUG, "aspectRatio", "landscape")
                                                 false
-                                            }else{
+                                            } else {
                                                 Log.println(Log.DEBUG, "aspectRatio", "portrait")
                                                 true
                                             }
@@ -351,19 +338,20 @@ fun ChatViewMessageComponent(
                                                     }
                                                 )
                                             }
-                                            .clip(RoundedCornerShape(24.dp))
+                                            .clip(RoundedCornerShape(18.dp))
                                             .height(if (imageHeight) 300.dp else 200.dp)
                                             .width(if (imageHeight) 200.dp else 270.dp)
                                             .shimmerEffect()
                                     )
                                     if (index != message.images.size - 1) {
-                                        Spacer(modifier = Modifier.height(5.dp))
+                                        Spacer(modifier = Modifier.height(2.dp))
                                     }
                                 }
                                 if (message.text.isNotEmpty()) {
                                     Text(
                                         text = message.text,
-                                        color = Color.White,
+                                        color = if (isUser) Color.White else Color.Black,
+                                        fontFamily = FontFamily.SansSerif,
                                         modifier = Modifier.padding(
                                             top = 4.dp,
                                             bottom = 4.dp,

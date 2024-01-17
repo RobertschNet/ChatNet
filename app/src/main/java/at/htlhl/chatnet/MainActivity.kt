@@ -3,9 +3,7 @@ package at.htlhl.chatnet
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.ServiceConnection
-import android.net.ConnectivityManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
@@ -23,6 +21,8 @@ import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.LocationUpdateService
 import at.htlhl.chatnet.ui.theme.TestingTheme
 import at.htlhl.chatnet.viewmodels.SharedViewModel
+import coil.imageLoader
+import coil.request.ImageRequest
 
 class MainActivity : ComponentActivity() {
     private var serviceConnection: ServiceConnection? = null
@@ -47,22 +47,37 @@ class MainActivity : ComponentActivity() {
                     if (viewModel.checkIfUserIsLoggedIn()) {
                         Log.println(Log.INFO, "User", "User is logged in!!!!!!!!!")
                         viewModel.updateOnlineStatus("online")
-                        viewModel.getUserData()
-                        viewModel.fetchFriendsFromUser()
+                        viewModel.getUserData {
+                            loadImage(applicationContext, viewModel.user.value.image)
+                        }
+                        viewModel.fetchFriendsFromUser {
+                            for (friend in viewModel.friendListData.value) {
+                                loadImage(applicationContext, friend.image)
+                            }
+                        }
                         viewModel.fetchChatsWithMessages {
+                            for (chat in viewModel.chatData.value) {
+                                for (message in chat.messages) {
+                                    if (message.images.isNotEmpty()) {
+                                        for (image in message.images) {
+                                            loadImage(applicationContext, image)
+                                        }
+                                    }
+                                }
+                            }
                             viewModel.fetchRandomFriendsFromFriend()
                             if (navController.currentDestination?.route == Screens.LoadingScreen.route && start.value) {
                                 start.value = false
-                                navController.navigate("MainFlow"){
-                                    popUpTo("LoadingScreen"){
+                                navController.navigate("MainFlow") {
+                                    popUpTo("LoadingScreen") {
                                         inclusive = true
                                     }
                                 }
                             }
                         }
                     } else {
-                        navController.navigate("LoginFlow"){
-                            popUpTo("LoadingScreen"){
+                        navController.navigate("LoginFlow") {
+                            popUpTo("LoadingScreen") {
                                 inclusive = true
                             }
                         }
@@ -73,6 +88,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun loadImage(context: Context, imageUrl: String) {
+        val request = ImageRequest.Builder(context)
+            .data(imageUrl)
+            .build()
+        context.imageLoader.enqueue(request)
+    }
 
     override fun onDestroy() {
         super.onDestroy()

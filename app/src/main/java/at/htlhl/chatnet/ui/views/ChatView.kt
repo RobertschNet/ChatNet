@@ -46,7 +46,7 @@ import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.FirebaseChat
-import at.htlhl.chatnet.data.FirebaseMessage
+import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.mixed.BlockUserDialog
@@ -58,10 +58,8 @@ import at.htlhl.chatnet.ui.components.mixed.OptionsDialog
 import at.htlhl.chatnet.ui.components.mixed.UnblockToMessageDialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
-import com.google.firebase.Timestamp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 class ChatView : ViewModel() {
     @SuppressLint("StateFlowValueCalledInComposition")
@@ -71,8 +69,10 @@ class ChatView : ViewModel() {
         systemUiController.setStatusBarColor(color = Color.Transparent, darkIcons = true)
         val chatDataState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val chatData: List<FirebaseChat> = chatDataState.value
+        val friendDataState = sharedViewModel.friend.collectAsState()
+        val friendData: InternalChatInstance = friendDataState.value
         val matchingChat = chatData.find { chat ->
-            chat.chatRoomID == sharedViewModel.friend.value.chatRoomID
+            chat.chatRoomID == friendData.chatRoomID
         }
         val chatMateChat = matchingChat?.tab == "chatmate"
         val chatRoomId = matchingChat?.chatRoomID ?: ""
@@ -92,8 +92,9 @@ class ChatView : ViewModel() {
                 )
             }
         } ?: emptyList()
-        sharedViewModel.imageList.value = createImageList(messageListFromMatchingChat, sharedViewModel)
-        sharedViewModel.markMessagesAsRead(user = sharedViewModel.friend.value)
+        sharedViewModel.imageList.value =
+            createImageList(messageListFromMatchingChat, sharedViewModel)
+        sharedViewModel.markMessagesAsRead(user = friendData)
         sharedViewModel.updateMarkAsReadStatus(isAlreadyUnread = true)
         ChatViewContentStructure(
             sharedViewModel = sharedViewModel,
@@ -140,9 +141,6 @@ class ChatView : ViewModel() {
                 }
             },
             content = {
-                LaunchedEffect(it.calculateBottomPadding()) {
-                    lazyListState.scrollToItem(filteredMessages.size)
-                }
                 ChatViewContentList(
                     sharedViewModel = sharedViewModel,
                     paddingValues = it,
@@ -155,12 +153,13 @@ class ChatView : ViewModel() {
                 )
             }, bottomBar = {
                 InputField(
-                    onChatMateResponse=chatMateResponse,
+                    onChatMateResponse = chatMateResponse,
                     sharedViewModel = sharedViewModel,
                     navController = navController,
                     chatMateChat = chatMateChat,
-                )
-                //TODO reimplement the cannot send message dialog when the user is blocked
+                ){
+                    unblockDialog = true
+                }
             }
         )
         if (blockDialog) {
@@ -216,9 +215,6 @@ class ChatView : ViewModel() {
                 animatedText = "ChatMate is thinking..."
             }
         }
-        LaunchedEffect(messages.size) {
-            lazyListState.animateScrollToItem(messages.size)
-        }
         val filteredMessages = messages.filter {
             it.text.contains(sharedViewModel.searchValue.value, ignoreCase = true)
         }
@@ -242,7 +238,6 @@ class ChatView : ViewModel() {
                 state = lazyListState
             ) {
                 items(
-
                     key = { it.id },
                     items = filteredMessages
                 ) { message ->
@@ -265,9 +260,12 @@ class ChatView : ViewModel() {
                             text = message.text,
                             timestamp = message.timestamp,
                             visible = message.visible,
-                        ), chatRoomId = chatRoomId, onClick= { image ->
-                            sharedViewModel.imagePosition.intValue = sharedViewModel.imageList.value.find { it.images[0] == image }?.let { sharedViewModel.imageList.value.indexOf(it) } ?: 0
-                            navController.navigate(Screens.ImageViewScreen.route)}, chatMateResponse = { chatMateResponse.invoke(it) }
+                        ), chatRoomId = chatRoomId, onClick = { image ->
+                            sharedViewModel.imagePosition.intValue =
+                                sharedViewModel.imageList.value.find { it.images[0] == image }
+                                    ?.let { sharedViewModel.imageList.value.indexOf(it) } ?: 0
+                            navController.navigate(Screens.ImageViewScreen.route)
+                        }, chatMateResponse = { chatMateResponse.invoke(it) }
                     )
 
                 }

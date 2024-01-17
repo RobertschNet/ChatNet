@@ -2,6 +2,7 @@ package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -49,6 +50,8 @@ import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.mixed.PasswordResetEmailDialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
+import coil.imageLoader
+import coil.request.ImageRequest
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -140,6 +143,7 @@ class ForgotPasswordView {
         val emailColor =
             if (emailTexFieldColor == AccountDataState.Empty) Color.Gray else if (emailTexFieldColor == AccountDataState.Valid) MaterialTheme.colorScheme.primary else Color.Red
         val controller = LocalSoftwareKeyboardController.current
+        val context = LocalContext.current
         auth = Firebase.auth
         val signInLauncher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.StartActivityForResult()
@@ -160,9 +164,24 @@ class ForgotPasswordView {
                                         println("Sign-in successful")
                                         if (it) {
                                             sharedViewModel.updateOnlineStatus("online")
-                                            sharedViewModel.getUserData()
-                                            sharedViewModel.fetchFriendsFromUser()
+                                            sharedViewModel.getUserData{
+                                                loadImage(context = context , imageUrl = sharedViewModel.user.value.image)
+                                            }
+                                            sharedViewModel.fetchFriendsFromUser{
+                                                for (friend in sharedViewModel.friendListData.value) {
+                                                    loadImage(context, friend.image)
+                                                }
+                                            }
                                             sharedViewModel.fetchChatsWithMessages {
+                                                for (chat in sharedViewModel.chatData.value) {
+                                                    for (message in chat.messages) {
+                                                        if (message.images.isNotEmpty()) {
+                                                            for (image in message.images) {
+                                                                loadImage(context, image)
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                                 sharedViewModel.fetchRandomFriendsFromFriend()
                                                 navController.navigate(Screens.ChatsViewScreen.route)
                                             }
@@ -477,5 +496,11 @@ class ForgotPasswordView {
 
     private fun checkIfValueIsValid(value: String): Boolean {
         return value.matches("^(?=.{1,320})(?!.*[+._-]{2})(?![+._-])[a-zA-Z0-9+._-]{1,64}(?<![+._-])@(?![+._-])[a-zA-Z0-9.-]*\\.[a-zA-Z]{2,63}(?<![+._-])$".toRegex())
+    }
+    private fun loadImage(context: Context, imageUrl: String) {
+        val request = ImageRequest.Builder(context)
+            .data(imageUrl)
+            .build()
+        context.imageLoader.enqueue(request)
     }
 }

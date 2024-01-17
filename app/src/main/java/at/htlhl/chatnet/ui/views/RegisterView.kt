@@ -3,6 +3,7 @@ package at.htlhl.chatnet.ui.views
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ContentValues
+import android.content.Context
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -51,6 +52,8 @@ import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.mixed.SecondFADialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
+import coil.imageLoader
+import coil.request.ImageRequest
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -160,6 +163,7 @@ class RegisterView {
         val usernameColor =
             if (usernameTexFieldColor == AccountDataState.Empty) Color.Gray else if (usernameTexFieldColor == AccountDataState.Valid) MaterialTheme.colorScheme.primary else Color.Red
         val activity = LocalContext.current as Activity
+        val context = LocalContext.current
         val controller = LocalSoftwareKeyboardController.current
         auth = Firebase.auth
         val signInLauncher = rememberLauncherForActivityResult(
@@ -181,9 +185,24 @@ class RegisterView {
                                         println("Sign-in successful")
                                         if (it) {
                                             sharedViewModel.updateOnlineStatus("online")
-                                            sharedViewModel.getUserData()
-                                            sharedViewModel.fetchFriendsFromUser()
+                                            sharedViewModel.getUserData{
+                                                loadImage(context = context , imageUrl = sharedViewModel.user.value.image)
+                                            }
+                                            sharedViewModel.fetchFriendsFromUser{
+                                                for (friend in sharedViewModel.friendListData.value) {
+                                                    loadImage(context, friend.image)
+                                                }
+                                            }
                                             sharedViewModel.fetchChatsWithMessages {
+                                                for (chat in sharedViewModel.chatData.value) {
+                                                    for (message in chat.messages) {
+                                                        if (message.images.isNotEmpty()) {
+                                                            for (image in message.images) {
+                                                                loadImage(context, image)
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                                 sharedViewModel.fetchRandomFriendsFromFriend()
                                                 navController.navigate(Screens.ChatsViewScreen.route)
                                             }
@@ -678,5 +697,11 @@ class RegisterView {
                 false
             }
         }
+    }
+    private fun loadImage(context: Context, imageUrl: String) {
+        val request = ImageRequest.Builder(context)
+            .data(imageUrl)
+            .build()
+        context.imageLoader.enqueue(request)
     }
 }

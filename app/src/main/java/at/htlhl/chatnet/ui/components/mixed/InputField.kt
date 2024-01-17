@@ -64,7 +64,6 @@ import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.FirebaseMessage
-import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -80,7 +79,8 @@ fun InputField(
     onChatMateResponse: String,
     sharedViewModel: SharedViewModel,
     navController: NavController,
-    chatMateChat: Boolean
+    chatMateChat: Boolean,
+    onSentWhileBlocked: () -> Unit
 ) {
     Log.println(Log.INFO, "InputField", chatMateChat.toString())
     var badgeCount by remember { mutableIntStateOf(0) }
@@ -189,36 +189,50 @@ fun InputField(
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = {
                     if (!isLoading) {
-                        if (text.isNotEmpty() || sharedViewModel.galleryImageList.value.isNotEmpty()) {
-                            isLoading = true
-                            if (sharedViewModel.galleryImageList.value.isEmpty()) {
-                                uploadMessage(chatMateChat,sharedViewModel, text) {
-                                    isLoading = false
-                                    if (it) {
-                                        text = ""
-                                    } else {
-                                        //TODO Show error message
-                                    }
-                                }
-                                text = ""
-                            } else {
-                                uploadImage(context,sharedViewModel.galleryImageList.value, { success ->
-                                    sharedViewModel.galleryImageList.value = emptyList()
-                                    uploadMessage(chatMateChat,sharedViewModel, text, success) {
+                        if (!sharedViewModel.user.value.blocked.contains(sharedViewModel.friend.value.personList.id)) {
+                            if (text.isNotEmpty() || sharedViewModel.galleryImageList.value.isNotEmpty()) {
+                                isLoading = true
+                                if (sharedViewModel.galleryImageList.value.isEmpty()) {
+                                    uploadMessage(chatMateChat, sharedViewModel, text) {
                                         isLoading = false
                                         if (it) {
-                                            sharedViewModel.galleryImageList.value = emptyList()
                                             text = ""
                                         } else {
                                             //TODO Show error message
                                         }
                                     }
-                                }, {
-                                    isLoading = false
-                                    //TODO Show error message
-                                })
-                                text = ""
+                                    text = ""
+                                } else {
+                                    uploadImage(
+                                        context,
+                                        sharedViewModel.galleryImageList.value,
+                                        { success ->
+                                            sharedViewModel.galleryImageList.value = emptyList()
+                                            uploadMessage(
+                                                chatMateChat,
+                                                sharedViewModel,
+                                                text,
+                                                success
+                                            ) {
+                                                isLoading = false
+                                                if (it) {
+                                                    sharedViewModel.galleryImageList.value =
+                                                        emptyList()
+                                                    text = ""
+                                                } else {
+                                                    //TODO Show error message
+                                                }
+                                            }
+                                        },
+                                        {
+                                            isLoading = false
+                                            //TODO Show error message
+                                        })
+                                    text = ""
+                                }
                             }
+                        } else{
+                            onSentWhileBlocked.invoke()
                         }
                     }
                 }),
@@ -357,45 +371,54 @@ fun InputField(
                                     color = Color(0xFF00A0E8),
                                     fontWeight = Bold,
                                     modifier = Modifier.clickable {
-                                        if (text.isNotEmpty() || sharedViewModel.galleryImageList.value.isNotEmpty()) {
-                                            isLoading = true
-                                            if (sharedViewModel.galleryImageList.value.isEmpty()) {
-                                                uploadMessage(chatMateChat, sharedViewModel, text) {
-                                                    isLoading = false
-                                                    if (it) {
-                                                    } else {
-                                                        //TODO Show error message
-                                                    }
-                                                }
-                                                text = ""
-                                            } else {
-                                                uploadImage(
-                                                    context,sharedViewModel.galleryImageList.value,
-                                                    { success ->
-                                                        sharedViewModel.galleryImageList.value =
-                                                            emptyList()
-                                                        uploadMessage(
-                                                            chatMateChat,
-                                                            sharedViewModel,
-                                                            text,
-                                                            success
-                                                        ) {
-                                                            isLoading = false
-                                                            if (it) {
-                                                                sharedViewModel.galleryImageList.value =
-                                                                    emptyList()
-                                                                text = ""
-                                                            } else {
-                                                                //TODO Show error message
-                                                            }
-                                                        }
-                                                    },
-                                                    {
+                                        if (!sharedViewModel.user.value.blocked.contains(sharedViewModel.friend.value.personList.id)) {
+                                            if (text.isNotEmpty() || sharedViewModel.galleryImageList.value.isNotEmpty()) {
+                                                isLoading = true
+                                                if (sharedViewModel.galleryImageList.value.isEmpty()) {
+                                                    uploadMessage(
+                                                        chatMateChat,
+                                                        sharedViewModel,
+                                                        text
+                                                    ) {
                                                         isLoading = false
-                                                        //TODO Show error message
-                                                    })
-                                                text = ""
+                                                        if (it) {
+                                                        } else {
+                                                            //TODO Show error message
+                                                        }
+                                                    }
+                                                    text = ""
+                                                } else {
+                                                    uploadImage(
+                                                        context,
+                                                        sharedViewModel.galleryImageList.value,
+                                                        { success ->
+                                                            sharedViewModel.galleryImageList.value =
+                                                                emptyList()
+                                                            uploadMessage(
+                                                                chatMateChat,
+                                                                sharedViewModel,
+                                                                text,
+                                                                success
+                                                            ) {
+                                                                isLoading = false
+                                                                if (it) {
+                                                                    sharedViewModel.galleryImageList.value =
+                                                                        emptyList()
+                                                                    text = ""
+                                                                } else {
+                                                                    //TODO Show error message
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            isLoading = false
+                                                            //TODO Show error message
+                                                        })
+                                                    text = ""
+                                                }
                                             }
+                                        } else{
+                                            onSentWhileBlocked.invoke()
                                         }
                                     }
                                 )

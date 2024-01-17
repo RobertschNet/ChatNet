@@ -3,6 +3,7 @@ package at.htlhl.chatnet.ui.views
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ContentValues
+import android.content.Context
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -54,6 +55,8 @@ import at.htlhl.chatnet.data.AccountDataState
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
+import coil.imageLoader
+import coil.request.ImageRequest
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -160,6 +163,7 @@ class LoginView {
             if (passwordTexFieldColor == AccountDataState.Empty) Color.Gray else if (passwordTexFieldColor == AccountDataState.Valid) MaterialTheme.colorScheme.primary else Color.Red
         var isLoading by remember { mutableStateOf(false) }
         val activity = LocalContext.current as Activity
+        val context = LocalContext.current
         val controller = LocalSoftwareKeyboardController.current
         val authentication = FirebaseAuth.getInstance()
         auth = Firebase.auth
@@ -183,9 +187,24 @@ class LoginView {
                                         println("Sign-in successful")
                                         if (it) {
                                             sharedViewModel.updateOnlineStatus("online")
-                                            sharedViewModel.getUserData()
-                                            sharedViewModel.fetchFriendsFromUser()
+                                            sharedViewModel.getUserData{
+                                                loadImage(context = context , imageUrl = sharedViewModel.user.value.image)
+                                            }
+                                            sharedViewModel.fetchFriendsFromUser{
+                                                for (friend in sharedViewModel.friendListData.value) {
+                                                    loadImage(context, friend.image)
+                                                }
+                                            }
                                             sharedViewModel.fetchChatsWithMessages {
+                                                for (chat in sharedViewModel.chatData.value) {
+                                                    for (message in chat.messages) {
+                                                        if (message.images.isNotEmpty()) {
+                                                            for (image in message.images) {
+                                                                loadImage(context, image)
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                                 sharedViewModel.fetchRandomFriendsFromFriend()
                                                 navController.navigate("MainFlow") {
                                                     popUpTo("LoginFlow") {
@@ -329,9 +348,24 @@ class LoginView {
                                         Log.d(ContentValues.TAG, "createUserWithEmail:success")
                                         if (!isUserEmailVerified()) {
                                             sharedViewModel.updateOnlineStatus("online")
-                                            sharedViewModel.getUserData()
-                                            sharedViewModel.fetchFriendsFromUser()
+                                            sharedViewModel.getUserData{
+                                                loadImage(context = context , imageUrl = sharedViewModel.user.value.image)
+                                            }
+                                            sharedViewModel.fetchFriendsFromUser{
+                                                for (friend in sharedViewModel.friendListData.value) {
+                                                    loadImage(context, friend.image)
+                                                }
+                                            }
                                             sharedViewModel.fetchChatsWithMessages {
+                                                for (chat in sharedViewModel.chatData.value) {
+                                                    for (message in chat.messages) {
+                                                        if (message.images.isNotEmpty()) {
+                                                            for (image in message.images) {
+                                                                loadImage(context, image)
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                                 sharedViewModel.fetchRandomFriendsFromFriend()
                                                 navController.navigate("MainFlow") {
                                                     popUpTo("LoginFlow") {
@@ -588,5 +622,11 @@ class LoginView {
                 false
             }
         }
+    }
+    private fun loadImage(context: Context, imageUrl: String) {
+        val request = ImageRequest.Builder(context)
+            .data(imageUrl)
+            .build()
+        context.imageLoader.enqueue(request)
     }
 }

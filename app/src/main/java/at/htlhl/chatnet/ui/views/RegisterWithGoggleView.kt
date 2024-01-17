@@ -1,6 +1,7 @@
 package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -43,6 +44,8 @@ import androidx.navigation.NavController
 import at.htlhl.chatnet.data.AccountDataState
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
+import coil.imageLoader
+import coil.request.ImageRequest
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -126,6 +129,7 @@ class RegisterWithGoggleView {
         var usernameTextFieldColor by remember { mutableStateOf(AccountDataState.Empty) }
         val usernameColor = if (usernameTextFieldColor == AccountDataState.Empty) Color.Gray else if (usernameTextFieldColor == AccountDataState.Valid) MaterialTheme.colorScheme.primary else Color.Red
         val controller = LocalSoftwareKeyboardController.current
+        val context = LocalContext.current
         auth = Firebase.auth
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(
@@ -231,9 +235,24 @@ class RegisterWithGoggleView {
                                    Log.println(Log.INFO, "Google", "Success")
                                     createUserEntry(auth, username, {
                                         sharedViewModel.updateOnlineStatus("online")
-                                        sharedViewModel.getUserData()
-                                        sharedViewModel.fetchFriendsFromUser()
+                                        sharedViewModel.getUserData{
+                                            loadImage(context = context , imageUrl = sharedViewModel.user.value.image)
+                                        }
+                                        sharedViewModel.fetchFriendsFromUser{
+                                            for (friend in sharedViewModel.friendListData.value) {
+                                                loadImage(context, friend.image)
+                                            }
+                                        }
                                         sharedViewModel.fetchChatsWithMessages {
+                                            for (chat in sharedViewModel.chatData.value) {
+                                                for (message in chat.messages) {
+                                                    if (message.images.isNotEmpty()) {
+                                                        for (image in message.images) {
+                                                            loadImage(context, image)
+                                                        }
+                                                    }
+                                                }
+                                            }
                                             sharedViewModel.fetchRandomFriendsFromFriend()
                                             navController.navigate("MainFlow") {
                                                 popUpTo(Screens.RegisterWithGoogleScreen.route) {
@@ -367,5 +386,11 @@ class RegisterWithGoggleView {
 
     private fun checkIfValueIsValid(value: String): Boolean {
         return value.matches("^(?!.*[._-]{2})(?![._-])[a-zA-Z0-9._-]{1,30}(?<![._-])$".toRegex())
+    }
+    private fun loadImage(context: Context, imageUrl: String) {
+        val request = ImageRequest.Builder(context)
+            .data(imageUrl)
+            .build()
+        context.imageLoader.enqueue(request)
     }
 }

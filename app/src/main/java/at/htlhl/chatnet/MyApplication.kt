@@ -14,16 +14,12 @@ class MyApplication : Application(), ImageLoaderFactory {
         SharedViewModel(this)
     }
 
-    override fun onCreate() {
-        super.onCreate()
-    }
-
     override fun newImageLoader(): ImageLoader {
         return ImageLoader(this).newBuilder()
             .memoryCachePolicy(CachePolicy.ENABLED)
             .memoryCache {
                 MemoryCache.Builder(this)
-                    .maxSizePercent(0.1)
+                    .maxSizePercent(0.2)
                     .strongReferencesEnabled(true)
                     .build()
             }

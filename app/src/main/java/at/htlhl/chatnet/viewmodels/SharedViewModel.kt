@@ -5,7 +5,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Handler
@@ -25,15 +24,10 @@ import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInClient
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
-import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentChange
@@ -133,7 +127,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     private var friendListDataListener: ListenerRegistration? = null
 
     @Suppress("LABEL_NAME_CLASH")
-    fun fetchFriendsFromUser() {
+    fun fetchFriendsFromUser(onComplete: () -> Unit = {}) {
         if (auth.currentUser == null) {
             return
         }
@@ -189,6 +183,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                 completedCount++
                                 if (completedCount == totalFriends) {
                                     _friendListData.value = personListData
+                                    onComplete.invoke()
                                     Log.println(Log.INFO, "FriendList", personListData.toString())
                                 }
                             }
@@ -353,7 +348,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                             subQuerySnapshot?.let { subSnapshot ->
                                 val subCollectionData =
                                     subSnapshot.documents.map { messageDocument ->
-                                         InternalMessageInstance(
+                                        InternalMessageInstance(
                                             id = messageDocument.id,
                                             sender = messageDocument.data!!["sender"] as String,
                                             images = messageDocument.data!!["images"] as List<String>,
@@ -560,7 +555,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     private val _user =
         MutableStateFlow(FirebaseUsers())
     val user: StateFlow<FirebaseUsers> get() = _user
-    fun getUserData() {
+    fun getUserData(onComplete: () -> Unit = {}) {
         Log.println(Log.INFO, "$§$§User", auth.currentUser!!.uid)
         if (auth.currentUser == null) {
             return
@@ -574,6 +569,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     val personList = documentSnapshot.toObject(FirebaseUsers::class.java)
                     _user.value = personList!!
                     isConnected.value = personList.connected
+                    onComplete.invoke()
                     Log.println(Log.INFO, "User", personList.toString())
                     sortDataChats {}
                 }
