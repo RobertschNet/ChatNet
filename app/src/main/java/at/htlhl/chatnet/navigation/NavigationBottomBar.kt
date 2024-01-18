@@ -23,6 +23,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,9 +48,14 @@ fun NavigationBarLayout(
     viewModel: SharedViewModel,
     context: Context
 ) {
+    val isBottomBarEnabled = remember {
+        mutableStateOf(false)
+    }
     Scaffold(
         bottomBar = {
-            BottomNavigationBar(isBottomBarEnabled = viewModel.bottomBarState, items = listOf(
+            BottomNavigationBar(
+                isEnabled = isBottomBarEnabled.value,
+                isBottomBarEnabled = viewModel.bottomBarState, items = listOf(
                 BottomNavItem(
                     name = "Chats",
                     route = Screens.ChatsViewScreen.route,
@@ -89,7 +96,10 @@ fun NavigationBarLayout(
             Navigation(
                 navController = navController,
                 sharedViewModel = viewModel,
-                context = context
+                context = context,
+                onBottomBarDisabled = {
+                    isBottomBarEnabled.value= it
+                }
             )
         }
     }
@@ -97,13 +107,14 @@ fun NavigationBarLayout(
 
 @Composable
 fun BottomNavigationBar(
+    isEnabled:Boolean,
     isBottomBarEnabled: MutableState<Boolean>,
     items: List<BottomNavItem>,
     navController: NavController,
     onItemClick: (BottomNavItem) -> Unit
 ) {
     val backStackEntry = navController.currentBackStackEntryAsState()
-    if (isBottomBarEnabled.value) {
+    if (isEnabled) {
         Card(
             shape = RectangleShape,
             modifier = Modifier

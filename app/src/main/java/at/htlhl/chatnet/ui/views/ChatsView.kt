@@ -13,6 +13,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,7 +22,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItem
@@ -36,12 +36,14 @@ import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
 import at.htlhl.chatnet.ui.components.mixed.ClearChatDialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
+import coil.imageLoader
+import coil.request.ImageRequest
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 
-class Chats : ViewModel() {
+class ChatsView {
 
-    @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
+    @SuppressLint("UnusedMaterialScaffoldPaddingParameter", "StateFlowValueCalledInComposition")
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun ChatsScreen(
@@ -69,6 +71,20 @@ class Chats : ViewModel() {
                     sharedViewModel.searchValue.value, ignoreCase = true
                 ) ?: false
             } else userDataInstance
+        LaunchedEffect(sharedViewModel.chatData.value){
+            for (chat in sharedViewModel.chatData.value) {
+                for (message in chat.messages) {
+                    if (message.images.isNotEmpty()) {
+                        for (image in message.images) {
+                            val request = ImageRequest.Builder(context)
+                                .data(image)
+                                .build()
+                            context.imageLoader.enqueue(request)
+                        }
+                    }
+                }
+            }
+        }
         val bottomSheetItems = listOf(
             BottomSheetItem(
                 title = if (friendData.markedAsUnread || friendData.read > 0) "Mark as Read" else "Mark as Unread",

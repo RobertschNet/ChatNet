@@ -91,7 +91,7 @@ fun InputField(
     var text by rememberSaveable {
         mutableStateOf("")
     }
-    if (onChatMateResponse.isNotEmpty()) {
+    LaunchedEffect(onChatMateResponse){
         text = onChatMateResponse
     }
     var chatMateResponseText by remember { mutableStateOf("ChatMate is thinking") }

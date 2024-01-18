@@ -193,19 +193,11 @@ class RegisterView {
                                                     loadImage(context, friend.image)
                                                 }
                                             }
-                                            sharedViewModel.fetchChatsWithMessages {
-                                                for (chat in sharedViewModel.chatData.value) {
-                                                    for (message in chat.messages) {
-                                                        if (message.images.isNotEmpty()) {
-                                                            for (image in message.images) {
-                                                                loadImage(context, image)
-                                                            }
-                                                        }
-                                                    }
-                                                }
+                                            sharedViewModel.fetchChatsWithMessages()
+
                                                 sharedViewModel.fetchRandomFriendsFromFriend()
                                                 navController.navigate(Screens.ChatsViewScreen.route)
-                                            }
+
                                         } else {
                                             navController.navigate(Screens.RegisterWithGoogleScreen.route) {
                                                 popUpTo("LoginFlow") {

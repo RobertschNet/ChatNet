@@ -141,6 +141,9 @@ class ChatView : ViewModel() {
                 }
             },
             content = {
+                LaunchedEffect(it.calculateBottomPadding()) {
+                    lazyListState.scrollToItem(filteredMessages.size)
+                }
                 ChatViewContentList(
                     sharedViewModel = sharedViewModel,
                     paddingValues = it,
@@ -214,6 +217,9 @@ class ChatView : ViewModel() {
                 delay(750)
                 animatedText = "ChatMate is thinking..."
             }
+        }
+        LaunchedEffect(messages.size) {
+            lazyListState.animateScrollToItem(messages.size)
         }
         val filteredMessages = messages.filter {
             it.text.contains(sharedViewModel.searchValue.value, ignoreCase = true)
@@ -374,6 +380,7 @@ class ChatView : ViewModel() {
 
                     "generate" -> {
                         sharedViewModel.sendDataToServer(message.text) {
+                            Log.println(Log.ERROR, "walllumm", it)
                             chatMateResponse.invoke(it)
                         }
                     }

@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,8 +18,8 @@ import at.htlhl.chatnet.ui.views.CameraPhotoView
 import at.htlhl.chatnet.ui.views.CameraView
 import at.htlhl.chatnet.ui.views.ChatMateView
 import at.htlhl.chatnet.ui.views.ChatView
-import at.htlhl.chatnet.ui.views.Chats
-import at.htlhl.chatnet.ui.views.DropIn
+import at.htlhl.chatnet.ui.views.ChatsView
+import at.htlhl.chatnet.ui.views.DropInView
 import at.htlhl.chatnet.ui.views.FindUserView
 import at.htlhl.chatnet.ui.views.ForgotPasswordView
 import at.htlhl.chatnet.ui.views.ImageView
@@ -31,13 +32,15 @@ import at.htlhl.chatnet.ui.views.RandChatView
 import at.htlhl.chatnet.ui.views.RegisterView
 import at.htlhl.chatnet.ui.views.RegisterWithGoggleView
 import at.htlhl.chatnet.viewmodels.SharedViewModel
+import kotlinx.coroutines.delay
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun Navigation(
     navController: NavHostController,
     sharedViewModel: SharedViewModel,
-    context: Context
+    context: Context,
+    onBottomBarDisabled: (Boolean) -> Unit
 ) {
     NavHost(navController = navController, startDestination = "LoadingScreen") {
         composable("LoadingScreen",
@@ -52,7 +55,8 @@ fun Navigation(
         }
         navigation(
             startDestination = "LoginScreen",
-            route = "LoginFlow"){
+            route = "LoginFlow"
+        ) {
             composable("LoginScreen",
                 enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
                 exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
@@ -71,41 +75,46 @@ fun Navigation(
         }
         navigation(
             startDestination = "ChatsViewScreen",
-            route = "MainFlow")
+            route = "MainFlow"
+        )
         {
             composable("ChatsViewScreen",
                 enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
                 exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }
             ) {
-                sharedViewModel.bottomBarState.value = true
-                Chats().ChatsScreen(navController, sharedViewModel)
+                LaunchedEffect(Unit) {
+                    delay(50)
+                    onBottomBarDisabled.invoke(true)
+                }
+                ChatsView().ChatsScreen(navController, sharedViewModel)
             }
             composable("DropInScreen",
-                enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+                enterTransition = {
+                    fadeIn(animationSpec = tween(durationMillis = 0))
+                },
                 exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }
             ) {
-                sharedViewModel.bottomBarState.value = true
-                DropIn().DropInScreen(
+                onBottomBarDisabled.invoke(true)
+                DropInView().DropInScreen(
                     navController = navController,
                     sharedViewModel = sharedViewModel
                 )
             }
-            composable(
-                "ChatViewScreen",
+            composable("ChatViewScreen",
                 enterTransition = {
                     slideInHorizontally(
                         initialOffsetX = { fullWidth -> fullWidth },
-                        animationSpec = tween(durationMillis = 500)
+                        animationSpec = tween(durationMillis = 0)
                     )
                 },
                 exitTransition = {
                     slideOutHorizontally(
                         targetOffsetX = { fullWidth -> fullWidth },
-                        animationSpec = tween(durationMillis = 500)
+                        animationSpec = tween(durationMillis = 0)
                     )
                 }
             ) {
-                sharedViewModel.bottomBarState.value = false
+                onBottomBarDisabled.invoke(false)
                 ChatView().ChatViewScreen(
                     navController = navController,
                     sharedViewModel = sharedViewModel
@@ -114,7 +123,7 @@ fun Navigation(
             composable("RandChatScreen",
                 enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
                 exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-                sharedViewModel.bottomBarState.value = false
+                onBottomBarDisabled.invoke(false)
                 RandChatView().RandChatScreen(navController, sharedViewModel)
             }
             composable("CameraViewScreen",
@@ -140,13 +149,13 @@ fun Navigation(
                         animationSpec = tween(durationMillis = 500)
                     )
                 }) {
-                sharedViewModel.bottomBarState.value = false
+                onBottomBarDisabled.invoke(false)
                 FindUserView().FindUserScreen(navController, sharedViewModel)
             }
             composable("ChatMateScreen",
                 enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
                 exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-                sharedViewModel.bottomBarState.value = true
+                onBottomBarDisabled.invoke(true)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     ChatMateView().ChatMateScreen(navController, sharedViewModel)
                 }
@@ -159,13 +168,13 @@ fun Navigation(
             composable("RandChatStartScreen",
                 enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
                 exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-                sharedViewModel.bottomBarState.value = true
+                onBottomBarDisabled.invoke(true)
                 RandChatStartView().RandChatStartScreen(navController, sharedViewModel)
             }
             composable("ProfileInfoScreen",
                 enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
                 exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-                sharedViewModel.bottomBarState.value = false
+                onBottomBarDisabled.invoke(false)
                 sharedViewModel.fetchFriendsFriends()
                 ProfileInfoView().ProfileInfoScreen(sharedViewModel, navController)
             }

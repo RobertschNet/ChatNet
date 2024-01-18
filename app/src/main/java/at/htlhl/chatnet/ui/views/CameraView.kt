@@ -64,7 +64,7 @@ import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
-class CameraView : ViewModel() {
+class CameraView {
 
     @SuppressLint("NotConstructor", "UnusedMaterialScaffoldPaddingParameter")
     @Composable

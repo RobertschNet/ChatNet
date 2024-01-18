@@ -64,6 +64,7 @@ import java.util.concurrent.TimeUnit
 class SharedViewModel(application: Application) : AndroidViewModel(application) {
     private val firebaseInstance = FirebaseFirestore.getInstance()
 
+
     private companion object {
         const val USER_COLLECTION = "users"
         const val CHATS_COLLECTION = "chats"
@@ -127,7 +128,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     private var friendListDataListener: ListenerRegistration? = null
 
     @Suppress("LABEL_NAME_CLASH")
-    fun fetchFriendsFromUser(onComplete: () -> Unit = {}) {
+    fun fetchFriendsFromUser(onComplete: () -> Unit) {
         if (auth.currentUser == null) {
             return
         }
@@ -182,8 +183,8 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                 }
                                 completedCount++
                                 if (completedCount == totalFriends) {
-                                    _friendListData.value = personListData
                                     onComplete.invoke()
+                                    _friendListData.value = personListData
                                     Log.println(Log.INFO, "FriendList", personListData.toString())
                                 }
                             }
@@ -311,9 +312,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val chatData: StateFlow<List<FirebaseChat>> get() = _chatData
 
     @Suppress("UNCHECKED_CAST", "LABEL_NAME_CLASH")
-    fun fetchChatsWithMessages(
-        onComplete: () -> Unit,
-    ) {
+    fun fetchChatsWithMessages() {
         val chatDataSet = mutableSetOf<FirebaseChat>()
         // Step 1: Listen for changes in the chats collection
         Log.println(Log.INFO, "ChatData!!!", auth.currentUser!!.uid)
@@ -321,9 +320,6 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             .addSnapshotListener(MetadataChanges.INCLUDE) { querySnapshot, error ->
                 if (error != null) {
                     return@addSnapshotListener
-                }
-                if (querySnapshot?.documentChanges?.isEmpty() == true) {
-                    onComplete.invoke()
                 }
                 // Step 2: For each change in the chats collection, fetch the messages subcollection
                 querySnapshot?.documentChanges?.forEach { documentChange ->
@@ -350,12 +346,12 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                     subSnapshot.documents.map { messageDocument ->
                                         InternalMessageInstance(
                                             id = messageDocument.id,
-                                            sender = messageDocument.data!!["sender"] as String,
-                                            images = messageDocument.data!!["images"] as List<String>,
-                                            read = messageDocument.data!!["read"] as Boolean,
-                                            text = messageDocument.data!!["text"] as String,
-                                            timestamp = messageDocument.data!!["timestamp"] as Timestamp,
-                                            visible = messageDocument.data!!["visible"] as List<String>,
+                                            sender = messageDocument.data?.get("sender") as? String ?: "",
+                                            images = messageDocument.data?.get("images") as? List<String> ?: emptyList(),
+                                            read = messageDocument.data?.get("read") as? Boolean ?: false,
+                                            text = messageDocument.data?.get("text") as? String ?: "",
+                                            timestamp = messageDocument.data?.get("timestamp") as? Timestamp ?: Timestamp.now(),
+                                            visible = messageDocument.data?.get("visible") as? List<String> ?: emptyList(),
                                             isFromCache = if (subQuerySnapshot.metadata.isFromCache) {
                                                 messageDocument.metadata.hasPendingWrites()
                                             } else {
@@ -378,12 +374,10 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                 }
                                 chatDataSet.add(chat)
                                 _chatData.value = chatDataSet.toList()
-                                sortDataChats { onComplete.invoke() }
+                                sortDataChats { }
                                 Log.println(Log.INFO, "ChatData", chatDataSet.toString())
                             }
                         }
-                    } else {
-                        sortDataChats { onComplete.invoke() }
                     }
                 }
             }
@@ -797,18 +791,15 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     fun sendDataToServer(data: String, onReceived: (String) -> Unit) {
         chatMateResponseState.value = ChatMateResponseState.Loading
-        val url = "https://getresponse-ie4mphraqq-uc.a.run.app/getResponse"
+        val url = "https://getresponse-ie4mphraqq-uc.a.run.app/getResponse?text=$data"
         val client = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
-        val requestData = ("{\"text\":\"$data\"}")
-        val mediaType = "application/json; charset=utf-8".toMediaType()
-        val requestBody = requestData.toRequestBody(mediaType)
         val request = Request.Builder()
             .url(url)
-            .post(requestBody)
+            .get()
             .build()
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {

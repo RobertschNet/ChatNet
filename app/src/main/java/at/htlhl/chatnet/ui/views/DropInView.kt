@@ -70,7 +70,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 
-class DropIn : ViewModel() {
+class DropInView {
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalMaterial3Api::class)
@@ -271,182 +271,181 @@ class DropIn : ViewModel() {
             )
         }
     }
-}
 
-@OptIn(ExperimentalFoundationApi::class)
-@RequiresApi(Build.VERSION_CODES.O)
-@Composable
-fun ChatItemForDropIn(
-    person: InternalChatInstance,
-    bottomSheetState: Boolean,
-    navController: NavController,
-    sharedViewModel: SharedViewModel,
-    documentationId: List<FirebaseChat>,
-    onItemClicked: () -> Unit
-) {
-    val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
-    val formattedTime: String = formatter.format(person.timestampMessage.toDate())
-    Divider(thickness = 0.25f.dp, color = Color.LightGray)
-    Row(
-        modifier = Modifier
-            .combinedClickable(
-                onClick = {
-                    if (bottomSheetState) {
-                        onItemClicked()
-                    } else {
-                        sharedViewModel.updateFriend(person)
-                        Log.println(Log.INFO, "Current", person.toString())
-                        val filteredChats = documentationId.filter { chat ->
-                            chat.members.contains(person.personList.id) && chat.members
-                                .contains(sharedViewModel.auth.currentUser?.uid)
-                        }
-                        if (filteredChats.isEmpty()) {
-                            sharedViewModel.saveChatRoom(
-                                person = person.personList.id,
-                                tab = "dropIn"
-                            )
-                        }
-                        navController.navigate(Screens.ChatViewScreen.route)
-                    }
-
-                },
-                onLongClick = {
-                    sharedViewModel.updateFriend(person)
-                    onItemClicked()
-                },
-            )
-            .fillMaxWidth()
-            .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
-            .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
+    @OptIn(ExperimentalFoundationApi::class)
+    @RequiresApi(Build.VERSION_CODES.O)
+    @Composable
+    fun ChatItemForDropIn(
+        person: InternalChatInstance,
+        bottomSheetState: Boolean,
+        navController: NavController,
+        sharedViewModel: SharedViewModel,
+        documentationId: List<FirebaseChat>,
+        onItemClicked: () -> Unit
     ) {
-        val isOnline = person.personList.status
-        Box(
-            modifier = Modifier.size(50.dp)
-        ) {
-            SubcomposeAsyncImage(
-                contentDescription = null,
-                model = person.personList.image,
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .size(50.dp),
-                contentScale = ContentScale.Crop,
-                alignment = Alignment.Center,
-                loading = {
-                    CircularProgressIndicator()
-                }
-            )
-            Box(
-                modifier = Modifier
-                    .size(16.5f.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            colors = if (!isSystemInDarkTheme()) listOf(
-                                Color.White,
-                                Color.White
-                            ) else listOf(Color(0xF1161616), Color(0xF1161616)),
-                            start = Offset(0f, 0f),
-                            end = Offset(14.dp.value, 14.dp.value)
-                        )
-                    )
-                    .align(Alignment.BottomEnd)
-            ) {
-                when (isOnline) {
-                    "online" -> {
-                        Box(
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
-                                        start = Offset(0f, 0f),
-                                        end = Offset(14.dp.value, 14.dp.value)
-                                    )
+        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val formattedTime: String = formatter.format(person.timestampMessage.toDate())
+        Divider(thickness = 0.25f.dp, color = Color.LightGray)
+        Row(
+            modifier = Modifier
+                .combinedClickable(
+                    onClick = {
+                        if (bottomSheetState) {
+                            onItemClicked()
+                        } else {
+                            sharedViewModel.updateFriend(person)
+                            Log.println(Log.INFO, "Current", person.toString())
+                            val filteredChats = documentationId.filter { chat ->
+                                chat.members.contains(person.personList.id) && chat.members
+                                    .contains(sharedViewModel.auth.currentUser?.uid)
+                            }
+                            if (filteredChats.isEmpty()) {
+                                sharedViewModel.saveChatRoom(
+                                    person = person.personList.id,
+                                    tab = "dropIn"
                                 )
-                                .align(Alignment.Center)
-                        )
-                    }
+                            }
+                            navController.navigate(Screens.ChatViewScreen.route)
+                        }
 
-                    "offline" -> {
-                        Box(
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(Color.Gray, Color(0xFF808080)),
-                                        start = Offset(0f, 0f),
-                                        end = Offset(14.dp.value, 14.dp.value)
-                                    )
-                                )
-                                .align(Alignment.Center)
-                        ) {
+                    },
+                    onLongClick = {
+                        sharedViewModel.updateFriend(person)
+                        onItemClicked()
+                    },
+                )
+                .fillMaxWidth()
+                .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
+                .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
+        ) {
+            val isOnline = person.personList.status
+            Box(
+                modifier = Modifier.size(50.dp)
+            ) {
+                SubcomposeAsyncImage(
+                    contentDescription = null,
+                    model = person.personList.image,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .size(50.dp),
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.Center,
+                    loading = {
+                        CircularProgressIndicator()
+                    }
+                )
+                Box(
+                    modifier = Modifier
+                        .size(16.5f.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                colors = if (!isSystemInDarkTheme()) listOf(
+                                    Color.White,
+                                    Color.White
+                                ) else listOf(Color(0xF1161616), Color(0xF1161616)),
+                                start = Offset(0f, 0f),
+                                end = Offset(14.dp.value, 14.dp.value)
+                            )
+                        )
+                        .align(Alignment.BottomEnd)
+                ) {
+                    when (isOnline) {
+                        "online" -> {
                             Box(
                                 modifier = Modifier
-                                    .size(8.dp)
+                                    .size(14.dp)
                                     .clip(CircleShape)
-                                    .background(Color.DarkGray)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
+                                            start = Offset(0f, 0f),
+                                            end = Offset(14.dp.value, 14.dp.value)
+                                        )
+                                    )
                                     .align(Alignment.Center)
                             )
                         }
-                    }
 
-                    "idle" -> {
-                        Box(
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(Color(0xFFFFC107), Color(0xFFFFC107)),
-                                        start = Offset(0f, 0f),
-                                        end = Offset(14.dp.value, 14.dp.value)
-                                    )
-                                )
-                                .align(Alignment.Center)
-                        ) {
+                        "offline" -> {
                             Box(
                                 modifier = Modifier
-                                    .size(8.2f.dp)
+                                    .size(14.dp)
                                     .clip(CircleShape)
-                                    .background(Color.White)
-                                    .align(Alignment.TopStart)
-                            )
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(Color.Gray, Color(0xFF808080)),
+                                            start = Offset(0f, 0f),
+                                            end = Offset(14.dp.value, 14.dp.value)
+                                        )
+                                    )
+                                    .align(Alignment.Center)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.DarkGray)
+                                        .align(Alignment.Center)
+                                )
+                            }
+                        }
+
+                        "idle" -> {
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(Color(0xFFFFC107), Color(0xFFFFC107)),
+                                            start = Offset(0f, 0f),
+                                            end = Offset(14.dp.value, 14.dp.value)
+                                        )
+                                    )
+                                    .align(Alignment.Center)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.2f.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White)
+                                        .align(Alignment.TopStart)
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
-        Column(Modifier.padding(horizontal = 8.dp)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+            Column(Modifier.padding(horizontal = 8.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = person.personList.username["mixedcase"].toString(),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 17.sp,
+                        color = if (isSystemInDarkTheme()) Color.White else Color.Black
+                    )
+                    Text(
+                        text = formattedTime,
+                        fontWeight = FontWeight.Light,
+                        fontSize = 12.sp,
+                        color = if (isSystemInDarkTheme()) Color.White else Color.Black
+                    )
+                }
                 Text(
-                    text = person.personList.username["mixedcase"].toString(),
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 17.sp,
-                    color = if (isSystemInDarkTheme()) Color.White else Color.Black
-                )
-                Text(
-                    text = formattedTime,
-                    fontWeight = FontWeight.Light,
-                    fontSize = 12.sp,
-                    color = if (isSystemInDarkTheme()) Color.White else Color.Black
+                    modifier = Modifier.padding(start = 10.dp),
+                    text = person.personList.statusFriend,
+                    maxLines = 1,
+                    fontSize = 15.sp,
+                    color = if (person.lastMessage.text >= "User is 400 meters away") Color.Yellow else if (person.lastMessage.text >= "User is 450 meters away") Color.Red else Color.LightGray
                 )
             }
-            Text(
-                modifier = Modifier.padding(start = 10.dp),
-                text = person.personList.statusFriend,
-                maxLines = 1,
-                fontSize = 15.sp,
-                color = if (person.lastMessage.text >= "User is 400 meters away") Color.Yellow else if (person.lastMessage.text >= "User is 450 meters away") Color.Red else Color.LightGray
-            )
         }
+        Divider(thickness = 0.25f.dp, color = Color.LightGray)
     }
-    Divider(thickness = 0.25f.dp, color = Color.LightGray)
 }
-

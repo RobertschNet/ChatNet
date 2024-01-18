@@ -823,9 +823,9 @@ class ProfileInfoView {
         if (deleteAllMediaDialog) {
             DeleteAllMediaDialog { value ->
                 if (value == "me") {
-                    sharedViewModel.changeMediaVisibility(true, true)
+                    sharedViewModel.changeMediaVisibility(userContext = true, isMedia = true)
                 } else if (value == "everyone") {
-                    sharedViewModel.changeMediaVisibility(false, true)
+                    sharedViewModel.changeMediaVisibility(userContext = false, isMedia = true)
                 }
                 deleteAllMediaDialog = false
             }
@@ -833,97 +833,96 @@ class ProfileInfoView {
         if (deleteAllMessagesDialog) {
             DeleteAllMessagesDialog { value ->
                 if (value == "me") {
-                    sharedViewModel.changeMediaVisibility(true, false)
+                    sharedViewModel.changeMediaVisibility(userContext = true, isMedia = false)
                 } else if (value == "everyone") {
-                    sharedViewModel.changeMediaVisibility(false, false)
+                    sharedViewModel.changeMediaVisibility(userContext = false, isMedia = false)
                 }
                 deleteAllMessagesDialog = false
             }
         }
         Spacer(modifier = Modifier.height(20.dp))
     }
-}
 
-
-@OptIn(ExperimentalMotionApi::class)
-@Composable
-fun ProfileHeader(
-    progress: State<Float>,
-    navController: NavController,
-    friend: InternalChatInstance
-) {
-    Log.println(Log.INFO, "Hallo", progress.toString())
-    val context = LocalContext.current
-    val motionScene = remember {
-        context.resources
-            .openRawResource(R.raw.userinfo_motion_layout)
-            .readBytes()
-            .decodeToString()
-    }
-    MotionLayout(
-        motionScene = MotionScene(content = motionScene),
-        progress = progress.value,
-        modifier = Modifier.fillMaxWidth()
+    @OptIn(ExperimentalMotionApi::class)
+    @Composable
+    fun ProfileHeader(
+        progress: State<Float>,
+        navController: NavController,
+        friend: InternalChatInstance
     ) {
-        val profilePicProperties = motionProperties(id = "profile_pic")
-        Card(
-            elevation = 10.dp,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White)
-                .layoutId("box")
-        ) {}
-        Image(
-            painter = painterResource(id = R.drawable.back_svgrepo_com_1_),
-            contentDescription = null,
-            modifier = Modifier
-                .clickable { navController.navigate(Screens.ChatsViewScreen.route) }
-                .clip(CircleShape)
-                .layoutId("back_arrow")
-        )
-        SubcomposeAsyncImage(
-            model = friend.personList.image,
-            contentScale = ContentScale.Crop,
-            contentDescription = null,
-            modifier = Modifier
-                .clip(CircleShape)
-                .layoutId("profile_pic")
-                .shimmerEffect()
-        )
-        Text(
-            text = friend.personList.username["mixedcase"].toString(),
-            overflow = TextOverflow.Ellipsis,
-            fontSize = 26.sp,
-            modifier = Modifier.layoutId("username"),
-            color = profilePicProperties.value.color("background")
-        )
+        Log.println(Log.INFO, "Hallo", progress.toString())
+        val context = LocalContext.current
+        val motionScene = remember {
+            context.resources
+                .openRawResource(R.raw.userinfo_motion_layout)
+                .readBytes()
+                .decodeToString()
+        }
+        MotionLayout(
+            motionScene = MotionScene(content = motionScene),
+            progress = progress.value,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            val profilePicProperties = motionProperties(id = "profile_pic")
+            Card(
+                elevation = 10.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .layoutId("box")
+            ) {}
+            Image(
+                painter = painterResource(id = R.drawable.back_svgrepo_com_1_),
+                contentDescription = null,
+                modifier = Modifier
+                    .clickable { navController.navigate(Screens.ChatsViewScreen.route) }
+                    .clip(CircleShape)
+                    .layoutId("back_arrow")
+            )
+            SubcomposeAsyncImage(
+                model = friend.personList.image,
+                contentScale = ContentScale.Crop,
+                contentDescription = null,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .layoutId("profile_pic")
+                    .shimmerEffect()
+            )
+            Text(
+                text = friend.personList.username["mixedcase"].toString(),
+                overflow = TextOverflow.Ellipsis,
+                fontSize = 26.sp,
+                modifier = Modifier.layoutId("username"),
+                color = profilePicProperties.value.color("background")
+            )
+        }
     }
-}
 
-private fun createImageList(
-    messages: List<InternalMessageInstance>,
-    sharedViewModel: SharedViewModel
-): List<InternalMessageInstance> {
-    val imageList = arrayListOf<InternalMessageInstance>()
-    messages.forEach {
-        if (it.images.isNotEmpty()) {
-            it.images.forEach { image ->
-                if (it.visible.contains(sharedViewModel.auth.currentUser!!.uid)) {
-                    imageList.add(
-                        InternalMessageInstance(
-                            isFromCache = it.isFromCache,
-                            id = it.id,
-                            sender = it.sender,
-                            images = arrayListOf(image),
-                            read = it.read,
-                            text = it.text,
-                            timestamp = it.timestamp,
-                            visible = it.visible
+    private fun createImageList(
+        messages: List<InternalMessageInstance>,
+        sharedViewModel: SharedViewModel
+    ): List<InternalMessageInstance> {
+        val imageList = arrayListOf<InternalMessageInstance>()
+        messages.forEach {
+            if (it.images.isNotEmpty()) {
+                it.images.forEach { image ->
+                    if (it.visible.contains(sharedViewModel.auth.currentUser!!.uid)) {
+                        imageList.add(
+                            InternalMessageInstance(
+                                isFromCache = it.isFromCache,
+                                id = it.id,
+                                sender = it.sender,
+                                images = arrayListOf(image),
+                                read = it.read,
+                                text = it.text,
+                                timestamp = it.timestamp,
+                                visible = it.visible
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
+        return imageList
     }
-    return imageList
 }

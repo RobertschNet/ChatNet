@@ -55,23 +55,23 @@ class MainActivity : ComponentActivity() {
                                 loadImage(applicationContext, friend.image)
                             }
                         }
-                        viewModel.fetchChatsWithMessages {
-                            for (chat in viewModel.chatData.value) {
-                                for (message in chat.messages) {
-                                    if (message.images.isNotEmpty()) {
-                                        for (image in message.images) {
-                                            loadImage(applicationContext, image)
-                                        }
+                        viewModel.fetchChatsWithMessages()
+                        for (chat in viewModel.chatData.value) {
+                            for (message in chat.messages) {
+                                if (message.images.isNotEmpty()) {
+                                    for (image in message.images) {
+                                        loadImage(applicationContext, image)
                                     }
                                 }
                             }
-                            viewModel.fetchRandomFriendsFromFriend()
-                            if (navController.currentDestination?.route == Screens.LoadingScreen.route && start.value) {
-                                start.value = false
-                                navController.navigate("MainFlow") {
-                                    popUpTo("LoadingScreen") {
-                                        inclusive = true
-                                    }
+                        }
+                        viewModel.fetchRandomFriendsFromFriend()
+
+                        if (navController.currentDestination?.route == Screens.LoadingScreen.route && start.value) {
+                            start.value = false
+                            navController.navigate("MainFlow") {
+                                popUpTo("LoadingScreen") {
+                                    inclusive = true
                                 }
                             }
                         }
