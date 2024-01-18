@@ -48,7 +48,6 @@ import java.util.Locale
 fun ChatsViewChatItem(
     chat: InternalChatInstance,
     displayOnlineState: Boolean,
-    navController: NavController,
     sharedViewModel: SharedViewModel,
     onClick: (String) -> Unit
 ) {
@@ -218,8 +217,7 @@ fun ChatsViewChatItem(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 if (chat.lastMessage.visible.contains(sharedViewModel.auth.currentUser?.uid.toString())) {
-                    val messageContent =
-                        if (chat.lastMessage.text.isEmpty() && chat.lastMessage.images.isNotEmpty()) "Image" else chat.lastMessage.text
+                    val messageContent = if (chat.lastMessage.text.isEmpty() && chat.lastMessage.images.isNotEmpty()) "Image" else chat.lastMessage.text
                     val senderPrefix =
                         if (chat.lastMessage.sender != sharedViewModel.auth.currentUser?.uid.toString()) "" else "Me: "
                     Text(
@@ -234,7 +232,7 @@ fun ChatsViewChatItem(
                             0xFF00A0E8
                         ) else Color.LightGray,
                     )
-                    if (messageContent == "Image") {
+                    if (chat.lastMessage.images.isNotEmpty()) {
                         Image(
                             imageVector = Icons.Default.Image,
                             contentDescription = null,
@@ -248,7 +246,7 @@ fun ChatsViewChatItem(
                         modifier = Modifier
                             .align(Alignment.CenterVertically)
                             .weight(1f),
-                        text = messageContent,
+                        text = " $messageContent",
                         overflow = TextOverflow.Ellipsis,
                         maxLines = 1,
                         fontSize = 15.sp,

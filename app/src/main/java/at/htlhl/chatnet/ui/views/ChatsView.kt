@@ -134,7 +134,6 @@ class ChatsView {
                             chat = message,
                             displayOnlineState = true,
                             sharedViewModel = sharedViewModel,
-                            navController = navController,
                         ) { context ->
                             when (context) {
                                 "image" -> {

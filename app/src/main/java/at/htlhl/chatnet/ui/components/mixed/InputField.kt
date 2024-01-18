@@ -261,14 +261,14 @@ fun InputField(
                     listOf(
                         Color(0xFF00A0E8), Color(0xFF00A0E8), Color(
                             0xFF0CB0FA
-                        ), Color.White
-                    ), Offset.Zero, Offset.Infinite, TileMode.Clamp
+                        )
+                    ), Offset.Zero, Offset.Infinite, TileMode.Repeated
                 ),
                 onValueChange = { text = it },
                 textStyle = LocalTextStyle.current.copy(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Normal,
-                    fontFamily = FontFamily.Default,
+                    fontFamily = FontFamily.SansSerif,
                     color = MaterialTheme.colorScheme.secondary,
                 ),
                 modifier = Modifier
@@ -276,12 +276,7 @@ fun InputField(
                     .height(50.dp + badgeCount.dp)
                     .padding(start = 10.dp, end = 10.dp)
                     .background(
-                        MaterialTheme.colorScheme.background, RoundedCornerShape(26.dp)
-                    )
-                    .border(
-                        width = Dp.Hairline,
-                        color = MaterialTheme.colorScheme.secondary,
-                        shape = RoundedCornerShape(26.dp),
+                        Color(0xFFF4F5F8), RoundedCornerShape(26.dp)
                     ),
                 decorationBox = { innerTextField ->
                     Row(
@@ -335,12 +330,13 @@ fun InputField(
                                 }
                             }
                         }
-                        Box(Modifier.padding(start = 10.dp, end = 70.dp)) {
+                        Box(Modifier.padding(start = 10.dp, end = 70.dp), contentAlignment = Alignment.CenterStart) {
                             if (text.isEmpty()) {
                                 Text(
                                     text = "Message...",
                                     textAlign = TextAlign.Start,
-                                    fontSize = 18.sp,
+                                    fontFamily = FontFamily.SansSerif,
+                                    fontSize = 15.sp,
                                     color = MaterialTheme.colorScheme.secondary,
                                     fontWeight = FontWeight.Normal,
                                 )

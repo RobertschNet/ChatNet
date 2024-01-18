@@ -156,7 +156,6 @@ class DropInView {
                             chat = chats,
                             displayOnlineState = true,
                             sharedViewModel = sharedViewModel,
-                            navController = navController,
                         ) { context ->
                             when (context) {
                                 "image" -> {

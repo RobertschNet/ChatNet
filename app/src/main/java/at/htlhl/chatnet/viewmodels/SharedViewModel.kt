@@ -79,7 +79,36 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     val auth: FirebaseAuth = Firebase.auth
     val chatMateResponseState = mutableStateOf(ChatMateResponseState.Success)
-    private val _friend = MutableStateFlow(InternalChatInstance())
+    private val _friend = MutableStateFlow(InternalChatInstance(
+        FirebaseUsers(
+            blocked = emptyList(),
+            image = "https://firebasestorage.googleapis.com/v0/b/chatnet-97f9a.appspot.com/o/images%2FDALL%C2%B7E%202023-09-17%2014.29.57%20-%20Profile%20picture%20for%20an%20AI-Asistent%2C%20digital%20art.png?alt=media&token=f41b85e7-8012-4d5d-87f0-e4bdd7f55030",
+            username = mapOf("lowercase" to "chatmate", "mixedcase" to "ChatMate"),
+            status = "online",
+            id = "1s8vrpKw4GXO6HbaUKl3w2wdP3w2",
+            email = "dick@lol.at",
+            pinned = emptyList(),
+            color = "",
+            connected = false,
+            mutedFriend = false,
+            statusFriend = "accepted"
+        ),
+        Timestamp.now(),
+        InternalMessageInstance(
+            isFromCache = false,
+            id = "1szRRaAM2MEYnPEsQAIX",
+            sender = "E8LJ593frbcCjOPrLhXRvn1W0Du1",
+            images = arrayListOf(),
+            read = false,
+            text = "Hey",
+            timestamp = Timestamp.now(),
+            visible = arrayListOf()
+        ),
+        false,
+        0,
+        false,
+        "Run6JfBNdYtH3C6g2HQT"
+    ))
     val friend: StateFlow<InternalChatInstance> get() = _friend
     var unfinishedGoogleRegistration = mutableStateOf("")
     val bottomBarState = mutableStateOf(false)
@@ -232,7 +261,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val completeChatMateList: StateFlow<List<InternalChatInstance>> get() = _completeChatMateList
 
     private fun createInternalChatInstance(chat: FirebaseChat): InternalChatInstance {
-        val lastMessage = chat.messages.lastOrNull() ?: InternalMessageInstance()
+        val lastMessage = chat.messages.firstOrNull() ?: InternalMessageInstance()
         return InternalChatInstance(
             personList = FirebaseUsers(
                 blocked = emptyList(),
@@ -334,7 +363,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                         val subCollectionRef =
                             getChatDocumentRef().document(documentChange.document.id)
                                 .collection("/$MESSAGES_COLLECTION")
-                                .orderBy("timestamp", Query.Direction.ASCENDING)
+                                .orderBy("timestamp", Query.Direction.DESCENDING)
                         subCollectionRef.addSnapshotListener(MetadataChanges.INCLUDE) { subQuerySnapshot, exception ->
                             if (exception != null) {
                                 return@addSnapshotListener

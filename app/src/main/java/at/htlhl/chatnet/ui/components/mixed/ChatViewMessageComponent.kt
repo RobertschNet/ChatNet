@@ -1,7 +1,6 @@
 package at.htlhl.chatnet.ui.components.mixed
 
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -28,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
-import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -72,7 +70,7 @@ fun ChatViewMessageComponent(
     val formatter = DateTimeFormatter.ofPattern("HH:mm")
     val searchValue = sharedViewModel.searchValue.value
     var imageHeight by remember {
-        mutableStateOf(false)
+        mutableStateOf(true)
     }
     val formattedTime =
         message.timestamp.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalTime()
@@ -83,6 +81,44 @@ fun ChatViewMessageComponent(
         if (isSystemInDarkTheme()) Color.DarkGray else Color.White
     }
     val alignment = if (isUser) Arrangement.End else Arrangement.Start
+    if (isDateNeeded(message, nextMessage)) {
+        Row(
+            horizontalArrangement = alignment,
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (isUser) {
+                if (!chatMateChat) {
+                    SubcomposeAsyncImage(
+                        model =
+                        if (message.isFromCache) R.drawable.clock_svgrepo_com else if (message.read) R.drawable.eye_1_svgrepo_com else R.drawable.eye_hide_1_svgrepo_com,
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
+                        modifier = Modifier
+                            .size(20.dp)
+                            .padding(end = 5.dp),
+                    )
+                }
+                Text(
+                    text = formattedTime,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Start,
+                    modifier =
+                    Modifier.padding(end = 15.dp)
+                )
+            } else {
+                Text(
+                    text = formattedTime,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Start,
+                    modifier =
+                    Modifier.padding(start = 15.dp)
+                )
+            }
+        }
+    }
     Column {
         if (isDateSeparatorNeeded(message, previousMessage, searchValue)) {
             Card(
@@ -315,15 +351,9 @@ fun ChatViewMessageComponent(
                                     SubcomposeAsyncImage(
                                         model = image,
                                         onSuccess = { imageAsset ->
-                                            val aspectRatio = imageAsset.result.drawable.intrinsicWidth.toFloat() / imageAsset.result.drawable.intrinsicHeight.toFloat()
-                                            imageHeight = if (aspectRatio > 1) {
-                                                Log.println(Log.DEBUG, "aspectRatio", "landscape")
-                                                false
-                                            } else {
-                                                Log.println(Log.DEBUG, "aspectRatio", "portrait")
-                                                true
-                                            }
-
+                                            val aspectRatio =
+                                                imageAsset.result.drawable.intrinsicWidth.toFloat() / imageAsset.result.drawable.intrinsicHeight.toFloat()
+                                            imageHeight = aspectRatio <= 1
                                         },
                                         alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
                                         contentDescription = null,
@@ -359,7 +389,6 @@ fun ChatViewMessageComponent(
                                             start = 10.dp,
                                             end = 10.dp
                                         )
-
                                     )
                                 }
                             }
@@ -442,47 +471,9 @@ fun ChatViewMessageComponent(
                             .padding(12.dp)
                             .background(backgroundColor, shape = RoundedCornerShape(18.dp)),
                         textAlign = TextAlign.Center,
-                        color = if (isUser) Color.White else Color.Black // Set color based on user
+                        color = if (isUser) Color.White else Color.Black
                     )
                 }
-            }
-        }
-    }
-    if (isDateNeeded(message, nextMessage)) {
-        Row(
-            horizontalArrangement = alignment,
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (isUser) {
-                if (!chatMateChat) {
-                    SubcomposeAsyncImage(
-                        model =
-                        if (message.isFromCache) R.drawable.clock_svgrepo_com else if (message.read) R.drawable.eye_1_svgrepo_com else R.drawable.eye_hide_1_svgrepo_com,
-                        contentDescription = null,
-                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
-                        modifier = Modifier
-                            .size(20.dp)
-                            .padding(end = 5.dp),
-                    )
-                }
-                Text(
-                    text = formattedTime,
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.Start,
-                    modifier =
-                    Modifier.padding(end = 15.dp)
-                )
-            } else {
-                Text(
-                    text = formattedTime,
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.Start,
-                    modifier =
-                    Modifier.padding(start = 15.dp)
-                )
             }
         }
     }
@@ -506,14 +497,11 @@ private fun isDateSeparatorNeeded(
         timeInMillis = previousMessage.timestamp.toDate().time
     }
 
-    // Check if the search value is not null and is not empty
     val isSearchActive = !searchValue.isNullOrBlank()
 
     return if (isSearchActive) {
-        // If search is active, always show date separators
         true
     } else {
-        // If search is not active, show date separators based on date comparison
         currentCalendar.get(Calendar.YEAR) != previousCalendar.get(Calendar.YEAR) ||
                 currentCalendar.get(Calendar.DAY_OF_YEAR) != previousCalendar.get(Calendar.DAY_OF_YEAR)
     }
@@ -585,7 +573,6 @@ fun findAllOccurrences(main: String, sub: String): List<Int> {
         indices.add(lastIndex)
         lastIndex = main.indexOf(sub, lastIndex + sub.length)
     }
-    Log.d("indices", indices.toString())
     return indices
 }
 

@@ -92,7 +92,6 @@ class ChatMateView {
                             chat = message,
                             displayOnlineState = false,
                             sharedViewModel = sharedViewModel,
-                            navController = navController,
                         ) { context ->
                             when (context) {
                                 "image" -> {

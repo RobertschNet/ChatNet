@@ -121,12 +121,10 @@ class ChatView : ViewModel() {
         val filteredMessages = messagesForChat.filter { message ->
             message.visible.contains(sharedViewModel.auth.currentUser?.uid.toString())
         }.toMutableList()
-        val lazyListState =
-            rememberLazyListState(initialFirstVisibleItemIndex = sharedViewModel.getMessageLengthForChat()!!)
+        val lazyListState = rememberLazyListState()
         Scaffold(
             modifier = Modifier
-                .imePadding()
-                .onSizeChanged { coroutineScope.launch { lazyListState.scrollToItem(filteredMessages.size) } },
+                .imePadding(),
             topBar = {
                 ChatViewTopBar(
                     navController = navController,
@@ -141,9 +139,6 @@ class ChatView : ViewModel() {
                 }
             },
             content = {
-                LaunchedEffect(it.calculateBottomPadding()) {
-                    lazyListState.scrollToItem(filteredMessages.size)
-                }
                 ChatViewContentList(
                     sharedViewModel = sharedViewModel,
                     paddingValues = it,
@@ -219,7 +214,7 @@ class ChatView : ViewModel() {
             }
         }
         LaunchedEffect(messages.size) {
-            lazyListState.animateScrollToItem(messages.size)
+            lazyListState.animateScrollToItem(0)
         }
         val filteredMessages = messages.filter {
             it.text.contains(sharedViewModel.searchValue.value, ignoreCase = true)
@@ -231,12 +226,8 @@ class ChatView : ViewModel() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Bottom
         ) {
-            LaunchedEffect(sharedViewModel.searchValue.value) {
-                coroutineScope.launch {
-                    lazyListState.scrollToItem(filteredMessages.size)
-                }
-            }
             LazyColumn(
+                reverseLayout = true,
                 modifier = Modifier.padding(
                     bottom = paddingValues.calculateBottomPadding(),
                     top = paddingValues.calculateTopPadding()
@@ -248,10 +239,8 @@ class ChatView : ViewModel() {
                     items = filteredMessages
                 ) { message ->
                     val messageIndex = messages.indexOf(message)
-                    val previousMessageIndex =
-                        if (messageIndex > 0) messages.getOrNull(messageIndex - 1) else null
-                    val nextMessageIndex =
-                        if (messageIndex > 0) messages.getOrNull(messageIndex + 1) else null
+                    val previousMessageIndex = messages.getOrNull(messageIndex + 1) // Reverse the calculation
+                    val nextMessageIndex = messages.getOrNull(messageIndex - 1)   // Reverse the calculation
                     MessageItem(
                         sharedViewModel = sharedViewModel,
                         chatMateChat = chatMateChat,
