@@ -257,13 +257,13 @@ class RandChatView {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Bottom
         ) {
-            LazyColumn(modifier = Modifier.padding(bottom = 70.dp), state = lazyListState) {
+            LazyColumn(modifier = Modifier.padding(bottom = 70.dp),
+                reverseLayout = true,
+                state = lazyListState) {
                 items(messages) { message ->
                     val messageIndex = messages.indexOf(message)
-                    val previousMessageIndex =
-                        if (messageIndex > 0) messages.getOrNull(messageIndex - 1) else null
-                    val nextMessageIndex =
-                        if (messageIndex > 0) messages.getOrNull(messageIndex + 1) else null
+                    val previousMessageIndex = messages.getOrNull(messageIndex + 1) // Reverse the calculation
+                    val nextMessageIndex = messages.getOrNull(messageIndex - 1)   // Reverse the calculation
                     MessageItem(
                         sharedViewModel = sharedViewModel,
                         chatMateChat = chatMateChat,

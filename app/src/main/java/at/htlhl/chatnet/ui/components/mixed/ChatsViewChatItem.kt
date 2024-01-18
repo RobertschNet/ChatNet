@@ -1,6 +1,5 @@
 package at.htlhl.chatnet.ui.components.mixed
 
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Text
@@ -33,7 +31,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.ui.theme.shimmerEffect
@@ -217,7 +214,8 @@ fun ChatsViewChatItem(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 if (chat.lastMessage.visible.contains(sharedViewModel.auth.currentUser?.uid.toString())) {
-                    val messageContent = if (chat.lastMessage.text.isEmpty() && chat.lastMessage.images.isNotEmpty()) "Image" else chat.lastMessage.text
+                    val messageContent =
+                        if (chat.lastMessage.text.isEmpty() && chat.lastMessage.images.isNotEmpty()) "Image" else chat.lastMessage.text
                     val senderPrefix =
                         if (chat.lastMessage.sender != sharedViewModel.auth.currentUser?.uid.toString()) "" else "Me: "
                     Text(
@@ -246,7 +244,7 @@ fun ChatsViewChatItem(
                         modifier = Modifier
                             .align(Alignment.CenterVertically)
                             .weight(1f),
-                        text = " $messageContent",
+                        text = messageContent,
                         overflow = TextOverflow.Ellipsis,
                         maxLines = 1,
                         fontSize = 15.sp,

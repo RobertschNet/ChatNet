@@ -60,6 +60,7 @@ fun Navigation(
             composable("LoginScreen",
                 enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
                 exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
+                onBottomBarDisabled.invoke(false)
                 LoginView().LoginScreen(navController, sharedViewModel)
             }
             composable("RegisterScreen",
@@ -149,7 +150,10 @@ fun Navigation(
                         animationSpec = tween(durationMillis = 500)
                     )
                 }) {
-                onBottomBarDisabled.invoke(false)
+                LaunchedEffect(Unit){
+                    onBottomBarDisabled.invoke(false)
+
+                }
                 FindUserView().FindUserScreen(navController, sharedViewModel)
             }
             composable("ChatMateScreen",

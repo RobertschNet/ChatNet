@@ -101,7 +101,8 @@ fun ChatViewMessageComponent(
                 }
                 Text(
                     text = formattedTime,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.SansSerif,
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Start,
                     modifier =
@@ -110,7 +111,8 @@ fun ChatViewMessageComponent(
             } else {
                 Text(
                     text = formattedTime,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.SansSerif,
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Start,
                     modifier =
@@ -552,6 +554,9 @@ private fun isDateNeeded(
     nextMessage: InternalMessageInstance?,
 ): Boolean {
     if (nextMessage == null) {
+        return true
+    }
+    if (nextMessage.sender != currentMessage.sender) {
         return true
     }
 

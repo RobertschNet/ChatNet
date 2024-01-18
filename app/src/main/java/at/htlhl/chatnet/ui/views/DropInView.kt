@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -149,7 +150,7 @@ class DropInView {
                     state = lazyListState
                 ) {
                     item { 
-                        Text(text = "User in your area", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp))
+                        Text(text = "User in your area", color = MaterialTheme.colorScheme.primary,fontFamily = FontFamily.SansSerif, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp))
                     }
                     items(updatedLocalChatUsers) { chats ->
                         ChatsViewChatItem(
@@ -174,7 +175,7 @@ class DropInView {
                         }
                     }
                     item {
-                        Text(text = "Users with empty chat rooms", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp))
+                        Text(text = "Users you are in contact with",color = MaterialTheme.colorScheme.primary, fontFamily = FontFamily.SansSerif, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp))
                     }
                     items(usersWithEmptyChatRooms){ chats ->
                         Text(text = chats.members.toString())
