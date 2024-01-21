@@ -71,6 +71,7 @@ class ChatView : ViewModel() {
         val chatData: List<FirebaseChat> = chatDataState.value
         val friendDataState = sharedViewModel.friend.collectAsState()
         val friendData: InternalChatInstance = friendDataState.value
+        Log.println(Log.ERROR, "ssssss", friendData.toString())
         val matchingChat = chatData.find { chat ->
             chat.chatRoomID == friendData.chatRoomID
         }

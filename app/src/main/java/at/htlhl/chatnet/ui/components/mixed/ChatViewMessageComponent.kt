@@ -472,7 +472,7 @@ fun ChatViewMessageComponent(
                         modifier = Modifier
                             .padding(12.dp)
                             .background(backgroundColor, shape = RoundedCornerShape(18.dp)),
-                        textAlign = TextAlign.Center,
+                        textAlign = TextAlign.Start,
                         color = if (isUser) Color.White else Color.Black
                     )
                 }

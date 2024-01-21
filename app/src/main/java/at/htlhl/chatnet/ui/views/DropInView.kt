@@ -4,26 +4,27 @@ import android.annotation.SuppressLint
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Scaffold
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -45,9 +46,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItem
@@ -67,8 +69,6 @@ import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 
 class DropInView {
@@ -84,15 +84,19 @@ class DropInView {
         var showUserIconPrompt by remember { mutableStateOf(false) }
         var showClearChatPrompt by remember { mutableStateOf(false) }
         val modelSheetState = remember { mutableStateOf(false) }
-        val documentIdState = sharedViewModel.chatData.collectAsState()
-        val documentationId: List<FirebaseChat> = documentIdState.value
-        val friendDataState= sharedViewModel.friend.collectAsState()
+        val chatDataState = sharedViewModel.chatData.collectAsState()
+        val chatData: List<FirebaseChat> = chatDataState.value
+        val dropInDataState = sharedViewModel.completeDropInList.collectAsState()
+        val dropInData: List<InternalChatInstance> = dropInDataState.value
+        val friendDataState = sharedViewModel.friend.collectAsState()
+        val userDataState = sharedViewModel.user.collectAsState()
+        val userData: FirebaseUsers = userDataState.value
         val friend: InternalChatInstance = friendDataState.value
         val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
             localUser.id != sharedViewModel.auth.currentUser?.uid
         }
         val updatedLocalChatUsers: List<InternalChatInstance> = localChatUsers.map { person ->
-            val matchingChat = documentationId.find { chat ->
+            val matchingChat = chatData.find { chat ->
                 chat.members.contains(person.id)
             }
             InternalChatInstance(
@@ -106,9 +110,6 @@ class DropInView {
                 read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                     ?: 0
             )
-        }
-        val usersWithEmptyChatRooms = documentationId.filter { user ->
-            user.messages.isEmpty()
         }
         val bottomSheetItems = listOf(
             BottomSheetItem(
@@ -143,42 +144,96 @@ class DropInView {
                 }
             },
             content = {
-                LazyColumn(
-                    Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.tertiary),
-                    state = lazyListState
-                ) {
-                    item { 
-                        Text(text = "User in your area", color = MaterialTheme.colorScheme.primary,fontFamily = FontFamily.SansSerif, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp))
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Row {
+                        Spacer(modifier = Modifier.width(15.dp))
+                        Text(
+                            text = "Users in your area",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
-                    items(updatedLocalChatUsers) { chats ->
-                        ChatsViewChatItem(
-                            chat = chats,
-                            displayOnlineState = true,
-                            sharedViewModel = sharedViewModel,
-                        ) { context ->
-                            when (context) {
-                                "image" -> {
-                                    showUserIconPrompt = true
-                                }
-
-                                "message" -> {
-                                    modelSheetState.value = true
-                                }
-
-                                "navigate" -> {
-                                    navController.navigate(Screens.ChatViewScreen.route)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        content = {
+                            item {
+                                UserListItem(user = userData)
+                            }
+                            items(updatedLocalChatUsers) { chat ->
+                                GPSChatList(
+                                    chat = chat
+                                ) { paul ->
+                                    if (paul.chatRoomID.isEmpty()) {
+                                        sharedViewModel.saveChatRoom(
+                                            person = paul.personList.id,
+                                            tab = "dropIn"
+                                        ) {
+                                            sharedViewModel.updateFriend(
+                                                InternalChatInstance(
+                                                    personList = paul.personList,
+                                                    timestampMessage = Timestamp.now(),
+                                                    lastMessage = InternalMessageInstance(),
+                                                    markedAsUnread = true,
+                                                    pinChat = false,
+                                                    chatRoomID = it,
+                                                    read = 0
+                                                )
+                                            ) {
+                                                navController.navigate(Screens.ChatViewScreen.route)
+                                            }
+                                        }
+                                    }else{
+                                        sharedViewModel.updateFriend(paul)
+                                        navController.navigate(Screens.ChatViewScreen.route)
+                                    }
                                 }
                             }
-                            sharedViewModel.updateFriend(chats)
                         }
+                    )
+                    Spacer(modifier = Modifier.height(40.dp))
+                    Row {
+                        Spacer(modifier = Modifier.width(15.dp))
+                        Text(
+                            text = "Users you chatted with",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
-                    item {
-                        Text(text = "Users you are in contact with",color = MaterialTheme.colorScheme.primary, fontFamily = FontFamily.SansSerif, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp))
-                    }
-                    items(usersWithEmptyChatRooms){ chats ->
-                        Text(text = chats.members.toString())
+                    LazyColumn(
+                        Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.tertiary),
+                        state = lazyListState
+                    ) {
+                        items(dropInData) { chat ->
+                            ChatsViewChatItem(
+                                chat = chat,
+                                displayOnlineState = true,
+                                sharedViewModel = sharedViewModel,
+                            ) { context ->
+                                when (context) {
+                                    "image" -> {
+                                        showUserIconPrompt = true
+                                    }
+
+                                    "message" -> {
+                                        modelSheetState.value = true
+                                    }
+
+                                    "navigate" -> {
+                                        navController.navigate(Screens.ChatViewScreen.route)
+                                    }
+                                }
+                                sharedViewModel.updateFriend(chat)
+                            }
+                        }
                     }
                 }
             }
@@ -232,10 +287,9 @@ class DropInView {
                         bottomSheetItems,
                         onItemClicked = { item ->
                             modelSheetState.value = false
-
                             when (item.tag) {
                                 "unread" -> {
-                                    if (sharedViewModel.friend.value.read > 0) {
+                                    if (friend.read > 0) {
                                         sharedViewModel.markMessagesAsRead(sharedViewModel.friend.value)
                                     } else if (sharedViewModel.friend.value.markedAsUnread && sharedViewModel.friend.value.read == 0) {
                                         sharedViewModel.updateMarkAsReadStatus(true)
@@ -249,7 +303,7 @@ class DropInView {
                                 }
 
                                 "mute" -> {
-                                    if (sharedViewModel.friend.value.personList.mutedFriend) {
+                                    if (friend.personList.mutedFriend) {
                                         sharedViewModel.updateMuteFriendStatus(true)
                                     } else {
                                         sharedViewModel.updateMuteFriendStatus(false)
@@ -257,7 +311,7 @@ class DropInView {
                                 }
 
                                 "pin" -> {
-                                    if (sharedViewModel.friend.value.pinChat) {
+                                    if (friend.pinChat) {
                                         sharedViewModel.updatePinChatStatus(true)
                                     } else {
                                         sharedViewModel.updatePinChatStatus(false)
@@ -272,67 +326,29 @@ class DropInView {
         }
     }
 
-    @OptIn(ExperimentalFoundationApi::class)
-    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
-    fun ChatItemForDropIn(
-        person: InternalChatInstance,
-        bottomSheetState: Boolean,
-        navController: NavController,
-        sharedViewModel: SharedViewModel,
-        documentationId: List<FirebaseChat>,
-        onItemClicked: () -> Unit
-    ) {
-        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
-        val formattedTime: String = formatter.format(person.timestampMessage.toDate())
-        Divider(thickness = 0.25f.dp, color = Color.LightGray)
-        Row(
-            modifier = Modifier
-                .combinedClickable(
-                    onClick = {
-                        if (bottomSheetState) {
-                            onItemClicked()
-                        } else {
-                            sharedViewModel.updateFriend(person)
-                            Log.println(Log.INFO, "Current", person.toString())
-                            val filteredChats = documentationId.filter { chat ->
-                                chat.members.contains(person.personList.id) && chat.members
-                                    .contains(sharedViewModel.auth.currentUser?.uid)
-                            }
-                            if (filteredChats.isEmpty()) {
-                                sharedViewModel.saveChatRoom(
-                                    person = person.personList.id,
-                                    tab = "dropIn"
-                                )
-                            }
-                            navController.navigate(Screens.ChatViewScreen.route)
-                        }
-
-                    },
-                    onLongClick = {
-                        sharedViewModel.updateFriend(person)
-                        onItemClicked()
-                    },
-                )
-                .fillMaxWidth()
-                .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
-                .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
+    fun GPSChatList(chat: InternalChatInstance, onItemClicked: (InternalChatInstance) -> Unit) {
+        val isOnline = chat.personList.status
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(
+            modifier = Modifier.width(90.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            val isOnline = person.personList.status
             Box(
-                modifier = Modifier.size(50.dp)
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .width(70.dp)
             ) {
                 SubcomposeAsyncImage(
-                    contentDescription = null,
-                    model = person.personList.image,
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .size(50.dp),
                     contentScale = ContentScale.Crop,
-                    alignment = Alignment.Center,
-                    loading = {
-                        CircularProgressIndicator()
-                    }
+                    modifier = Modifier
+                        .clickable { onItemClicked.invoke(chat) }
+                        .align(Alignment.Center)
+                        .size(70.dp)
+                        .clip(CircleShape),
+                    model = chat.personList.image,
+                    contentDescription = null
                 )
                 Box(
                     modifier = Modifier
@@ -341,8 +357,7 @@ class DropInView {
                         .background(
                             Brush.linearGradient(
                                 colors = if (!isSystemInDarkTheme()) listOf(
-                                    Color.White,
-                                    Color.White
+                                    Color.White, Color.White
                                 ) else listOf(Color(0xF1161616), Color(0xF1161616)),
                                 start = Offset(0f, 0f),
                                 end = Offset(14.dp.value, 14.dp.value)
@@ -417,35 +432,136 @@ class DropInView {
                     }
                 }
             }
-            Column(Modifier.padding(horizontal = 8.dp)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = person.personList.username["mixedcase"].toString(),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 17.sp,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black
-                    )
-                    Text(
-                        text = formattedTime,
-                        fontWeight = FontWeight.Light,
-                        fontSize = 12.sp,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black
-                    )
-                }
-                Text(
-                    modifier = Modifier.padding(start = 10.dp),
-                    text = person.personList.statusFriend,
-                    maxLines = 1,
-                    fontSize = 15.sp,
-                    color = if (person.lastMessage.text >= "User is 400 meters away") Color.Yellow else if (person.lastMessage.text >= "User is 450 meters away") Color.Red else Color.LightGray
-                )
-            }
+            Text(
+                text = chat.personList.username["mixedcase"].toString(),
+                overflow = TextOverflow.Clip,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 5.dp),
+                fontSize = 12.sp,
+                maxLines = 1,
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Normal,
+                color = Color.Black
+            )
         }
-        Divider(thickness = 0.25f.dp, color = Color.LightGray)
+    }
+
+    @Composable
+    fun UserListItem(user: FirebaseUsers) {
+        val isOnline = user.status
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(
+            modifier = Modifier.width(90.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .width(70.dp)
+            ) {
+                SubcomposeAsyncImage(
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(70.dp)
+                        .clip(CircleShape),
+                    model = user.image,
+                    contentDescription = null
+                )
+                Box(
+                    modifier = Modifier
+                        .size(16.5f.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                colors = if (!isSystemInDarkTheme()) listOf(
+                                    Color.White, Color.White
+                                ) else listOf(Color(0xF1161616), Color(0xF1161616)),
+                                start = Offset(0f, 0f),
+                                end = Offset(14.dp.value, 14.dp.value)
+                            )
+                        )
+                        .align(Alignment.BottomEnd)
+                ) {
+                    when (isOnline) {
+                        "online" -> {
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
+                                            start = Offset(0f, 0f),
+                                            end = Offset(14.dp.value, 14.dp.value)
+                                        )
+                                    )
+                                    .align(Alignment.Center)
+                            )
+                        }
+
+                        "offline" -> {
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(Color.Gray, Color(0xFF808080)),
+                                            start = Offset(0f, 0f),
+                                            end = Offset(14.dp.value, 14.dp.value)
+                                        )
+                                    )
+                                    .align(Alignment.Center)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.DarkGray)
+                                        .align(Alignment.Center)
+                                )
+                            }
+                        }
+
+                        "idle" -> {
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(Color(0xFFFFC107), Color(0xFFFFC107)),
+                                            start = Offset(0f, 0f),
+                                            end = Offset(14.dp.value, 14.dp.value)
+                                        )
+                                    )
+                                    .align(Alignment.Center)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.2f.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White)
+                                        .align(Alignment.TopStart)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            Text(
+                text = "You",
+                overflow = TextOverflow.Clip,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 5.dp),
+                fontSize = 12.sp,
+                maxLines = 1,
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Normal,
+                color = Color.Black
+            )
+        }
     }
 }

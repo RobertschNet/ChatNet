@@ -181,58 +181,51 @@ class LocationUpdateService : Service() {
 
     fun fetchLocation(latitude: Double, longitude: Double) {
         val center = GeoLocation(latitude, longitude)
-        val radiusInM = 5.0 * 100.0
-        val bounds = GeoFireUtils.getGeoHashQueryBounds(center, radiusInM)
-        val tasks: MutableList<Task<QuerySnapshot>> = ArrayList()
-        for (b in bounds) {
-            val q = FirebaseFirestore.getInstance().collection("users")
-                .whereEqualTo("status", "online")
-                .orderBy("location.geohash")
-                .startAt(b.startHash)
-                .endAt(b.endHash)
-            tasks.add(q.get())
-        }
-        Tasks.whenAllComplete(tasks)
-            .addOnCompleteListener {
-                val matchingDocs: MutableList<Map<String, Any>> = ArrayList()
-                for (task in tasks) {
-                    val snap = task.result
-                    for (doc in snap!!.documents) {
-                        val location = doc.get("location") as Map<*, *>
-                        val geolocation = location["geopoint"] as GeoPoint
-                        val lat = geolocation.latitude
-                        val lng = geolocation.longitude
-                        val docLocation = GeoLocation(lat, lng)
-                        val distanceInM = GeoFireUtils.getDistanceBetween(docLocation, center)
-                        println(distanceInM)
-                        if (distanceInM <= radiusInM) {
-                            doc.data?.let { it1 -> matchingDocs.add(it1) }
-                        }
-                    }
-                    val personList = matchingDocs.map { dataMap ->
-                        val location = dataMap["location"] as Map<*, *>
-                        val geolocation = location["geopoint"] as GeoPoint
-                        val docLocation = GeoLocation(geolocation.latitude, geolocation.longitude)
-                        val distanceInM = GeoFireUtils.getDistanceBetween(docLocation, center)
 
-                        FirebaseUsers(
-                            id = dataMap["id"].toString(),
-                            username =  dataMap["username"] as Map<String, String>,
-                            image = dataMap["image"].toString(),
-                            connected = dataMap["connected"] as Boolean,
-                            status = dataMap["status"] as String,
-                            email = dataMap["email"].toString(),
-                            color = dataMap["color"].toString(),
-                            blocked = dataMap["blocked"] as List<String>,
-                            pinned = dataMap["pinned"] as List<String>,
-                            mutedFriend = false,
-                            statusFriend = "User is ${distanceInM.toInt()} meters away",
-                        )
+        FirebaseFirestore.getInstance().collection("users")
+            .whereEqualTo("status", "online")
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val matchingDocs: MutableList<Map<String, Any>> = ArrayList()
+                for (doc in snapshot.documents) {
+                    val location = doc.get("location") as? Map<*, *>
+                    if (location != null) {
+                        doc.data?.let { it1 -> matchingDocs.add(it1) }
                     }
-                    Log.println(Log.INFO,"ottt",personList.toString())
-                    locationLiveData.postValue(personList)
                 }
+                val sortedUsers = matchingDocs.sortedBy {
+                    val location = it["location"] as? Map<*, *>
+                    val geolocation = location?.get("geopoint") as? GeoPoint
+                    val docLocation = GeoLocation(geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
+                    GeoFireUtils.getDistanceBetween(docLocation, center)
+                }
+
+                val top5ClosestUsers = sortedUsers.take(5)
+
+                val personList = top5ClosestUsers.map { dataMap ->
+                    val location = dataMap["location"] as? Map<*, *>
+                    val geolocation = location?.get("geopoint") as? GeoPoint
+                    val docLocation = GeoLocation(geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
+                    val distanceInM = GeoFireUtils.getDistanceBetween(docLocation, center)
+
+                    FirebaseUsers(
+                        id = dataMap["id"].toString(),
+                        username = dataMap["username"] as? Map<String, String> ?: emptyMap(),
+                        image = dataMap["image"].toString(),
+                        connected = dataMap["connected"] as? Boolean ?: false,
+                        status = dataMap["status"] as? String ?: "",
+                        email = dataMap["email"].toString(),
+                        color = dataMap["color"].toString(),
+                        blocked = dataMap["blocked"] as? List<String> ?: emptyList(),
+                        pinned = dataMap["pinned"] as? List<String> ?: emptyList(),
+                        mutedFriend = false,
+                        statusFriend = "User is ${distanceInM.toInt()} meters away",
+                    )
+                }
+                Log.println(Log.INFO, "ottt", personList.toString())
+                locationLiveData.postValue(personList)
             }
     }
+
 
 }

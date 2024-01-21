@@ -508,6 +508,8 @@ fun uploadMessage(
     images: List<String> = arrayListOf(),
     onSuccess: (Boolean) -> Unit
 ) {
+    Log.println(Log.INFO, "Message", "Message sending")
+    Log.println(Log.INFO, "Message", sharedViewModel.friend.value.chatRoomID)
     runBlocking {
         sharedViewModel.saveMessages(
             documentId = sharedViewModel.friend.value.chatRoomID,

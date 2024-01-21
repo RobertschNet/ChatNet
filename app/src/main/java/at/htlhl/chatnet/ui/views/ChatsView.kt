@@ -29,12 +29,12 @@ import at.htlhl.chatnet.data.FirebaseUsers
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.SaveImageTask
-import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.ui.components.chats.EmptyChatContent
 import at.htlhl.chatnet.ui.components.chats.ShowBigUserImageDialog
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
 import at.htlhl.chatnet.ui.components.mixed.ClearChatDialog
+import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.imageLoader
 import coil.request.ImageRequest
@@ -56,11 +56,17 @@ class ChatsView {
         var showUserIconPrompt by remember { mutableStateOf(false) }
         var showClearChatPrompt by remember { mutableStateOf(false) }
         val modelSheetState = remember { mutableStateOf(false) }
-        val userDataInstanceState = sharedViewModel.completeChatList.collectAsState()
+        val userDataInstanceState = sharedViewModel.completeChatList.collectAsState(
+            initial = arrayListOf(
+                InternalChatInstance()
+            )
+        )
         val userDataInstance: List<InternalChatInstance> = userDataInstanceState.value
-        val friendListDataState = sharedViewModel.friendListData.collectAsState()
+        val friendListDataState =
+            sharedViewModel.friendListData.collectAsState(initial = arrayListOf(FirebaseUsers()))
         val friendListData: List<FirebaseUsers> = friendListDataState.value
-        val friendDataState = sharedViewModel.friend.collectAsState()
+        val friendDataState =
+            sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
         val friendData: InternalChatInstance = friendDataState.value
         Log.println(Log.INFO, "Chats", "friendListData: $friendListData")
         val availableUsers = friendListData.filter { friend -> friend.statusFriend == "pending" }
@@ -71,7 +77,7 @@ class ChatsView {
                     sharedViewModel.searchValue.value, ignoreCase = true
                 ) ?: false
             } else userDataInstance
-        LaunchedEffect(sharedViewModel.chatData.value){
+        LaunchedEffect(sharedViewModel.chatData.value) {
             for (chat in sharedViewModel.chatData.value) {
                 for (message in chat.messages) {
                     if (message.images.isNotEmpty()) {
@@ -83,6 +89,14 @@ class ChatsView {
                         }
                     }
                 }
+            }
+        }
+        LaunchedEffect(sharedViewModel.localChatUserList.value){
+            for (user in sharedViewModel.localChatUserList.value) {
+                val request = ImageRequest.Builder(context)
+                    .data(user.image)
+                    .build()
+                context.imageLoader.enqueue(request)
             }
         }
         val bottomSheetItems = listOf(
