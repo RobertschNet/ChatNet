@@ -54,7 +54,7 @@ import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItem
 import at.htlhl.chatnet.data.FirebaseChat
-import at.htlhl.chatnet.data.FirebaseUsers
+import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
@@ -90,7 +90,7 @@ class DropInView {
         val dropInData: List<InternalChatInstance> = dropInDataState.value
         val friendDataState = sharedViewModel.friend.collectAsState()
         val userDataState = sharedViewModel.user.collectAsState()
-        val userData: FirebaseUsers = userDataState.value
+        val userData: FirebaseUser = userDataState.value
         val friend: InternalChatInstance = friendDataState.value
         val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
             localUser.id != sharedViewModel.auth.currentUser?.uid
@@ -137,7 +137,7 @@ class DropInView {
             topBar = {
                 TabsTopBar(
                     tab = "DropIn",
-                    availableUsers = listOf(FirebaseUsers()),
+                    availableUsers = listOf(FirebaseUser()),
                     sharedViewModel = sharedViewModel,
                 ) {
                     sharedViewModel.gpsState.value = !sharedViewModel.gpsState.value
@@ -447,7 +447,7 @@ class DropInView {
     }
 
     @Composable
-    fun UserListItem(user: FirebaseUsers) {
+    fun UserListItem(user: FirebaseUser) {
         val isOnline = user.status
         Spacer(modifier = Modifier.width(10.dp))
         Column(

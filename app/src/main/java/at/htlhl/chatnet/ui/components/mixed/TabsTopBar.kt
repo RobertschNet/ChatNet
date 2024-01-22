@@ -43,7 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import at.chatnet.R
-import at.htlhl.chatnet.data.FirebaseUsers
+import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 
@@ -51,7 +51,7 @@ import coil.compose.SubcomposeAsyncImage
 @Composable
 fun TabsTopBar(
     tab: String,
-    availableUsers: List<FirebaseUsers>,
+    availableUsers: List<FirebaseUser>,
     sharedViewModel: SharedViewModel,
     onClick: () -> Unit,
 ) {

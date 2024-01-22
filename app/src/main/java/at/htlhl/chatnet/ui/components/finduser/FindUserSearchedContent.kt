@@ -31,7 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.htlhl.chatnet.data.FirebaseChat
-import at.htlhl.chatnet.data.FirebaseUsers
+import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 
@@ -39,9 +39,9 @@ import at.htlhl.chatnet.viewmodels.SharedViewModel
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun FindUserSearchedContent(
-    friendList: List<FirebaseUsers>,
+    friendList: List<FirebaseUser>,
     chatData: List<FirebaseChat>,
-    persons: List<FirebaseUsers>,
+    persons: List<FirebaseUser>,
     isSearching: Boolean,
     searchText: String,
     sharedViewModel: SharedViewModel

@@ -24,13 +24,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import at.htlhl.chatnet.data.FirebaseUsers
+import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 
 
 @Composable
 fun BlockUserDialog(
-    user: FirebaseUsers,
+    user: FirebaseUser,
     friend: InternalChatInstance,
     onClose: (String) -> Unit = {}
 ) {

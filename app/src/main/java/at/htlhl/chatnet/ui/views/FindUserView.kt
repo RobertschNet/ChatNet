@@ -38,7 +38,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.FirebaseChat
-import at.htlhl.chatnet.data.FirebaseUsers
+import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.ui.components.finduser.FindUserPersonElement
 import at.htlhl.chatnet.ui.components.finduser.FindUserSearchedContent
 import at.htlhl.chatnet.ui.components.finduser.FindUserTopBar
@@ -72,10 +72,10 @@ class FindUserView : ViewModel() {
         val chatDataState = sharedViewModel.chatData.collectAsState()
         val chatData: List<FirebaseChat> = chatDataState.value
         val friendListFriendsDataState = sharedViewModel.friendRandomFriendsListData.collectAsState()
-        val friendListFriendsData: List<FirebaseUsers> = friendListFriendsDataState.value
+        val friendListFriendsData: List<FirebaseUser> = friendListFriendsDataState.value
 
         val friendListDataState = sharedViewModel.friendListData.collectAsState()
-        val friendListData: List<FirebaseUsers> = friendListDataState.value
+        val friendListData: List<FirebaseUser> = friendListDataState.value
         val finalFriendList =
             friendListData.filter { friend -> friend.statusFriend == "pending" }
         val finalFriendListFriends = friendListFriendsData.filter { friend ->
@@ -225,9 +225,9 @@ class FindUserView : ViewModel() {
     private val _isSearching = MutableStateFlow(false)
     private val isSearching = _isSearching.asStateFlow()
 
-    private val _person = MutableStateFlow<List<FirebaseUsers>>(emptyList())
+    private val _person = MutableStateFlow<List<FirebaseUser>>(emptyList())
 
-    private suspend fun retrieveMessages(): List<FirebaseUsers> {
+    private suspend fun retrieveMessages(): List<FirebaseUser> {
         try {
             val snapshot = FirebaseFirestore.getInstance().collection("users")
                 .orderBy("username.lowercase")
@@ -251,7 +251,7 @@ class FindUserView : ViewModel() {
                     if (usernameMap != null && image != null && id != null && status != null
                         && email != null && color != null && blocked != null && pinned != null && connected != null
                     ) {
-                        return@mapNotNull FirebaseUsers(
+                        return@mapNotNull FirebaseUser(
                             image = image,
                             username = usernameMap,
                             id = id,

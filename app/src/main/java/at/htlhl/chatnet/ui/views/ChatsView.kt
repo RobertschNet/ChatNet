@@ -25,7 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItem
-import at.htlhl.chatnet.data.FirebaseUsers
+import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.SaveImageTask
@@ -63,8 +63,8 @@ class ChatsView {
         )
         val userDataInstance: List<InternalChatInstance> = userDataInstanceState.value
         val friendListDataState =
-            sharedViewModel.friendListData.collectAsState(initial = arrayListOf(FirebaseUsers()))
-        val friendListData: List<FirebaseUsers> = friendListDataState.value
+            sharedViewModel.friendListData.collectAsState(initial = arrayListOf(FirebaseUser()))
+        val friendListData: List<FirebaseUser> = friendListDataState.value
         val friendDataState =
             sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
         val friendData: InternalChatInstance = friendDataState.value

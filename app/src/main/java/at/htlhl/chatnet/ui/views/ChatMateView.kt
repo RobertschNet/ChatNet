@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItem
-import at.htlhl.chatnet.data.FirebaseUsers
+import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
@@ -77,7 +77,7 @@ class ChatMateView {
                 TabsTopBar(
                     tab = "ChatMate",
                     sharedViewModel=sharedViewModel,
-                    availableUsers = listOf(FirebaseUsers()),
+                    availableUsers = listOf(FirebaseUser()),
                 ) { sharedViewModel.createChatMateChat() }
             },
             content = {

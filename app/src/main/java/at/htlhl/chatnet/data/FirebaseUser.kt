@@ -1,6 +1,6 @@
 package at.htlhl.chatnet.data
 
-data class FirebaseUsers(
+data class FirebaseUser(
     val blocked: List<String>, // list of ids of users that have been blocked by the user
     val image: String, // url of the users profile picture
     val username: Map<String, String>, // username of the user in different cases (lowercase, mixedcase)

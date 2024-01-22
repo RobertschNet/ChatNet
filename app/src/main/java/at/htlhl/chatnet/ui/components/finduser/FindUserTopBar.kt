@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
-import at.htlhl.chatnet.data.FirebaseUsers
+import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.navigation.Screens
 import coil.compose.SubcomposeAsyncImage
 
@@ -42,7 +42,7 @@ import coil.compose.SubcomposeAsyncImage
 fun FindUserTopBar(
     navController: NavController,
     interactionSource: MutableInteractionSource,
-    persons: List<FirebaseUsers>,
+    persons: List<FirebaseUser>,
     searchText: String,
     onClicked: () -> Unit,
     onTextChanged: (String) -> Unit

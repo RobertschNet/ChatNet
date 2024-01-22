@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
-import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
 import android.location.Location
 import android.os.Binder
 import android.os.Build
@@ -20,7 +19,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
-import at.htlhl.chatnet.data.FirebaseUsers
+import at.htlhl.chatnet.data.FirebaseUser
 import com.firebase.geofire.GeoFireUtils
 import com.firebase.geofire.GeoLocation
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -28,13 +27,10 @@ import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
-import com.google.android.gms.tasks.Task
-import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
-import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.ktx.Firebase
 
 class LocationUpdateService : Service() {
@@ -45,7 +41,7 @@ class LocationUpdateService : Service() {
     private lateinit var locationCallback: LocationCallback
     val auth: FirebaseAuth = Firebase.auth
     private var lastKnownLocation: Location? = null
-    val locationLiveData = MutableLiveData<List<FirebaseUsers>>()
+    val locationLiveData = MutableLiveData<List<FirebaseUser>>()
 
     override fun onCreate() {
         super.onCreate()
@@ -208,7 +204,7 @@ class LocationUpdateService : Service() {
                     val docLocation = GeoLocation(geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
                     val distanceInM = GeoFireUtils.getDistanceBetween(docLocation, center)
 
-                    FirebaseUsers(
+                    FirebaseUser(
                         id = dataMap["id"].toString(),
                         username = dataMap["username"] as? Map<String, String> ?: emptyMap(),
                         image = dataMap["image"].toString(),

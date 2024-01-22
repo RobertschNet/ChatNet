@@ -67,7 +67,7 @@ import androidx.constraintlayout.compose.MotionScene
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseChat
-import at.htlhl.chatnet.data.FirebaseUsers
+import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
@@ -90,11 +90,11 @@ class ProfileInfoView {
         val lazyListState = rememberLazyListState()
         val friendsFromFriendsListState =
             sharedViewModel.friendFriendsListData.collectAsState(initial = emptyList())
-        val friendsFromFriendsList: List<FirebaseUsers> = friendsFromFriendsListState.value
+        val friendsFromFriendsList: List<FirebaseUser> = friendsFromFriendsListState.value
         val friendState = sharedViewModel.friend.collectAsState()
         val friend: InternalChatInstance = friendState.value
         val userState = sharedViewModel.user.collectAsState()
-        val user: FirebaseUsers = userState.value
+        val user: FirebaseUser = userState.value
         val chatDataState = sharedViewModel.chatData.collectAsState()
         val chatData: List<FirebaseChat> = chatDataState.value
         val chat: FirebaseChat =
@@ -184,10 +184,10 @@ class ProfileInfoView {
     fun ProfileInfoContent(
         sharedViewModel: SharedViewModel,
         navController: NavController,
-        friendsFromFriendsList: List<FirebaseUsers>,
+        friendsFromFriendsList: List<FirebaseUser>,
         imageList: List<InternalMessageInstance>,
         friend: InternalChatInstance,
-        user: FirebaseUsers,
+        user: FirebaseUser,
     ) {
         var blockDialog by remember { mutableStateOf(false) }
         var removeFriendDialog by remember { mutableStateOf(false) }
@@ -495,7 +495,7 @@ class ProfileInfoView {
                                 sharedViewModel.updateMuteFriendStatus(true)
                                 sharedViewModel.updateFriend(
                                     InternalChatInstance(
-                                        personList = FirebaseUsers(
+                                        personList = FirebaseUser(
                                             friend.personList.blocked,
                                             friend.personList.image,
                                             friend.personList.username,
@@ -520,7 +520,7 @@ class ProfileInfoView {
                                 sharedViewModel.updateMuteFriendStatus(false)
                                 sharedViewModel.updateFriend(
                                     InternalChatInstance(
-                                        personList = FirebaseUsers(
+                                        personList = FirebaseUser(
                                             friend.personList.blocked,
                                             friend.personList.image,
                                             friend.personList.username,

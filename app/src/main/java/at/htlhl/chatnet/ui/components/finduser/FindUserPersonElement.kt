@@ -35,7 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import at.htlhl.chatnet.data.FirebaseUsers
+import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -44,11 +44,11 @@ import coil.compose.SubcomposeAsyncImage
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun FindUserPersonElement(
-    person: FirebaseUsers,
+    person: FirebaseUser,
     deleteAble: Boolean,
     sharedViewModel: SharedViewModel,
     searchedUser: String,
-    onClick: (FirebaseUsers, Boolean) -> Unit
+    onClick: (FirebaseUser, Boolean) -> Unit
 ) {
     Row(
         modifier = Modifier
