@@ -1,6 +1,14 @@
 package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -36,8 +44,10 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,6 +60,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -67,9 +78,12 @@ import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.firebase.Firebase
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.storage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 import java.util.Locale
 
 class ProfileView {
@@ -83,6 +97,12 @@ class ProfileView {
         val context = LocalContext.current
         var usernameText by remember {
             mutableStateOf("")
+        }
+        var updateProfilePictureLoading by remember {
+            mutableStateOf(false)
+        }
+        var updateProfilePictureException by remember {
+            mutableStateOf(false)
         }
         var isLoading by remember {
             mutableStateOf(false)
@@ -114,6 +134,32 @@ class ProfileView {
                     .addOnCompleteListener {}
             }
         }
+        val multiplePhotoPickerLauncher =
+            rememberLauncherForActivityResult(contract = ActivityResultContracts.PickVisualMedia(),
+                onResult = { uri ->
+                    if (uri == null) {
+                        updateProfilePictureLoading = false
+                        return@rememberLauncherForActivityResult
+                    }
+                    val inputStream = context.contentResolver.openInputStream(uri)
+                    val bitmap = BitmapFactory.decodeStream(inputStream)
+                    val webpByteArray = convertBitmapToWebP(bitmap)
+                    uploadWebPImage(
+                        webpByteArray,
+                        { downloadUrl ->
+                            sharedViewModel.updateUserProfilePicture(downloadUrl) {
+                                updateProfilePictureLoading = false
+                                updateProfilePictureException = !it
+                            }
+                        },
+                        {
+                            updateProfilePictureLoading = false
+                            updateProfilePictureException = true
+                        }
+                    )
+                }
+            )
+
         Scaffold(
             modifier = Modifier
                 .fillMaxSize()
@@ -154,18 +200,61 @@ class ProfileView {
                                         )
                                         .align(Alignment.BottomEnd)
                                 ) {
-                                    Icon(imageVector = Icons.Outlined.Cached,
+                                    var rotationState by remember { mutableFloatStateOf(0f) }
+
+                                    val rotation by animateFloatAsState(
+                                        targetValue = rotationState,
+                                        animationSpec = tween(
+                                            durationMillis = 1000,
+                                            easing = FastOutSlowInEasing
+                                        ), label = ""
+                                    )
+                                    LaunchedEffect(updateProfilePictureLoading) {
+                                        while (true) {
+                                            if (updateProfilePictureLoading) {
+                                                rotationState += -360f
+                                                delay(1000)
+                                            } else {
+                                                break
+                                            }
+                                        }
+
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Outlined.Cached,
                                         contentDescription = null,
                                         tint = Color.White,
                                         modifier = Modifier
                                             .size(40.dp)
-                                            .clickable {
-                                                //TODO: Change profile picture
+                                            .clickable(enabled = !updateProfilePictureLoading) {
+                                                updateProfilePictureException = false
+                                                updateProfilePictureLoading = true
+                                                multiplePhotoPickerLauncher.launch(
+                                                    PickVisualMediaRequest(
+                                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                                    )
+                                                )
                                             }
                                             .align(Alignment.Center)
                                             .clip(CircleShape)
+                                            .graphicsLayer(
+                                                rotationZ = rotation,
+                                            )
                                     )
+
+
                                 }
+                            }
+
+                            if (updateProfilePictureException) {
+                                Text(
+                                    text = "An error occurred while updating your profile picture.",
+                                    color = Color.Red,
+                                    textAlign = TextAlign.Center,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    fontFamily = FontFamily.SansSerif,
+                                )
                             }
                             Row(
                                 modifier = Modifier
@@ -618,7 +707,9 @@ class ProfileView {
                                         text = "Save",
                                         fontFamily = FontFamily.SansSerif,
                                         textAlign = TextAlign.End,
-                                        color = if (usernameTextFieldColor != Color.Red) Color(0xFF00A0E8) else Color.Gray,
+                                        color = if (usernameTextFieldColor != Color.Red) Color(
+                                            0xFF00A0E8
+                                        ) else Color.Gray,
                                         modifier = Modifier
                                             .clickable(enabled = !isLoading && usernameTextFieldColor != Color.Red) {
                                                 isLoading = true
@@ -687,5 +778,32 @@ class ProfileView {
             }
     }
 
+    private fun uploadWebPImage(
+        webpByteArray: ByteArray,
+        onUploadSuccess: (String) -> Unit,
+        onUploadError: () -> Unit
+    ) {
+        val storage = Firebase.storage
+        val storageRef = storage.reference
+        val webpImageRef = storageRef.child("images/${webpByteArray.size}\"")
+
+        webpImageRef.putBytes(webpByteArray)
+            .addOnSuccessListener {
+                webpImageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
+                    onUploadSuccess.invoke(downloadUrl.toString())
+                }.addOnFailureListener {
+                    onUploadError.invoke()
+                }
+            }
+            .addOnFailureListener {
+                onUploadError.invoke()
+            }
+    }
+
+    private fun convertBitmapToWebP(bitmap: Bitmap): ByteArray {
+        val outputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.WEBP, 50, outputStream)
+        return outputStream.toByteArray()
+    }
 
 }

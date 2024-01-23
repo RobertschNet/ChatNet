@@ -475,7 +475,7 @@ fun uploadImage(
 
 private fun convertBitmapToWebP(bitmap: Bitmap): ByteArray {
     val outputStream = ByteArrayOutputStream()
-    bitmap.compress(Bitmap.CompressFormat.WEBP, 100, outputStream)
+    bitmap.compress(Bitmap.CompressFormat.WEBP, 50, outputStream)
     return outputStream.toByteArray()
 }
 

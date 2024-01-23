@@ -97,7 +97,7 @@ class ImageView {
                     .align(Alignment.TopStart)
             ) {
                 IconButton(
-                    onClick = { navController.navigate(Screens.ChatViewScreen.route) },
+                    onClick = { navController.navigateUp()},
                     modifier = Modifier
                         .size(35.dp)
                         .padding(5.dp)

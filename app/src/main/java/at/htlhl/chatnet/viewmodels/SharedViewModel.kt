@@ -642,11 +642,15 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
      * used for the users account settings.
      */
 
-    fun updateUserProfilePicture(imageReference: String) {
+    fun updateUserProfilePicture(imageReference: String, onComplete: (Boolean) -> Unit) {
         val fieldUpdates = hashMapOf<String, Any>("image" to imageReference)
         getUserDocumentRef().document(auth.currentUser!!.uid).update(fieldUpdates)
-            .addOnSuccessListener {}
-            .addOnFailureListener { exception -> exception.printStackTrace() }
+            .addOnSuccessListener {
+                onComplete.invoke(true)
+            }
+            .addOnFailureListener { exception -> exception.printStackTrace()
+            onComplete.invoke(false)
+            }
     }
 
     private val _user =
