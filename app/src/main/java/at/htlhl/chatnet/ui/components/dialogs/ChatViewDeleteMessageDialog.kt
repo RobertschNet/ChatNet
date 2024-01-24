@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.components.mixed
+package at.htlhl.chatnet.ui.components.dialogs
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,17 +19,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import at.htlhl.chatnet.data.InternalChatInstance
-
 
 @Composable
-fun UnblockToMessageDialog(
-    friend: InternalChatInstance,
+fun DeleteMessageDialog(
+    isUser: Boolean,
     onClose: (String) -> Unit = {}
 ) {
     Dialog(
@@ -40,22 +37,21 @@ fun UnblockToMessageDialog(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background, RoundedCornerShape(20.dp))
                 .width(250.dp)
-                .height(200.dp),
+                .height(if (isUser) 240.dp else 200.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Unblock ${friend.personList.username["mixedcase"]}?",
+                text = "Delete Message?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
-                overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                text = "In order to send a message to ${friend.personList.username["mixedcase"]} you have to unblock him first.",
+                text = if (!isUser) "This message can be deleted only for you, and not for everyone." else "This message can be deleted only for you, or for everyone in the chat.",
                 fontWeight = FontWeight.Light,
-                color = MaterialTheme.colorScheme.secondary,
+                color= MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(
@@ -74,15 +70,39 @@ fun UnblockToMessageDialog(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onClose.invoke("unblock") }
+                    .clickable { onClose.invoke("change") }
             ) {
                 Text(
-                    text = "Unblock User",
+                    text = "Delete for me",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
                     color = Color.Red,
                     modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
                 )
+            }
+            if (isUser) {
+                Divider(
+                    thickness = 0.3f.dp,
+                    color = Color.LightGray,
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onClose.invoke("delete")
+                        }
+                ) {
+                    Text(
+                        text = "Delete for everyone",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp,
+                        color = Color.Red,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
+                    )
+                }
             }
             Divider(
                 thickness = 0.3f.dp,
@@ -97,7 +117,7 @@ fun UnblockToMessageDialog(
             ) {
                 Text(
                     text = "Cancel",
-                    color = MaterialTheme.colorScheme.primary,
+                    color= MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
                     modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)

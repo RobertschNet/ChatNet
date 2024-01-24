@@ -31,7 +31,7 @@ import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
-import at.htlhl.chatnet.ui.components.mixed.ClearChatDialog
+import at.htlhl.chatnet.ui.components.dialogs.ClearChatDialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 
 class ChatMateView {

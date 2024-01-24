@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.components.mixed
+package at.htlhl.chatnet.ui.components.dialogs
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,15 +19,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import at.htlhl.chatnet.data.InternalChatInstance
 
 @Composable
-fun ClearChatDialog(onDismiss: (String) -> Unit) {
+fun DeleteFriendDialog(
+    friend: InternalChatInstance,
+    onClose: (String) -> Unit = {}
+) {
     Dialog(
-        onDismissRequest = { onDismiss.invoke("closed") },
+        onDismissRequest = { onClose.invoke("closed") },
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
     ) {
         Column(
@@ -39,33 +44,39 @@ fun ClearChatDialog(onDismiss: (String) -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Clear Chat?",
+                text = "Remove Friend ${friend.personList.username["mixedcase"]}?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
+                overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                text = "All messages/images from both users will be deleted.",
+                text = "Are you sure you want to remove this friend? All messages and media will be deleted. This action cannot be undone.",
                 fontWeight = FontWeight.Light,
+                color = MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center,
-                color= MaterialTheme.colorScheme.secondary,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(
-                    top = 10.dp, bottom = 20.dp, start = 10.dp, end = 10.dp
+                    top = 10.dp,
+                    bottom = 20.dp,
+                    start = 10.dp,
+                    end = 10.dp
                 )
             )
             Divider(
                 thickness = 0.3f.dp,
                 color = Color.LightGray,
             )
-            Row(verticalAlignment = Alignment.CenterVertically,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onDismiss.invoke("clear") }) {
+                    .clickable { onClose.invoke("deleted") }
+            ) {
                 Text(
-                    text = "Clear",
+                    text = "Delete Friend",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
                     color = Color.Red,
@@ -76,15 +87,17 @@ fun ClearChatDialog(onDismiss: (String) -> Unit) {
                 thickness = 0.3f.dp,
                 color = Color.LightGray,
             )
-            Row(verticalAlignment = Alignment.CenterVertically,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onDismiss.invoke("closed") }) {
+                    .clickable { onClose.invoke("closed") }
+            ) {
                 Text(
                     text = "Cancel",
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
-                    color= MaterialTheme.colorScheme.primary,
                     fontSize = 15.sp,
                     modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
                 )

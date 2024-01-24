@@ -37,7 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -49,17 +48,16 @@ import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.mixed.BlockUserDialog
+import at.htlhl.chatnet.ui.components.dialogs.BlockUserDialog
 import at.htlhl.chatnet.ui.components.mixed.ChatViewMessageComponent
 import at.htlhl.chatnet.ui.components.mixed.ChatViewTopBar
-import at.htlhl.chatnet.ui.components.mixed.DeleteMessageDialog
+import at.htlhl.chatnet.ui.components.dialogs.DeleteMessageDialog
 import at.htlhl.chatnet.ui.components.mixed.InputField
-import at.htlhl.chatnet.ui.components.mixed.OptionsDialog
-import at.htlhl.chatnet.ui.components.mixed.UnblockToMessageDialog
+import at.htlhl.chatnet.ui.components.dialogs.OptionsDialog
+import at.htlhl.chatnet.ui.components.dialogs.UnblockToMessageDialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 class ChatView : ViewModel() {
     @SuppressLint("StateFlowValueCalledInComposition")
@@ -69,7 +67,7 @@ class ChatView : ViewModel() {
         systemUiController.setStatusBarColor(color = Color.Transparent, darkIcons = true)
         val chatDataState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val chatData: List<FirebaseChat> = chatDataState.value
-        val friendDataState = sharedViewModel.friend.collectAsState()
+        val friendDataState = sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
         val friendData: InternalChatInstance = friendDataState.value
         Log.println(Log.ERROR, "ssssss", friendData.toString())
         val matchingChat = chatData.find { chat ->
@@ -201,7 +199,6 @@ class ChatView : ViewModel() {
     ) {
         var animatedText by remember { mutableStateOf("Robert is writing") }
         var unblockDialog by remember { mutableStateOf(false) }
-        val coroutineScope = rememberCoroutineScope()
         LaunchedEffect(sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
             while (true) {
                 delay(750)

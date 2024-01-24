@@ -700,15 +700,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     fun reset() {
         _chatData.value = emptyList()
-        _friend.value = InternalChatInstance(
-            FirebaseUser(),
-            Timestamp.now(),
-            InternalMessageInstance(),
-            false,
-            0,
-            false,
-            ""
-        )
+        _friend.value = InternalChatInstance()
         _friendListData.value = emptyList()
         _user.value = FirebaseUser()
         randState.value = false

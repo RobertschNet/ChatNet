@@ -47,7 +47,7 @@ import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.AccountDataState
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.mixed.PasswordResetEmailDialog
+import at.htlhl.chatnet.ui.components.dialogs.PasswordResetEmailDialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import coil.imageLoader
@@ -63,7 +63,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 class ForgotPasswordView {
     private lateinit var auth: FirebaseAuth

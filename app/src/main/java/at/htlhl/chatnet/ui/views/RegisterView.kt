@@ -49,7 +49,7 @@ import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.AccountDataState
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.mixed.SecondFADialog
+import at.htlhl.chatnet.ui.components.dialogs.SecondFADialog
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import coil.imageLoader

@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.components.mixed
+package at.htlhl.chatnet.ui.components.dialogs
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,14 +19,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import at.htlhl.chatnet.data.FirebaseUser
+import at.htlhl.chatnet.data.InternalChatInstance
+
 
 @Composable
-fun DeleteMessageDialog(
-    isUser: Boolean,
+fun BlockUserDialog(
+    user: FirebaseUser,
+    friend: InternalChatInstance,
     onClose: (String) -> Unit = {}
 ) {
     Dialog(
@@ -37,21 +42,22 @@ fun DeleteMessageDialog(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background, RoundedCornerShape(20.dp))
                 .width(250.dp)
-                .height(if (isUser) 240.dp else 200.dp),
+                .height(200.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Delete Message?",
+                text = if (user.blocked.contains(friend.personList.id)) "Unblock ${friend.personList.username["mixedcase"]}?" else "Block ${friend.personList.username["mixedcase"]}?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
+                overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                text = if (!isUser) "This message can be deleted only for you, and not for everyone." else "This message can be deleted only for you, or for everyone in the chat.",
+                text = if (user.blocked.contains(friend.personList.id)) "If you unblock this user you will start receiving his messages again." else "If you block this user you will no longer receive messages from him.",
                 fontWeight = FontWeight.Light,
-                color= MaterialTheme.colorScheme.secondary,
+                color = MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(
@@ -70,39 +76,15 @@ fun DeleteMessageDialog(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onClose.invoke("change") }
+                    .clickable { onClose.invoke("blocked") }
             ) {
                 Text(
-                    text = "Delete for me",
+                    text = if (user.blocked.contains(friend.personList.id)) "Unblock User" else "Block User",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
                     color = Color.Red,
                     modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
                 )
-            }
-            if (isUser) {
-                Divider(
-                    thickness = 0.3f.dp,
-                    color = Color.LightGray,
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            onClose.invoke("delete")
-                        }
-                ) {
-                    Text(
-                        text = "Delete for everyone",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp,
-                        color = Color.Red,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
-                    )
-                }
             }
             Divider(
                 thickness = 0.3f.dp,
@@ -117,7 +99,7 @@ fun DeleteMessageDialog(
             ) {
                 Text(
                     text = "Cancel",
-                    color= MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
                     modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)

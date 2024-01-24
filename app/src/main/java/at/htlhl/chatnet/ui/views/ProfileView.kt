@@ -218,7 +218,6 @@ class ProfileView {
                                                 break
                                             }
                                         }
-
                                     }
                                     Icon(
                                         imageVector = Icons.Outlined.Cached,

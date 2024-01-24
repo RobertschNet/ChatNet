@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.components.mixed
+package at.htlhl.chatnet.ui.components.dialogs
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,7 +28,7 @@ import androidx.compose.ui.window.DialogProperties
 
 @Preview
 @Composable
-fun PasswordResetEmailDialog(onDismiss: () -> Unit= {}) {
+fun SecondFADialog(onDismiss: () -> Unit = {}) {
     Dialog(
         onDismissRequest = { onDismiss.invoke() },
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
@@ -42,7 +42,7 @@ fun PasswordResetEmailDialog(onDismiss: () -> Unit= {}) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Reset Password",
+                text = "2 Factor Authentication",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 overflow = TextOverflow.Ellipsis,
@@ -50,7 +50,7 @@ fun PasswordResetEmailDialog(onDismiss: () -> Unit= {}) {
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                text = "We sent you an email with a link to reset your password. Please check your inbox and spam folder.",
+                text = "We sent you en email you will need to click the link in the email to complete the process.",
                 fontWeight = FontWeight.Light,
                 color = MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center,

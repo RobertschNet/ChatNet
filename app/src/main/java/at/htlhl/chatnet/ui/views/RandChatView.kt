@@ -44,10 +44,10 @@ import at.htlhl.chatnet.data.FirebaseMessage
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.mixed.ChatViewMessageComponent
-import at.htlhl.chatnet.ui.components.mixed.DeleteMessageDialog
+import at.htlhl.chatnet.ui.components.dialogs.DeleteMessageDialog
 import at.htlhl.chatnet.ui.components.mixed.InputField
 import at.htlhl.chatnet.ui.components.mixed.ChatViewTopBar
-import at.htlhl.chatnet.ui.components.mixed.OptionsDialog
+import at.htlhl.chatnet.ui.components.dialogs.OptionsDialog
 import at.htlhl.chatnet.ui.components.randchat.LoadingChat
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.firebase.Timestamp

@@ -71,10 +71,10 @@ import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.mixed.BlockUserDialog
-import at.htlhl.chatnet.ui.components.mixed.DeleteAllMediaDialog
-import at.htlhl.chatnet.ui.components.mixed.DeleteAllMessagesDialog
-import at.htlhl.chatnet.ui.components.mixed.DeleteFriendDialog
+import at.htlhl.chatnet.ui.components.dialogs.BlockUserDialog
+import at.htlhl.chatnet.ui.components.dialogs.DeleteAllMediaDialog
+import at.htlhl.chatnet.ui.components.dialogs.DeleteAllMessagesDialog
+import at.htlhl.chatnet.ui.components.dialogs.DeleteFriendDialog
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage

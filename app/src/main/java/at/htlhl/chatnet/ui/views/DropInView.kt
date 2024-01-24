@@ -59,10 +59,10 @@ import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.SaveImageTask
-import at.htlhl.chatnet.ui.components.chats.ShowBigUserImageDialog
+import at.htlhl.chatnet.ui.components.dialogs.ShowBigUserImageDialog
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
-import at.htlhl.chatnet.ui.components.mixed.ClearChatDialog
+import at.htlhl.chatnet.ui.components.dialogs.ClearChatDialog
 import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage

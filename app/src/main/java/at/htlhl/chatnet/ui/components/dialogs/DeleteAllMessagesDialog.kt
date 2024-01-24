@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.components.mixed
+package at.htlhl.chatnet.ui.components.dialogs
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,8 +32,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
+
 @Composable
-fun DeleteAllMediaDialog(
+fun DeleteAllMessagesDialog(
     onClose: (String) -> Unit = {}
 ) {
     var selected by remember { mutableStateOf(true) }
@@ -50,7 +51,7 @@ fun DeleteAllMediaDialog(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Delete All Media?",
+                text = "Delete All Messages?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 overflow = TextOverflow.Ellipsis,
@@ -58,7 +59,7 @@ fun DeleteAllMediaDialog(
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                text = "Do you really want to delete all media from this chat? This action cannot be undone.",
+                text = "Do you really want to delete all messages from this chat? This action cannot be undone.",
                 fontWeight = FontWeight.Light,
                 color = MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center,
@@ -106,7 +107,7 @@ fun DeleteAllMediaDialog(
                     .clickable { onClose.invoke(if (selected) "me" else "everyone") }
             ) {
                 Text(
-                    text = "Delete Media",
+                    text = "Delete Messages",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
                     color = Color.Red,

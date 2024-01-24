@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.components.mixed
+package at.htlhl.chatnet.ui.components.dialogs
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,13 +24,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 
 
 @Composable
-fun BlockUserDialog(
-    user: FirebaseUser,
+fun UnblockToMessageDialog(
     friend: InternalChatInstance,
     onClose: (String) -> Unit = {}
 ) {
@@ -47,7 +45,7 @@ fun BlockUserDialog(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = if (user.blocked.contains(friend.personList.id)) "Unblock ${friend.personList.username["mixedcase"]}?" else "Block ${friend.personList.username["mixedcase"]}?",
+                text = "Unblock ${friend.personList.username["mixedcase"]}?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 overflow = TextOverflow.Ellipsis,
@@ -55,7 +53,7 @@ fun BlockUserDialog(
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                text = if (user.blocked.contains(friend.personList.id)) "If you unblock this user you will start receiving his messages again." else "If you block this user you will no longer receive messages from him.",
+                text = "In order to send a message to ${friend.personList.username["mixedcase"]} you have to unblock him first.",
                 fontWeight = FontWeight.Light,
                 color = MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center,
@@ -76,10 +74,10 @@ fun BlockUserDialog(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onClose.invoke("blocked") }
+                    .clickable { onClose.invoke("unblock") }
             ) {
                 Text(
-                    text = if (user.blocked.contains(friend.personList.id)) "Unblock User" else "Block User",
+                    text = "Unblock User",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
                     color = Color.Red,
