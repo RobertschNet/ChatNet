@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -29,7 +30,7 @@ import at.htlhl.chatnet.data.InternalChatInstance
 
 @Composable
 fun UnblockToMessageDialog(
-    friend: InternalChatInstance,
+    chatPartner: InternalChatInstance,
     onClose: (String) -> Unit = {}
 ) {
     Dialog(
@@ -39,13 +40,13 @@ fun UnblockToMessageDialog(
         Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background, RoundedCornerShape(20.dp))
-                .width(250.dp)
-                .height(200.dp),
+                .width(250.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(5.dp))
             Text(
-                text = "Unblock ${friend.personList.username["mixedcase"]}?",
+                text = "Unblock ${chatPartner.personList.username["mixedcase"]}?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 overflow = TextOverflow.Ellipsis,
@@ -53,7 +54,7 @@ fun UnblockToMessageDialog(
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                text = "In order to send a message to ${friend.personList.username["mixedcase"]} you have to unblock him first.",
+                text = "In order to send a message to ${chatPartner.personList.username["mixedcase"]} you have to unblock him first.",
                 fontWeight = FontWeight.Light,
                 color = MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center,

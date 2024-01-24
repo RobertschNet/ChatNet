@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -33,11 +34,11 @@ fun ClearChatDialog(onDismiss: (String) -> Unit) {
         Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background, RoundedCornerShape(20.dp))
-                .width(250.dp)
-                .height(200.dp),
+                .width(250.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(5.dp))
             Text(
                 text = "Clear Chat?",
                 fontWeight = FontWeight.Bold,

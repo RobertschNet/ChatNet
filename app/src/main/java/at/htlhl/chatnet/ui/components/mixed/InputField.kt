@@ -29,6 +29,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.BottomAppBar
+import androidx.compose.material.Card
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -64,6 +65,11 @@ import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.FirebaseMessage
+import at.htlhl.chatnet.data.InternalChatInstance
+import at.htlhl.chatnet.data.addImageUploadList
+import at.htlhl.chatnet.data.getImageUploadList
+import at.htlhl.chatnet.data.removeImageUploadList
+import at.htlhl.chatnet.data.removeItemFromUploadList
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -76,35 +82,35 @@ import java.io.ByteArrayOutputStream
 
 @Composable
 fun InputField(
+    chatPartner: InternalChatInstance,
     onChatMateResponse: String,
     sharedViewModel: SharedViewModel,
     navController: NavController,
     chatMateChat: Boolean,
     onSentWhileBlocked: () -> Unit
 ) {
-    Log.println(Log.INFO, "InputField", chatMateChat.toString())
     var badgeCount by remember { mutableIntStateOf(0) }
-    var isLoading by remember {
-        mutableStateOf(false)
-    }
+    var isLoading by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
-    var text by rememberSaveable {
-        mutableStateOf("")
-    }
-    LaunchedEffect(onChatMateResponse){
-        text = onChatMateResponse
-    }
+    var text by rememberSaveable { mutableStateOf("") }
+    LaunchedEffect(onChatMateResponse) { text = onChatMateResponse }
     var chatMateResponseText by remember { mutableStateOf("ChatMate is thinking") }
     val chatMatePadding =
         if (sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) 10.dp else 0.dp
     val multiplePhotoPickerLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.PickMultipleVisualMedia(),
             onResult = { uris ->
-                sharedViewModel.galleryImageList.value = uris
+                if (uris.isNotEmpty()) {
+                    addImageUploadList(
+                        sharedViewModel.friend.value.chatRoomID,
+                        uris.map { uri -> uri })
+                }
             })
     BottomAppBar(
         elevation = 0.dp,
-        modifier = if (sharedViewModel.galleryImageList.value.isEmpty()) Modifier.height(70.dp + badgeCount.dp + chatMatePadding) else Modifier.height(
+        modifier = if (getImageUploadList(chatPartner.chatRoomID).isEmpty()) Modifier.height(
+            70.dp + badgeCount.dp + chatMatePadding
+        ) else Modifier.height(
             160.dp + badgeCount.dp + chatMatePadding
         ),
         backgroundColor = MaterialTheme.colorScheme.background,
@@ -113,13 +119,13 @@ fun InputField(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Bottom
         ) {
-            if (sharedViewModel.galleryImageList.value.isNotEmpty()) {
+            if (getImageUploadList(chatPartner.chatRoomID).isNotEmpty()) {
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 5.dp, end = 5.dp)
                 ) {
-                    items(sharedViewModel.galleryImageList.value.size) { index ->
+                    items(getImageUploadList(chatPartner.chatRoomID).size) { index ->
                         Box(
                             modifier = Modifier
                                 .size(100.dp)
@@ -127,7 +133,7 @@ fun InputField(
                                 .padding(5.dp)
                         ) {
                             SubcomposeAsyncImage(
-                                model = sharedViewModel.galleryImageList.value[index],
+                                model = getImageUploadList(chatPartner.chatRoomID)[index],
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
@@ -139,8 +145,12 @@ fun InputField(
                                 .clip(CircleShape)
                                 .background(Color.Gray.copy(alpha = 0.5f), CircleShape)
                                 .clickable {
-                                    sharedViewModel.galleryImageList.value =
-                                        sharedViewModel.galleryImageList.value.filterIndexed { i, _ -> i != index }
+                                    val currentItem =
+                                        getImageUploadList(chatPartner.chatRoomID)[index]
+                                    removeItemFromUploadList(
+                                        chatPartner.chatRoomID,
+                                        currentItem
+                                    )
                                 }
                                 .border(
                                     width = Dp.Hairline,
@@ -184,265 +194,197 @@ fun InputField(
             } else {
                 isLoading = false
             }
-            BasicTextField(
-                // TODO  enabled = sharedViewModel.isConnected.value,
-                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = {
-                    if (!isLoading) {
-                        if (!sharedViewModel.user.value.blocked.contains(sharedViewModel.friend.value.personList.id)) {
-                            if (text.isNotEmpty() || sharedViewModel.galleryImageList.value.isNotEmpty()) {
-                                isLoading = true
-                                if (sharedViewModel.galleryImageList.value.isEmpty()) {
-                                    uploadMessage(chatMateChat, sharedViewModel, text) {
-                                        isLoading = false
-                                        if (it) {
-                                            text = ""
-                                        } else {
-                                            //TODO Show error message
-                                        }
-                                    }
-                                    text = ""
-                                } else {
-                                    uploadImage(
-                                        context,
-                                        sharedViewModel.galleryImageList.value,
-                                        { success ->
-                                            sharedViewModel.galleryImageList.value = emptyList()
-                                            uploadMessage(
-                                                chatMateChat,
-                                                sharedViewModel,
-                                                text,
-                                                success
-                                            ) {
-                                                isLoading = false
-                                                if (it) {
-                                                    sharedViewModel.galleryImageList.value =
-                                                        emptyList()
-                                                    text = ""
-                                                } else {
-                                                    //TODO Show error message
-                                                }
-                                            }
-                                        },
-                                        {
-                                            isLoading = false
-                                            //TODO Show error message
-                                        })
-                                    text = ""
-                                }
-                            }
-                        } else{
-                            onSentWhileBlocked.invoke()
-                        }
-                    }
-                }),
-                value = text,
-                onTextLayout = { textLayoutResult ->
-                    when {
-                        textLayoutResult.lineCount >= 4 -> {
-                            badgeCount = 36
-                        }
-
-                        textLayoutResult.lineCount == 3 -> {
-                            badgeCount = 24
-                        }
-
-                        textLayoutResult.lineCount == 2 -> {
-                            badgeCount = 12
-                        }
-
-                        textLayoutResult.lineCount == 1 -> {
-                            badgeCount = 0
-                        }
-                    }
-                },
-                maxLines = 4,
-                cursorBrush = Brush.linearGradient(
-                    listOf(
-                        Color(0xFF00A0E8), Color(0xFF00A0E8), Color(
-                            0xFF0CB0FA
-                        )
-                    ), Offset.Zero, Offset.Infinite, TileMode.Repeated
-                ),
-                onValueChange = { text = it },
-                textStyle = LocalTextStyle.current.copy(
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = FontFamily.SansSerif,
-                    color = MaterialTheme.colorScheme.secondary,
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp + badgeCount.dp)
-                    .padding(start = 10.dp, end = 10.dp)
-                    .background(
-                        Color(0xFFF4F5F8), RoundedCornerShape(26.dp)
-                    ),
-                decorationBox = { innerTextField ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(
-                                            Color(0xFF00A0E8), Color(0xFF00A0E8), Color(
-                                                0xFF0CB0FA
-                                            ), Color.White
-                                        )
-                                    ), RoundedCornerShape(24.dp)
-                                )
-                        ) {
-                            if (text.isEmpty()) {
-                                IconButton(onClick = {
-                                    navController.navigate(Screens.CameraViewScreen.route)
-                                }) {
-                                    SubcomposeAsyncImage(
-                                        model = R.drawable.camera_svgrepo_com_5_,
-                                        contentDescription = null,
-                                        colorFilter = ColorFilter.tint(Color.White.copy(alpha = if (chatMateChat) 0.7f else 1f)),
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            } else {
-                                IconButton(onClick = {
-                                    if (chatMateChat) {
-                                        createToast(false, context)
-                                    } else if (!isLoading) {
-                                        multiplePhotoPickerLauncher.launch(
-                                            PickVisualMediaRequest(
-                                                ActivityResultContracts.PickVisualMedia.ImageOnly
-                                            )
-                                        )
-                                    }
-                                }) {
-                                    SubcomposeAsyncImage(
-                                        model = R.drawable.gallery_svgrepo_com,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(28.dp),
-                                        colorFilter = ColorFilter.tint(Color.White.copy(alpha = if (chatMateChat) 0.7f else 1f)),
-                                    )
-                                }
-                            }
-                        }
-                        Box(Modifier.padding(start = 10.dp, end = 70.dp), contentAlignment = Alignment.CenterStart) {
-                            if (text.isEmpty()) {
-                                Text(
-                                    text = "Message...",
-                                    textAlign = TextAlign.Start,
-                                    fontFamily = FontFamily.SansSerif,
-                                    fontSize = 15.sp,
-                                    color = MaterialTheme.colorScheme.secondary,
-                                    fontWeight = FontWeight.Normal,
-                                )
-                            }
-                            innerTextField()
-                        }
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(if (text.isEmpty() && sharedViewModel.galleryImageList.value.isEmpty()) 6.dp else 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.End,
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                color = Color(0xFF00A0E8),
-                                strokeWidth = 4.dp,
-                                modifier = Modifier
-                                    .size(30.dp)
-                                    .padding(end = 2.dp)
+            Card(
+                elevation = 2.dp,
+                modifier = Modifier.padding(start = 10.dp, end = 10.dp),
+                shape = RoundedCornerShape(26.dp),
+                contentColor = Color(0xFFF3F4FA)
+            ) {
+                BasicTextField(
+                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(onSend = {
+                        if (!isLoading) {
+                            onSentPressed(sharedViewModel, chatPartner, chatMateChat, context, text,
+                                { onSentWhileBlocked.invoke() },
+                                { isLoading = it },
+                                { text = "" }
                             )
-                        } else {
-                            if (text.isNotEmpty() || sharedViewModel.galleryImageList.value.isNotEmpty()) {
-                                Text(text = "Send",
-                                    fontSize = 18.sp,
-                                    fontFamily = FontFamily.SansSerif,
-                                    color = Color(0xFF00A0E8),
-                                    fontWeight = Bold,
-                                    modifier = Modifier.clickable {
-                                        if (!sharedViewModel.user.value.blocked.contains(sharedViewModel.friend.value.personList.id)) {
-                                            if (text.isNotEmpty() || sharedViewModel.galleryImageList.value.isNotEmpty()) {
-                                                isLoading = true
-                                                if (sharedViewModel.galleryImageList.value.isEmpty()) {
-                                                    uploadMessage(
-                                                        chatMateChat,
-                                                        sharedViewModel,
-                                                        text
-                                                    ) {
-                                                        isLoading = false
-                                                        if (it) {
-                                                        } else {
-                                                            //TODO Show error message
-                                                        }
-                                                    }
-                                                    text = ""
-                                                } else {
-                                                    uploadImage(
-                                                        context,
-                                                        sharedViewModel.galleryImageList.value,
-                                                        { success ->
-                                                            sharedViewModel.galleryImageList.value =
-                                                                emptyList()
-                                                            uploadMessage(
-                                                                chatMateChat,
-                                                                sharedViewModel,
-                                                                text,
-                                                                success
-                                                            ) {
-                                                                isLoading = false
-                                                                if (it) {
-                                                                    sharedViewModel.galleryImageList.value =
-                                                                        emptyList()
-                                                                    text = ""
-                                                                } else {
-                                                                    //TODO Show error message
-                                                                }
-                                                            }
-                                                        },
-                                                        {
-                                                            isLoading = false
-                                                            //TODO Show error message
-                                                        })
-                                                    text = ""
-                                                }
-                                            }
-                                        } else{
-                                            onSentWhileBlocked.invoke()
+                        }
+                    }),
+                    value = text,
+                    onTextLayout = { textLayoutResult ->
+                        when {
+                            textLayoutResult.lineCount >= 4 -> {
+                                badgeCount = 36
+                            }
+
+                            textLayoutResult.lineCount == 3 -> {
+                                badgeCount = 24
+                            }
+
+                            textLayoutResult.lineCount == 2 -> {
+                                badgeCount = 12
+                            }
+
+                            textLayoutResult.lineCount == 1 -> {
+                                badgeCount = 0
+                            }
+                        }
+                    },
+                    maxLines = 4,
+                    cursorBrush = Brush.linearGradient(
+                        listOf(
+                            Color(0xFF00A0E8), Color(0xFF00A0E8), Color(
+                                0xFF0CB0FA
+                            )
+                        ), Offset.Zero, Offset.Infinite, TileMode.Repeated
+                    ),
+                    onValueChange = { text = it },
+                    textStyle = LocalTextStyle.current.copy(
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Normal,
+                        fontFamily = FontFamily.SansSerif,
+                        color = MaterialTheme.colorScheme.secondary,
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp + badgeCount.dp)
+                        .background(
+                            Color(0xFFF3F4FA), RoundedCornerShape(26.dp)
+                        ),
+                    decorationBox = { innerTextField ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(
+                                                Color(0xFF00A0E8), Color(0xFF00A0E8), Color(
+                                                    0xFF0CB0FA
+                                                ), Color.White
+                                            )
+                                        ), RoundedCornerShape(24.dp)
+                                    )
+                            ) {
+                                if (text.isEmpty()) {
+                                    IconButton(onClick = {
+                                        if (chatMateChat) {
+                                            createToast(false, context)
+                                        } else {
+                                            navController.navigate(Screens.CameraViewScreen.route)
                                         }
+                                    }) {
+                                        SubcomposeAsyncImage(
+                                            model = R.drawable.camera_svgrepo_com_5_,
+                                            contentDescription = null,
+                                            colorFilter = ColorFilter.tint(Color.White.copy(alpha = if (chatMateChat) 0.7f else 1f)),
+                                            modifier = Modifier.size(24.dp)
+                                        )
                                     }
+                                } else {
+                                    IconButton(onClick = {
+                                        if (chatMateChat) {
+                                            createToast(false, context)
+                                        } else if (!isLoading) {
+                                            multiplePhotoPickerLauncher.launch(
+                                                PickVisualMediaRequest(
+                                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                                )
+                                            )
+                                        }
+                                    }) {
+                                        SubcomposeAsyncImage(
+                                            model = R.drawable.gallery_svgrepo_com,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(28.dp),
+                                            colorFilter = ColorFilter.tint(Color.White.copy(alpha = if (chatMateChat) 0.7f else 1f)),
+                                        )
+                                    }
+                                }
+                            }
+                            Box(
+                                Modifier.padding(start = 10.dp, end = 70.dp),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                if (text.isEmpty()) {
+                                    Text(
+                                        text = "Message...",
+                                        textAlign = TextAlign.Start,
+                                        fontFamily = FontFamily.SansSerif,
+                                        fontSize = 15.sp,
+                                        color = MaterialTheme.colorScheme.secondary,
+                                        fontWeight = FontWeight.Normal,
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(if (text.isEmpty() && getImageUploadList(chatPartner.chatRoomID).isEmpty()) 6.dp else 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End,
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    color = Color(0xFF00A0E8),
+                                    strokeWidth = 4.dp,
+                                    modifier = Modifier
+                                        .size(30.dp)
+                                        .padding(end = 2.dp)
                                 )
                             } else {
-                                IconButton(onClick = {
-                                    if (chatMateChat) createToast(
-                                        false,
-                                        context
-                                    ) else multiplePhotoPickerLauncher.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                    )
-                                }) {
-                                    SubcomposeAsyncImage(
-                                        model = R.drawable.gallery_svgrepo_com,
-                                        contentDescription = null,
-                                        colorFilter = ColorFilter.tint(
-                                            MaterialTheme.colorScheme.primary.copy(
-                                                alpha = if (chatMateChat) 0.7f else 1f
+                                if (text.isNotEmpty() || getImageUploadList(chatPartner.chatRoomID).isNotEmpty()) {
+                                    Text(text = "Send",
+                                        fontSize = 18.sp,
+                                        fontFamily = FontFamily.SansSerif,
+                                        color = Color(0xFF00A0E8),
+                                        fontWeight = Bold,
+                                        modifier = Modifier.clickable {
+                                            onSentPressed(sharedViewModel,
+                                                chatPartner,
+                                                chatMateChat,
+                                                context,
+                                                text,
+                                                { onSentWhileBlocked.invoke() },
+                                                { isLoading = it },
+                                                { text = "" }
                                             )
-                                        ),
-                                        modifier = Modifier.size(30.dp)
+                                        }
                                     )
+                                } else {
+                                    IconButton(onClick = {
+                                        if (chatMateChat) createToast(
+                                            false,
+                                            context
+                                        ) else multiplePhotoPickerLauncher.launch(
+                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                        )
+                                    }) {
+                                        SubcomposeAsyncImage(
+                                            model = R.drawable.gallery_svgrepo_com,
+                                            contentDescription = null,
+                                            colorFilter = ColorFilter.tint(
+                                                MaterialTheme.colorScheme.primary.copy(
+                                                    alpha = if (chatMateChat) 0.7f else 1f
+                                                )
+                                            ),
+                                            modifier = Modifier.size(30.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
-                },
-            )
+                    },
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
         }
     }
@@ -463,13 +405,15 @@ fun uploadImage(
     onUploadSuccess: (List<String>) -> Unit,
     onUploadError: () -> Unit
 ) {
-    runBlocking {
-        selectedImageUris.forEach { imageUri ->
-            val inputStream = context.contentResolver.openInputStream(imageUri)
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            val webpByteArray = convertBitmapToWebP(bitmap)
-            uploadWebPImage(webpByteArray, onUploadSuccess, onUploadError)
-        }
+    val list = arrayListOf<String>()
+    selectedImageUris.forEach { imageUri ->
+        val inputStream = context.contentResolver.openInputStream(imageUri)
+        val bitmap = BitmapFactory.decodeStream(inputStream)
+        val webpByteArray = convertBitmapToWebP(bitmap)
+        uploadWebPImage(webpByteArray, {
+            list.addAll(it)
+            if (list.size == selectedImageUris.size) onUploadSuccess.invoke(list)
+        }, onUploadError)
     }
 }
 
@@ -538,7 +482,7 @@ fun uploadMessage(
     //TODO: ChatMate loading when offline
     if (chatMateChat) {
         sharedViewModel.chatMateResponseState.value = ChatMateResponseState.Loading
-        sharedViewModel.sendDataToServer(text){
+        sharedViewModel.sendDataToServer(text) {
             runBlocking {
                 sharedViewModel.saveMessages(
                     documentId = sharedViewModel.friend.value.chatRoomID,
@@ -562,5 +506,61 @@ fun uploadMessage(
                 )
             }
         }
+    }
+}
+
+fun onSentPressed(
+    sharedViewModel: SharedViewModel,
+    chatPartner: InternalChatInstance,
+    chatMateChat: Boolean,
+    context: Context,
+    text: String,
+    onSentWhileBlocked: () -> Unit,
+    isLoading: (Boolean) -> Unit,
+    onSuccess: () -> Unit
+) {
+    if (!sharedViewModel.user.value.blocked.contains(chatPartner.personList.id)) {
+        if (text.isNotEmpty() || getImageUploadList(chatPartner.chatRoomID).isNotEmpty()) {
+            isLoading.invoke(true)
+            if (getImageUploadList(chatPartner.chatRoomID).isEmpty()) {
+                uploadMessage(chatMateChat, sharedViewModel, text) {
+                    isLoading.invoke(false)
+                    if (it) {
+                        onSuccess.invoke()
+                    } else {
+                        //TODO Show error message
+                    }
+                }
+            } else {
+                isLoading.invoke(true)
+                uploadImage(
+                    context,
+                    getImageUploadList(chatPartner.chatRoomID),
+                    { success ->
+                        removeImageUploadList(chatPartner.chatRoomID)
+                        uploadMessage(
+                            chatMateChat,
+                            sharedViewModel,
+                            text,
+                            success
+                        ) {
+                            isLoading.invoke(false)
+                            if (it) {
+                                removeImageUploadList(chatPartner.chatRoomID)
+                                onSuccess.invoke()
+                            } else {
+                                //TODO Show error message
+                            }
+                        }
+                    },
+                    {
+                        isLoading.invoke(false)
+                        //TODO Show error message
+                    }
+                )
+            }
+        }
+    } else {
+        onSentWhileBlocked.invoke()
     }
 }

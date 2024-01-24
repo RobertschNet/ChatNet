@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseUser
+import at.htlhl.chatnet.ui.components.dialogs.DeleteAccountDialog
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -102,6 +103,9 @@ class ProfileView {
             mutableStateOf(false)
         }
         var updateProfilePictureException by remember {
+            mutableStateOf(false)
+        }
+        var deleteAccountDialog by remember {
             mutableStateOf(false)
         }
         var isLoading by remember {
@@ -497,7 +501,7 @@ class ProfileView {
                                 modifier = Modifier
                                     .padding(start = 20.dp, top = 20.dp)
                                     .clickable {
-                                        //TODO: Open Delete Account Dialog
+                                        deleteAccountDialog = true
                                     }
                                     .fillMaxWidth(),
                             ) {
@@ -548,6 +552,15 @@ class ProfileView {
                     }
                     item {
                         Spacer(modifier = Modifier.height(20.dp))
+                    }
+                }
+                if (deleteAccountDialog){
+                    DeleteAccountDialog {
+                        if (it=="deleted"){
+                         //TODO: Implement Delete Account
+                        }else{
+                            deleteAccountDialog = false
+                        }
                     }
                 }
                 if (modelBottomSheetState) {
@@ -619,7 +632,6 @@ class ProfileView {
                                             fontFamily = FontFamily.SansSerif,
                                         )
                                     }
-
                                 },
                                 colors = TextFieldDefaults.textFieldColors(
                                     textColor = Color.Black,

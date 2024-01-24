@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -30,8 +31,8 @@ import at.htlhl.chatnet.data.InternalChatInstance
 
 @Composable
 fun BlockUserDialog(
-    user: FirebaseUser,
-    friend: InternalChatInstance,
+    chatUser: FirebaseUser,
+    chatPartner: InternalChatInstance,
     onClose: (String) -> Unit = {}
 ) {
     Dialog(
@@ -41,13 +42,13 @@ fun BlockUserDialog(
         Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background, RoundedCornerShape(20.dp))
-                .width(250.dp)
-                .height(200.dp),
+                .width(250.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(5.dp))
             Text(
-                text = if (user.blocked.contains(friend.personList.id)) "Unblock ${friend.personList.username["mixedcase"]}?" else "Block ${friend.personList.username["mixedcase"]}?",
+                text = if (chatUser.blocked.contains(chatPartner.personList.id)) "Unblock ${chatPartner.personList.username["mixedcase"]}?" else "Block ${chatPartner.personList.username["mixedcase"]}?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 overflow = TextOverflow.Ellipsis,
@@ -55,7 +56,7 @@ fun BlockUserDialog(
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                text = if (user.blocked.contains(friend.personList.id)) "If you unblock this user you will start receiving his messages again." else "If you block this user you will no longer receive messages from him.",
+                text = if (chatUser.blocked.contains(chatPartner.personList.id)) "If you unblock this user you will start receiving his messages again." else "If you block this user you will no longer receive messages from him.",
                 fontWeight = FontWeight.Light,
                 color = MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center,
@@ -79,7 +80,7 @@ fun BlockUserDialog(
                     .clickable { onClose.invoke("blocked") }
             ) {
                 Text(
-                    text = if (user.blocked.contains(friend.personList.id)) "Unblock User" else "Block User",
+                    text = if (chatUser.blocked.contains(chatPartner.personList.id)) "Unblock User" else "Block User",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
                     color = Color.Red,

@@ -65,7 +65,7 @@ import coil.compose.SubcomposeAsyncImage
 @Composable
 fun ChatViewTopBar(
     navController: NavController,
-    chatInstance: InternalChatInstance,
+    chatPartner: InternalChatInstance,
     sharedViewModel: SharedViewModel,
     onClick: (String) -> Unit
 ) {
@@ -102,10 +102,10 @@ fun ChatViewTopBar(
                             navController.navigate(Screens.ProfileInfoScreen.route)
                         }
                         .weight(1f)) {
-                    if (!chatInstance.personList.blocked.contains(sharedViewModel.auth.currentUser?.uid.toString())) {
+                    if (!chatPartner.personList.blocked.contains(sharedViewModel.auth.currentUser?.uid.toString())) {
                         SubcomposeAsyncImage(
                             contentDescription = null,
-                            model = chatInstance.personList.image,
+                            model = chatPartner.personList.image,
                             modifier = Modifier
                                 .clip(CircleShape)
                                 .size(45.dp)
@@ -122,12 +122,12 @@ fun ChatViewTopBar(
                             contentScale = ContentScale.Crop,
                         )
                     }
-                    if (chatInstance.personList.id == "ChatMate") {
+                    if (chatPartner.personList.id == "ChatMate") {
                         Column(
                             modifier = Modifier.offset(y = -offset.y.dp)
                         ) {
                             Text(
-                                text = chatInstance.personList.username["mixedcase"].toString(),
+                                text = chatPartner.personList.username["mixedcase"].toString(),
                                 color = MaterialTheme.colorScheme.primary,
                                 fontSize = 22.sp,
                                 fontFamily = FontFamily.SansSerif,
@@ -148,7 +148,7 @@ fun ChatViewTopBar(
                     } else {
                         Column {
                             Text(
-                                text = chatInstance.personList.username["mixedcase"].toString(),
+                                text = chatPartner.personList.username["mixedcase"].toString(),
                                 color = MaterialTheme.colorScheme.primary,
                                 fontSize = 22.sp,
                                 fontFamily = FontFamily.SansSerif,
@@ -158,7 +158,7 @@ fun ChatViewTopBar(
                                 modifier = Modifier.padding(start = 5.dp)
                             )
                             Text(
-                                text = chatInstance.personList.status,
+                                text = chatPartner.personList.status,
                                 color = MaterialTheme.colorScheme.secondary,
                                 fontSize = 13.sp,
                                 modifier = Modifier.padding(start = 7.dp)

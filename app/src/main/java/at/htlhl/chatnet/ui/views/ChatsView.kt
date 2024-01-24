@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItem
+import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.navigation.Screens
@@ -43,7 +44,7 @@ import java.lang.ref.WeakReference
 
 class ChatsView {
 
-    @SuppressLint("UnusedMaterialScaffoldPaddingParameter", "StateFlowValueCalledInComposition")
+    @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun ChatsScreen(
@@ -56,29 +57,19 @@ class ChatsView {
         var showUserIconPrompt by remember { mutableStateOf(false) }
         var showClearChatPrompt by remember { mutableStateOf(false) }
         val modelSheetState = remember { mutableStateOf(false) }
-        val userDataInstanceState = sharedViewModel.completeChatList.collectAsState(
-            initial = arrayListOf(
-                InternalChatInstance()
-            )
-        )
+        val userDataInstanceState = sharedViewModel.completeChatList.collectAsState(initial = arrayListOf(InternalChatInstance()))
         val userDataInstance: List<InternalChatInstance> = userDataInstanceState.value
-        val friendListDataState =
-            sharedViewModel.friendListData.collectAsState(initial = arrayListOf(FirebaseUser()))
+        val chatDataState = sharedViewModel.chatData.collectAsState(initial = arrayListOf(FirebaseChat()))
+        val chatData: List<FirebaseChat> = chatDataState.value
+        val friendListDataState = sharedViewModel.friendListData.collectAsState(initial = arrayListOf(FirebaseUser()))
         val friendListData: List<FirebaseUser> = friendListDataState.value
-        val friendDataState =
-            sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
+        val friendDataState = sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
         val friendData: InternalChatInstance = friendDataState.value
-        Log.println(Log.INFO, "Chats", "friendListData: $friendListData")
         val availableUsers = friendListData.filter { friend -> friend.statusFriend == "pending" }
-        Log.println(Log.INFO, "Chats", "userDataInstance: $userDataInstance")
-        val completePersonList =
-            if (sharedViewModel.searchValue.value != "") userDataInstance.filter {
-                it.personList.username["mixedcase"]?.contains(
-                    sharedViewModel.searchValue.value, ignoreCase = true
-                ) ?: false
-            } else userDataInstance
-        LaunchedEffect(sharedViewModel.chatData.value) {
-            for (chat in sharedViewModel.chatData.value) {
+        val completePersonList = if (sharedViewModel.searchValue.value != "") userDataInstance.filter { it.personList.username["mixedcase"]?.contains(sharedViewModel.searchValue.value, ignoreCase = true) ?: false } else userDataInstance
+
+        LaunchedEffect(chatData) {
+            for (chat in chatData) {
                 for (message in chat.messages) {
                     if (message.images.isNotEmpty()) {
                         for (image in message.images) {

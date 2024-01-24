@@ -1,6 +1,5 @@
 package at.htlhl.chatnet.ui.views
 
-import android.annotation.SuppressLint
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -25,6 +24,7 @@ import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,8 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
-import at.htlhl.chatnet.data.FirebaseChat
-import at.htlhl.chatnet.navigation.Screens
+import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
@@ -50,18 +49,14 @@ import kotlin.math.absoluteValue
 
 class ImageView {
     @RequiresApi(Build.VERSION_CODES.O)
-    @SuppressLint("StateFlowValueCalledInComposition")
     @Composable
     fun ImageViewScreen(sharedViewModel: SharedViewModel, navController: NavController) {
         val systemUiController = rememberSystemUiController()
-        systemUiController.setStatusBarColor(
-            color = Color.Black,
-            darkIcons = false
-        )
-        val chat: FirebaseChat =
-            sharedViewModel.chatData.value.find { it.chatRoomID == sharedViewModel.friend.value.chatRoomID }!!
-        Log.println(Log.INFO, "ImageView", chat.chatRoomID)
-        HorizontalPager(sharedViewModel, navController)
+        systemUiController.setStatusBarColor(color = Color.Black, darkIcons = false)
+        val chatPartnerState =
+            sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
+        val chatPartner: InternalChatInstance = chatPartnerState.value
+        HorizontalPager(sharedViewModel, navController, chatPartner)
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -69,7 +64,8 @@ class ImageView {
     @Composable
     private fun HorizontalPager(
         sharedViewModel: SharedViewModel,
-        navController: NavController
+        navController: NavController,
+        chatPartner: InternalChatInstance
     ) {
         Log.println(Log.INFO, "ImageView", sharedViewModel.imageList.value.toString())
         val pageCount = sharedViewModel.imageList.value.size
@@ -77,7 +73,10 @@ class ImageView {
         val pagerState =
             rememberPagerState(initialPage = sharedViewModel.imagePosition.intValue) { pageCount }
 
-        Box(Modifier.fillMaxSize().background(Color.Black)) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black)) {
             HorizontalPager(
                 beyondBoundsPageCount = 1,
                 modifier = Modifier
@@ -97,7 +96,7 @@ class ImageView {
                     .align(Alignment.TopStart)
             ) {
                 IconButton(
-                    onClick = { navController.navigateUp()},
+                    onClick = { navController.navigateUp() },
                     modifier = Modifier
                         .size(35.dp)
                         .padding(5.dp)
@@ -117,7 +116,7 @@ class ImageView {
                         .fillMaxSize(),
                 ) {
                     Text(
-                        text = if (sharedViewModel.imageList.value[pagerState.currentPage].sender == sharedViewModel.auth.currentUser!!.uid) "You" else sharedViewModel.friend.value.personList.username["mixedcase"].toString(),
+                        text = if (sharedViewModel.imageList.value[pagerState.currentPage].sender == sharedViewModel.auth.currentUser!!.uid) "You" else chatPartner.personList.username["mixedcase"].toString(),
                         fontSize = 18.sp
                     )
                     Text(
@@ -154,12 +153,10 @@ class ImageView {
             differenceInMinutes < 1 -> "Just now"
             differenceInMinutes < 60 -> "$differenceInMinutes minutes ago"
             differenceInHours < 24 && localDateTime.toLocalDate() == now.toLocalDate() -> {
-                // Within the same day
                 "Today, ${formatter.format(localDateTime)}"
             }
 
             differenceInHours < 48 -> {
-                // Yesterday
                 "Yesterday, ${formatter.format(localDateTime)}"
             }
 

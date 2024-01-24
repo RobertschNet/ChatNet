@@ -46,7 +46,7 @@ fun Navigation(
         composable("LoadingScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-            LoadingView().LoadingScreen(navController)
+            LoadingView().LoadingScreen()
         }
         composable("RegisterWithGoogleScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },

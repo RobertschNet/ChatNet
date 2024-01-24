@@ -120,7 +120,6 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val isConnected = mutableStateOf(false)
     val imagePosition = mutableIntStateOf(0)
     val imageList = mutableStateOf<List<InternalMessageInstance>>(emptyList())
-    val galleryImageList = mutableStateOf<List<Uri>>(emptyList())
 
     fun updateFriend(newFriend: InternalChatInstance, onComplete: () -> Unit = {}) {
         _friend.value = newFriend
@@ -622,13 +621,14 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             .addOnFailureListener { exception -> exception.printStackTrace() }
     }
 
-     fun updateUsername(name: String, callback: (Boolean) -> Unit) {
+    fun updateUsername(name: String, callback: (Boolean) -> Unit) {
         val fieldUpdates = mapOf(
             "username.lowercase" to name.lowercase(),
             "username.mixedcase" to name,
         )
 
-        firebaseInstance.collection(USER_COLLECTION).document(auth.currentUser!!.uid).update(fieldUpdates)
+        firebaseInstance.collection(USER_COLLECTION).document(auth.currentUser!!.uid)
+            .update(fieldUpdates)
             .addOnSuccessListener {
                 callback.invoke(true)
             }
@@ -637,6 +637,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 callback.invoke(false)
             }
     }
+
     /**
      * This section contains the logic for the Firebase communication,
      * used for the users account settings.
@@ -648,8 +649,9 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             .addOnSuccessListener {
                 onComplete.invoke(true)
             }
-            .addOnFailureListener { exception -> exception.printStackTrace()
-            onComplete.invoke(false)
+            .addOnFailureListener { exception ->
+                exception.printStackTrace()
+                onComplete.invoke(false)
             }
     }
 

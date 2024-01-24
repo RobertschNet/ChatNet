@@ -179,7 +179,6 @@ class ProfileInfoView {
 
     }
 
-    @SuppressLint("StateFlowValueCalledInComposition")
     @Composable
     fun ProfileInfoContent(
         sharedViewModel: SharedViewModel,
@@ -807,8 +806,8 @@ class ProfileInfoView {
         }
         if (blockDialog) {
             BlockUserDialog(
-                friend = friend,
-                user = user
+                chatPartner = friend,
+                chatUser = user
             ) { value ->
                 if (value == "blocked") {
                     sharedViewModel.updateBlockedUserList(
@@ -875,7 +874,7 @@ class ProfileInfoView {
                 painter = painterResource(id = R.drawable.back_svgrepo_com_1_),
                 contentDescription = null,
                 modifier = Modifier
-                    .clickable { navController.navigate(Screens.ChatsViewScreen.route) }
+                    .clickable { navController.navigateUp() }
                     .clip(CircleShape)
                     .layoutId("back_arrow")
             )

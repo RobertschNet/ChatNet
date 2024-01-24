@@ -44,11 +44,11 @@ fun DeleteAllMediaDialog(
         Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background, RoundedCornerShape(20.dp))
-                .width(250.dp)
-                .height(300.dp),
+                .width(250.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(5.dp))
             Text(
                 text = "Delete All Media?",
                 fontWeight = FontWeight.Bold,

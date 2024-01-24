@@ -1,11 +1,9 @@
 package at.htlhl.chatnet.ui.views
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.VibratorManager
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -31,7 +29,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,22 +42,22 @@ import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.FirebaseChat
+import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.dialogs.BlockUserDialog
-import at.htlhl.chatnet.ui.components.mixed.ChatViewMessageComponent
-import at.htlhl.chatnet.ui.components.mixed.ChatViewTopBar
 import at.htlhl.chatnet.ui.components.dialogs.DeleteMessageDialog
-import at.htlhl.chatnet.ui.components.mixed.InputField
 import at.htlhl.chatnet.ui.components.dialogs.OptionsDialog
 import at.htlhl.chatnet.ui.components.dialogs.UnblockToMessageDialog
+import at.htlhl.chatnet.ui.components.mixed.ChatViewMessageComponent
+import at.htlhl.chatnet.ui.components.mixed.ChatViewTopBar
+import at.htlhl.chatnet.ui.components.mixed.InputField
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import kotlinx.coroutines.delay
 
 class ChatView : ViewModel() {
-    @SuppressLint("StateFlowValueCalledInComposition")
     @Composable
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val systemUiController = rememberSystemUiController()
@@ -69,13 +66,13 @@ class ChatView : ViewModel() {
         val chatData: List<FirebaseChat> = chatDataState.value
         val friendDataState = sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
         val friendData: InternalChatInstance = friendDataState.value
-        Log.println(Log.ERROR, "ssssss", friendData.toString())
+        val userDataState = sharedViewModel.user.collectAsState(initial = FirebaseUser())
+        val userData: FirebaseUser = userDataState.value
         val matchingChat = chatData.find { chat ->
             chat.chatRoomID == friendData.chatRoomID
         }
         val chatMateChat = matchingChat?.tab == "chatmate"
         val chatRoomId = matchingChat?.chatRoomID ?: ""
-        Log.println(Log.ERROR, "ssssss", matchingChat.toString())
 
         val messageListFromMatchingChat: List<InternalMessageInstance> = matchingChat?.let { chat ->
             chat.messages.map { message ->
@@ -91,12 +88,12 @@ class ChatView : ViewModel() {
                 )
             }
         } ?: emptyList()
-        sharedViewModel.imageList.value =
-            createImageList(messageListFromMatchingChat, sharedViewModel)
         sharedViewModel.markMessagesAsRead(user = friendData)
         sharedViewModel.updateMarkAsReadStatus(isAlreadyUnread = true)
         ChatViewContentStructure(
             sharedViewModel = sharedViewModel,
+            chatPartner = friendData,
+            chatUser = userData,
             messagesForChat = messageListFromMatchingChat,
             navController = navController,
             chatRoomId = chatRoomId,
@@ -104,16 +101,16 @@ class ChatView : ViewModel() {
         )
     }
 
-    @SuppressLint("StateFlowValueCalledInComposition")
     @Composable
     fun ChatViewContentStructure(
         navController: NavController,
+        chatPartner: InternalChatInstance,
+        chatUser: FirebaseUser,
         messagesForChat: List<InternalMessageInstance>,
         sharedViewModel: SharedViewModel,
         chatRoomId: String,
         chatMateChat: Boolean
     ) {
-        val coroutineScope = rememberCoroutineScope()
         var chatMateResponse by remember { mutableStateOf("") }
         var blockDialog by remember { mutableStateOf(false) }
         var unblockDialog by remember { mutableStateOf(false) }
@@ -127,7 +124,7 @@ class ChatView : ViewModel() {
             topBar = {
                 ChatViewTopBar(
                     navController = navController,
-                    chatInstance = sharedViewModel.friend.value,
+                    chatPartner = chatPartner,
                     sharedViewModel = sharedViewModel
                 ) {
                     if (it == "return") {
@@ -146,23 +143,26 @@ class ChatView : ViewModel() {
                     lazyListState = lazyListState,
                     chatRoomId = chatRoomId,
                     navController = navController,
-                    chatMateResponse = { chatMateResponse = it }
+                    chatMateResponse = { message ->
+                        chatMateResponse = message
+                    }
                 )
             }, bottomBar = {
                 InputField(
+                    chatPartner = chatPartner,
                     onChatMateResponse = chatMateResponse,
                     sharedViewModel = sharedViewModel,
                     navController = navController,
                     chatMateChat = chatMateChat,
-                ){
+                ) {
                     unblockDialog = true
                 }
             }
         )
         if (blockDialog) {
             BlockUserDialog(
-                friend = sharedViewModel.friend.value,
-                user = sharedViewModel.user.value
+                chatPartner = chatPartner,
+                chatUser = chatUser
             ) { value ->
                 if (value == "blocked") {
                     sharedViewModel.updateBlockedUserList(
@@ -176,7 +176,7 @@ class ChatView : ViewModel() {
         }
         if (unblockDialog) {
             UnblockToMessageDialog(
-                friend = sharedViewModel.friend.value,
+                chatPartner = chatPartner,
             ) { value ->
                 if (value == "unblock") {
                     sharedViewModel.updateBlockedUserList(true)
@@ -237,8 +237,10 @@ class ChatView : ViewModel() {
                     items = filteredMessages
                 ) { message ->
                     val messageIndex = messages.indexOf(message)
-                    val previousMessageIndex = messages.getOrNull(messageIndex + 1) // Reverse the calculation
-                    val nextMessageIndex = messages.getOrNull(messageIndex - 1)   // Reverse the calculation
+                    val previousMessageIndex =
+                        messages.getOrNull(messageIndex + 1)
+                    val nextMessageIndex =
+                        messages.getOrNull(messageIndex - 1)
                     MessageItem(
                         sharedViewModel = sharedViewModel,
                         chatMateChat = chatMateChat,
@@ -254,9 +256,8 @@ class ChatView : ViewModel() {
                             timestamp = message.timestamp,
                             visible = message.visible,
                         ), chatRoomId = chatRoomId, onClick = { image ->
-                            sharedViewModel.imagePosition.intValue =
-                                sharedViewModel.imageList.value.find { it.images[0] == image }
-                                    ?.let { sharedViewModel.imageList.value.indexOf(it) } ?: 0
+                            sharedViewModel.imageList.value = createImageList(filteredMessages)
+                            sharedViewModel.imagePosition.intValue = sharedViewModel.imageList.value.find { it.images[0] == image }?.let { sharedViewModel.imageList.value.indexOf(it) } ?: 0
                             navController.navigate(Screens.ImageViewScreen.route)
                         }, chatMateResponse = { chatMateResponse.invoke(it) }
                     )
@@ -367,7 +368,6 @@ class ChatView : ViewModel() {
 
                     "generate" -> {
                         sharedViewModel.sendDataToServer(message.text) {
-                            Log.println(Log.ERROR, "walllumm", it)
                             chatMateResponse.invoke(it)
                         }
                     }
@@ -383,28 +383,24 @@ class ChatView : ViewModel() {
         return sharedViewModel.user.value.blocked.contains(sharedViewModel.friend.value.personList.id)
     }
 
-    private fun createImageList(
-        messages: List<InternalMessageInstance>,
-        sharedViewModel: SharedViewModel
-    ): List<InternalMessageInstance> {
+    private fun createImageList(messages: List<InternalMessageInstance>): List<InternalMessageInstance> {
         val imageList = arrayListOf<InternalMessageInstance>()
         messages.forEach {
             if (it.images.isNotEmpty()) {
                 it.images.forEach { image ->
-                    if (it.visible.contains(sharedViewModel.auth.currentUser?.uid.toString())) {
-                        imageList.add(
-                            InternalMessageInstance(
-                                isFromCache = it.isFromCache,
-                                id = it.id,
-                                sender = it.sender,
-                                images = arrayListOf(image),
-                                read = it.read,
-                                text = it.text,
-                                timestamp = it.timestamp,
-                                visible = it.visible
-                            )
+                    imageList.add(
+                        InternalMessageInstance(
+                            isFromCache = it.isFromCache,
+                            id = it.id,
+                            sender = it.sender,
+                            images = arrayListOf(image),
+                            read = it.read,
+                            text = it.text,
+                            timestamp = it.timestamp,
+                            visible = it.visible
                         )
-                    }
+                    )
+
                 }
             }
         }
