@@ -53,8 +53,7 @@ class ImageView {
     fun ImageViewScreen(sharedViewModel: SharedViewModel, navController: NavController) {
         val systemUiController = rememberSystemUiController()
         systemUiController.setStatusBarColor(color = Color.Black, darkIcons = false)
-        val chatPartnerState =
-            sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
+        val chatPartnerState = sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
         val chatPartner: InternalChatInstance = chatPartnerState.value
         HorizontalPager(sharedViewModel, navController, chatPartner)
     }

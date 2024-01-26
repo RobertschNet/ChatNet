@@ -1,11 +1,13 @@
 package at.htlhl.chatnet.ui.components.mixed
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -61,6 +63,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.ChatMateResponseState
@@ -70,7 +73,6 @@ import at.htlhl.chatnet.data.addImageUploadList
 import at.htlhl.chatnet.data.getImageUploadList
 import at.htlhl.chatnet.data.removeImageUploadList
 import at.htlhl.chatnet.data.removeItemFromUploadList
-import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Firebase
@@ -97,6 +99,16 @@ fun InputField(
     var chatMateResponseText by remember { mutableStateOf("ChatMate is thinking") }
     val chatMatePadding =
         if (sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) 10.dp else 0.dp
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            navController.navigate("CameraFlow")
+        } else {
+            // Show dialog
+        }
+    }
+
     val multiplePhotoPickerLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.PickMultipleVisualMedia(),
             onResult = { uris ->
@@ -274,10 +286,18 @@ fun InputField(
                             ) {
                                 if (text.isEmpty()) {
                                     IconButton(onClick = {
-                                        if (chatMateChat) {
+                                        if (!checkAndRequestCameraPermission(
+                                                context,
+                                                android.Manifest.permission.CAMERA,
+                                                launcher
+                                            )
+                                        ) {
+                                            createToast(true, context)
+                                        } else if (chatMateChat) {
                                             createToast(false, context)
                                         } else {
-                                            navController.navigate(Screens.CameraViewScreen.route)
+                                            navController.saveState()
+                                            navController.navigate("CameraFlow")
                                         }
                                     }) {
                                         SubcomposeAsyncImage(
@@ -562,5 +582,21 @@ fun onSentPressed(
         }
     } else {
         onSentWhileBlocked.invoke()
+    }
+
+}
+
+private fun checkAndRequestCameraPermission(
+    context: Context,
+    permission: String,
+    launcher: ManagedActivityResultLauncher<String, Boolean>
+): Boolean {
+    val permissionCheckResult = ContextCompat.checkSelfPermission(context, permission)
+    return if (permissionCheckResult == PackageManager.PERMISSION_GRANTED) {
+        true
+    } else {
+        // Request a permission
+        launcher.launch(permission)
+        false
     }
 }

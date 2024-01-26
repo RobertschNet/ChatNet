@@ -1,20 +1,28 @@
 package at.htlhl.chatnet
 
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.ServiceConnection
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.compose.rememberNavController
 import at.htlhl.chatnet.navigation.NavigationBarLayout
 import at.htlhl.chatnet.navigation.Screens
@@ -23,6 +31,8 @@ import at.htlhl.chatnet.ui.theme.TestingTheme
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.imageLoader
 import coil.request.ImageRequest
+import com.google.firebase.messaging.FirebaseMessaging
+
 
 class MainActivity : ComponentActivity() {
     private var serviceConnection: ServiceConnection? = null
@@ -38,6 +48,7 @@ class MainActivity : ComponentActivity() {
             val navController = rememberNavController()
             val start = rememberSaveable { mutableStateOf(true) }
             TestingTheme {
+
                 NavigationBarLayout(
                     navController = navController,
                     viewModel = viewModel,
@@ -107,7 +118,6 @@ class MainActivity : ComponentActivity() {
         super.onPause()
         (application as MyApplication).sharedViewModel.updateOnlineStatus("idle")
     }
-
     override fun onResume() {
         super.onResume()
         (application as MyApplication).sharedViewModel.updateOnlineStatus("online")

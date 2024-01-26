@@ -7,7 +7,6 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,13 +25,13 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.BottomAppBar
 import androidx.compose.material.IconButton
+import androidx.compose.material.Scaffold
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -65,7 +64,6 @@ import at.htlhl.chatnet.data.FirebaseMessage
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.storage.storage
@@ -75,7 +73,7 @@ import java.io.FileOutputStream
 
 class CameraPhotoView {
 
-    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+    @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @Composable
     fun CameraPhotoScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val bitmap = sharedViewModel.bitmaps.collectAsState()
@@ -89,17 +87,90 @@ class CameraPhotoView {
             )
         }
         val chatRoomId = filteredChats?.chatRoomID ?: ""
-        val systemUiController = rememberSystemUiController()
-
         Scaffold(
             contentColor = Color.Black,
-            containerColor = Color.Black,
+            backgroundColor = Color.Black,
             modifier = Modifier
                 .fillMaxSize()
                 .imePadding(),
+            bottomBar = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Transparent)
+                ) {
+                    TextFieldCameraPhotoView(
+                        sharedViewModel = sharedViewModel,
+                        navController = navController,
+                        onMessageSent = { text ->
+                            val storage = Firebase.storage
+                            val storageRef = storage.reference
+                            val cachePath = File(context.cacheDir, "tempImage.webp")
+                            cachePath.createNewFile()
+                            val outputStream = FileOutputStream(cachePath)
+                            bitmap.value.compress(
+                                Bitmap.CompressFormat.WEBP,
+                                50,
+                                outputStream
+                            )
+                            outputStream.close()
+                            val imageRef =
+                                storageRef.child("images/${System.currentTimeMillis()}") // Not safe
+                            val uploadTask = imageRef.putFile(Uri.fromFile(cachePath))
+                            uploadTask.addOnCompleteListener { task ->
+                                if (task.isSuccessful) {
+                                    imageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
+                                        Log.d("Image", "Download URL: $downloadUrl")
+                                        Log.println(
+                                            Log.INFO,
+                                            "Image",
+                                            "Download URL: $chatRoomId"
+                                        )
+                                        coroutineScope.launch {
+                                            sharedViewModel.saveMessages(
+                                                chatRoomId, FirebaseMessage(
+                                                    sender = sharedViewModel.auth.currentUser?.uid.toString(),
+                                                    text = text,
+                                                    timestamp = Timestamp.now(),
+                                                    read = false,
+                                                    images = arrayListOf(downloadUrl.toString()),
+                                                    visible = arrayListOf(
+                                                        sharedViewModel.friend.value.personList.id,
+                                                        sharedViewModel.auth.currentUser?.uid.toString()
+                                                    ),
+                                                )
+                                            ) {
+                                            }
+                                        }
+                                        navController.navigate(Screens.ChatViewScreen.route) {
+                                            popUpTo(Screens.ChatViewScreen.route) {
+                                                inclusive = true
+                                            }
+                                        }
+                                        sharedViewModel.text.value = ""
+                                    }.addOnFailureListener { exception ->
+                                        Log.e(
+                                            "Image",
+                                            "Failed to get download URL. Exception: $exception"
+                                        )
+                                    }
+                                } else {
+                                    Log.e(
+                                        "Image",
+                                        "Image upload failed. Task exception: ${task.exception}"
+                                    )
+                                }
+                            }
+                        },
+                        chatMateChat = false
+                    )
+                }
+            },
             content = {
                 Column {
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(5.dp))
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
@@ -107,7 +178,8 @@ class CameraPhotoView {
                     ) {
                         IconButton(
                             onClick = {
-                                navController.popBackStack()
+                                navController.navigateUp()
+
                             },
                             modifier = Modifier.padding(start = 10.dp)
                         ) {
@@ -149,81 +221,8 @@ class CameraPhotoView {
                         modifier = Modifier
                             .fillMaxSize()
                             .background(Color.Black)
-                            .weight(1f)
                     )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color.Transparent)
-                    ) {
-                        TextFieldCameraPhotoView(
-                            sharedViewModel = sharedViewModel,
-                            navController = navController,
-                            onMessageSent = { text ->
-                                systemUiController.setStatusBarColor(
-                                    color = Color.Transparent,
-                                    darkIcons = true
-                                )
-                                val storage = Firebase.storage
-                                val storageRef = storage.reference
-                                val cachePath = File(context.cacheDir, "tempImage.jpg")
-                                cachePath.createNewFile()
-                                val outputStream = FileOutputStream(cachePath)
-                                bitmap.value.compress(
-                                    Bitmap.CompressFormat.JPEG,
-                                    50,
-                                    outputStream
-                                )
-                                outputStream.close()
-                                val imageRef =
-                                    storageRef.child("images/${System.currentTimeMillis()}") // Not safe
-                                val uploadTask = imageRef.putFile(Uri.fromFile(cachePath))
-                                uploadTask.addOnCompleteListener { task ->
-                                    if (task.isSuccessful) {
-                                        imageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-                                            Log.d("Image", "Download URL: $downloadUrl")
-                                            Log.println(
-                                                Log.INFO,
-                                                "Image",
-                                                "Download URL: $chatRoomId"
-                                            )
-                                            coroutineScope.launch {
-                                                sharedViewModel.saveMessages(
-                                                    chatRoomId, FirebaseMessage(
-                                                        sender = sharedViewModel.auth.currentUser?.uid.toString(),
-                                                        text = text,
-                                                        timestamp = Timestamp.now(),
-                                                        read = false,
-                                                        images = arrayListOf(downloadUrl.toString()),
-                                                        visible = arrayListOf(
-                                                            sharedViewModel.friend.value.personList.id,
-                                                            sharedViewModel.auth.currentUser?.uid.toString()
-                                                        ),
-                                                    )
-                                                ) {
-                                                }
-                                            }
-                                            navController.navigate(Screens.ChatViewScreen.route)
-                                            sharedViewModel.text.value = ""
-                                        }.addOnFailureListener { exception ->
-                                            Log.e(
-                                                "Image",
-                                                "Failed to get download URL. Exception: $exception"
-                                            )
-                                        }
-                                    } else {
-                                        Log.e(
-                                            "Image",
-                                            "Image upload failed. Task exception: ${task.exception}"
-                                        )
-                                    }
-                                }
-                            },
-                            chatMateChat = false
-                        )
-                    }
+
                 }
 
             }
@@ -239,11 +238,10 @@ class CameraPhotoView {
         chatMateChat: Boolean
     ) {
         val text = sharedViewModel.text.value
-        val activated = remember { mutableStateOf(true) }
         var badgeCount by remember { mutableIntStateOf(0) }
-        val systemUiController = rememberSystemUiController()
+        var isLoading by remember { mutableStateOf(false) }
         BottomAppBar(
-            elevation = 10.dp,
+            elevation = 0.dp,
             modifier = Modifier
                 .height(70.dp + badgeCount.dp)
                 .padding(bottom = 10.dp, top = 10.dp),
@@ -253,10 +251,8 @@ class CameraPhotoView {
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(
                     onSend = {
-                        if (activated.value) {
-                            activated.value = false
-                            onMessageSent(text)
-                        }
+                        isLoading = true
+                        onMessageSent(text)
                     }
                 ),
                 value = text,
@@ -297,18 +293,14 @@ class CameraPhotoView {
                     .height(50.dp + badgeCount.dp)
                     .padding(start = 10.dp, end = 10.dp)
                     .background(
-                        Color.DarkGray.copy(alpha = 0.6f),
+                        Color(0xFF2B2D30).copy(alpha = 0.6f),
                         RoundedCornerShape(26.dp)
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.secondary,
-                        shape = RoundedCornerShape(26.dp),
                     ),
                 decorationBox = { innerTextField ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .background(Color.Transparent)
                             .padding(start = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -319,11 +311,7 @@ class CameraPhotoView {
                             IconButton(
                                 enabled = !chatMateChat,
                                 onClick = {
-                                    systemUiController.setStatusBarColor(
-                                        color = Color.Black,
-                                        darkIcons = false
-                                    )
-                                    navController.navigate(Screens.CameraViewScreen.route)
+                                    navController.navigateUp()
                                 }) {
                                 SubcomposeAsyncImage(
                                     model = R.drawable.image_redo_svgrepo_com,
@@ -350,23 +338,33 @@ class CameraPhotoView {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .background(Color.Transparent)
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.End,
                     ) {
-                        Text(
-                            text = "Send",
-                            fontSize = 18.sp,
-                            color = Color(0xFF00A0E8),
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .clickable {
-                                    if (activated.value) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                color = Color(0xFF00A0E8),
+                                strokeWidth = 4.dp,
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .padding(end = 2.dp)
+                            )
+                        } else {
+                            Text(
+                                text = "Send",
+                                fontSize = 18.sp,
+                                color = Color(0xFF00A0E8),
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .clickable {
+                                        isLoading = true
                                         onMessageSent(text)
-                                        activated.value = false
+
                                     }
-                                }
-                        )
+                            )
+                        }
 
                     }
                 },

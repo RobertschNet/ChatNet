@@ -26,6 +26,7 @@ import at.htlhl.chatnet.ui.views.ImageView
 import at.htlhl.chatnet.ui.views.LoadingView
 import at.htlhl.chatnet.ui.views.LoginView
 import at.htlhl.chatnet.ui.views.ProfileInfoView
+import at.htlhl.chatnet.ui.views.ProfilePictureView
 import at.htlhl.chatnet.ui.views.ProfileView
 import at.htlhl.chatnet.ui.views.RandChatStartView
 import at.htlhl.chatnet.ui.views.RandChatView
@@ -53,6 +54,24 @@ fun Navigation(
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
             RegisterWithGoggleView().RegisterWithGoggleScreen(sharedViewModel, navController)
         }
+
+        navigation(
+            startDestination = "CameraViewScreen",
+            route = "CameraFlow"
+        ){
+            composable("CameraViewScreen",
+                enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+                exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
+                CameraView().CameraView(navController, sharedViewModel, context)
+            }
+            composable("CameraPhotoScreen",
+                enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+                exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
+                CameraPhotoView().CameraPhotoScreen(navController, sharedViewModel)
+            }
+        }
+
+
         navigation(
             startDestination = "LoginScreen",
             route = "LoginFlow"
@@ -79,6 +98,23 @@ fun Navigation(
             route = "MainFlow"
         )
         {
+            composable("ProfilePictureScreen",
+                enterTransition = {
+                    slideInHorizontally(
+                        initialOffsetX = { fullWidth -> fullWidth },
+                        animationSpec = tween(durationMillis = 0)
+                    )
+                },
+                exitTransition = {
+                    slideOutHorizontally(
+                        targetOffsetX = { fullWidth -> fullWidth },
+                        animationSpec = tween(durationMillis = 0)
+                    )
+                }
+                ){
+                ProfilePictureView().ProfilePictureViewScreen(sharedViewModel, navController)
+                onBottomBarDisabled.invoke(false)
+            }
             composable("ChatsViewScreen",
                 enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
                 exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }
@@ -127,16 +163,6 @@ fun Navigation(
                 onBottomBarDisabled.invoke(false)
                 RandChatView().RandChatScreen(navController, sharedViewModel)
             }
-            composable("CameraViewScreen",
-                enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
-                exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-                CameraView().CameraView(navController, sharedViewModel, context)
-            }
-            composable("CameraPhotoScreen",
-                enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
-                exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-                CameraPhotoView().CameraPhotoScreen(navController, sharedViewModel)
-            }
             composable("FindUserScreen",
                 enterTransition = {
                     slideInHorizontally(
@@ -167,6 +193,7 @@ fun Navigation(
             composable("ProfileScreen",
                 enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
                 exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
+                onBottomBarDisabled.invoke(true)
                 ProfileView().ProfileScreen(navController, sharedViewModel)
             }
             composable("RandChatStartScreen",

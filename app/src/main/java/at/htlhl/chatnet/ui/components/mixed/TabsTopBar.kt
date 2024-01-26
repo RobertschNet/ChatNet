@@ -75,56 +75,59 @@ fun TabsTopBar(
                     .fillMaxWidth()
                     .weight(1f)
             )
-            IconButton(
-                onClick = { isSearchMode.value = true },
-                modifier = Modifier.padding(start = 108.dp, top = 5.dp)
-            ) {
-                SubcomposeAsyncImage(
-                    model = R.drawable.search_svgrepo_com_1_,
-                    contentDescription = null,
-                    modifier = Modifier.size(30.dp),
-                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
-                )
-            }
-            IconButton(
-                onClick = { onClick.invoke() },
-                modifier = Modifier.padding(top = 5.dp, end = 10.dp)
-            ) {
-                Box(modifier = Modifier.size(50.dp)) {
+            if (tab!="Profile"){
+                IconButton(
+                    onClick = { isSearchMode.value = true },
+                    modifier = Modifier.padding(start = 108.dp, top = 5.dp)
+                ) {
                     SubcomposeAsyncImage(
-                        model = if (tab == "Chats") R.drawable.add_user_social_svgrepo_com_1_ else if (tab == "ChatMate") R.drawable.add_circle_svgrepo_com else R.drawable.location_place_pin_svgrepo_com,
+                        model = R.drawable.search_svgrepo_com_1_,
                         contentDescription = null,
-                        modifier = Modifier
-                            .size(35.dp)
-                            .align(Alignment.Center),
+                        modifier = Modifier.size(30.dp),
                         colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                     )
-                    if (availableUsers.isNotEmpty() && tab == "Chats") {
-                        Box(
+                }
+                IconButton(
+                    onClick = { onClick.invoke() },
+                    modifier = Modifier.padding(top = 5.dp, end = 10.dp)
+                ) {
+                    Box(modifier = Modifier.size(50.dp)) {
+                        SubcomposeAsyncImage(
+                            model = if (tab == "Chats") R.drawable.add_user_social_svgrepo_com_1_ else if (tab == "ChatMate") R.drawable.add_circle_svgrepo_com else R.drawable.location_place_pin_svgrepo_com,
+                            contentDescription = null,
                             modifier = Modifier
-                                .padding(end = 7f.dp)
-                                .size(12f.dp)
-                                .zIndex(1f)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(Color.Red, Color.Red),
-                                        start = Offset(0f, 0f),
-                                        end = Offset(0.dp.value, 0.dp.value)
+                                .size(35.dp)
+                                .align(Alignment.Center),
+                            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+                        )
+                        if (availableUsers.isNotEmpty() && tab == "Chats") {
+                            Box(
+                                modifier = Modifier
+                                    .padding(end = 7f.dp)
+                                    .size(12f.dp)
+                                    .zIndex(1f)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(Color.Red, Color.Red),
+                                            start = Offset(0f, 0f),
+                                            end = Offset(0.dp.value, 0.dp.value)
+                                        )
                                     )
+                                    .align(Alignment.TopEnd)
+                            ) {
+                                Text(
+                                    text = availableUsers.size.toString(),
+                                    fontSize = 8.sp,
+                                    color = MaterialTheme.colorScheme.background,
+                                    modifier = Modifier.align(Alignment.Center)
                                 )
-                                .align(Alignment.TopEnd)
-                        ) {
-                            Text(
-                                text = availableUsers.size.toString(),
-                                fontSize = 8.sp,
-                                color = MaterialTheme.colorScheme.background,
-                                modifier = Modifier.align(Alignment.Center)
-                            )
+                            }
                         }
                     }
                 }
             }
+
         } else {
             val (text, setText) = remember { mutableStateOf("") }
             val keyboardController = LocalSoftwareKeyboardController.current

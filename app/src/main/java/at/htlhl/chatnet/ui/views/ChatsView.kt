@@ -1,8 +1,14 @@
 package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.content.pm.PackageManager
 import android.util.Log
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +28,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItem
@@ -67,7 +74,6 @@ class ChatsView {
         val friendData: InternalChatInstance = friendDataState.value
         val availableUsers = friendListData.filter { friend -> friend.statusFriend == "pending" }
         val completePersonList = if (sharedViewModel.searchValue.value != "") userDataInstance.filter { it.personList.username["mixedcase"]?.contains(sharedViewModel.searchValue.value, ignoreCase = true) ?: false } else userDataInstance
-
         LaunchedEffect(chatData) {
             for (chat in chatData) {
                 for (message in chat.messages) {

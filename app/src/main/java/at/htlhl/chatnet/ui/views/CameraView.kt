@@ -83,6 +83,10 @@ class CameraView {
             TODO("VERSION.SDK_INT < S")
         }
         val systemUiController = rememberSystemUiController()
+        systemUiController.setStatusBarColor(
+            color = Color.Black,
+            darkIcons = false
+        )
         val controller = remember {
             LifecycleCameraController(applicationContext).apply {
                 setEnabledUseCases(

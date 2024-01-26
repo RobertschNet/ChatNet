@@ -41,7 +41,7 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
+import androidx.compose.material.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -73,7 +73,9 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseUser
+import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.dialogs.DeleteAccountDialog
+import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -89,7 +91,9 @@ import java.util.Locale
 
 class ProfileView {
 
-    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter",
+        "UnusedMaterialScaffoldPaddingParameter"
+    )
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun ProfileScreen(navController: NavController, sharedViewModel: SharedViewModel) {
@@ -168,6 +172,15 @@ class ProfileView {
             modifier = Modifier
                 .fillMaxSize()
                 .imePadding(),
+            topBar = {
+                TabsTopBar(
+                    tab = "Profile",
+                    availableUsers = listOf(FirebaseUser()),
+                    sharedViewModel = sharedViewModel
+                ) {
+
+                }
+            },
             content = {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     item {
@@ -178,7 +191,7 @@ class ProfileView {
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .padding(top = 30.dp)
+                                    .padding(top = 10.dp)
                                     .size(180.dp)
                             ) {
                                 SubcomposeAsyncImage(
@@ -188,6 +201,9 @@ class ProfileView {
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .clip(CircleShape)
+                                        .clickable {
+                                            navController.navigate(Screens.ProfilePictureView.route)
+                                        }
                                         .shimmerEffect()
                                 )
                                 Box(
@@ -554,11 +570,11 @@ class ProfileView {
                         Spacer(modifier = Modifier.height(20.dp))
                     }
                 }
-                if (deleteAccountDialog){
+                if (deleteAccountDialog) {
                     DeleteAccountDialog {
-                        if (it=="deleted"){
-                         //TODO: Implement Delete Account
-                        }else{
+                        if (it == "deleted") {
+                            //TODO: Implement Delete Account
+                        } else {
                             deleteAccountDialog = false
                         }
                     }
