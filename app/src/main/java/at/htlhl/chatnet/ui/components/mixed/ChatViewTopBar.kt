@@ -177,17 +177,6 @@ fun ChatViewTopBar(
                         }
                 }
                 IconButton(onClick = {
-                    onClick.invoke("block")
-                }) {
-                    SubcomposeAsyncImage(
-                        model = R.drawable.person_block_svgrepo_com,
-                        contentDescription = null,
-                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
-                        modifier = Modifier
-                            .size(30.dp),
-                    )
-                }
-                IconButton(onClick = {
                     isSearchMode.value = true
                 }) {
                     SubcomposeAsyncImage(

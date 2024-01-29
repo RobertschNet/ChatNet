@@ -2,7 +2,6 @@ package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,6 +15,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -57,12 +57,14 @@ import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
+import at.htlhl.chatnet.data.LocationUserInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.SaveImageTask
+import at.htlhl.chatnet.ui.components.dialogs.ClearChatDialog
+import at.htlhl.chatnet.ui.components.dialogs.DisableDropInDialog
 import at.htlhl.chatnet.ui.components.dialogs.ShowBigUserImageDialog
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
-import at.htlhl.chatnet.ui.components.dialogs.ClearChatDialog
 import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -77,13 +79,17 @@ class DropInView {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun DropInScreen(navController: NavController, sharedViewModel: SharedViewModel) {
-        Log.println(Log.INFO, "Chats", "ChatsScreen")
         val context = LocalContext.current
         val lazyListState = rememberLazyListState()
         val coroutineScope = rememberCoroutineScope()
         var showUserIconPrompt by remember { mutableStateOf(false) }
         var showClearChatPrompt by remember { mutableStateOf(false) }
         val modelSheetState = remember { mutableStateOf(false) }
+        var disableDropInDialog by remember {
+            mutableStateOf(
+                false
+            )
+        }
         val chatDataState = sharedViewModel.chatData.collectAsState()
         val chatData: List<FirebaseChat> = chatDataState.value
         val dropInDataState = sharedViewModel.completeDropInList.collectAsState()
@@ -95,17 +101,32 @@ class DropInView {
         val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
             localUser.id != sharedViewModel.auth.currentUser?.uid
         }
+        val localChatUser= sharedViewModel.localChatUserList.value.find { localUser ->
+            localUser.id == sharedViewModel.auth.currentUser?.uid
+        }
         val updatedLocalChatUsers: List<InternalChatInstance> = localChatUsers.map { person ->
             val matchingChat = chatData.find { chat ->
                 chat.members.contains(person.id)
             }
             InternalChatInstance(
-                personList = person,
+                personList = FirebaseUser(
+                    blocked = person.blocked,
+                    email = "",
+                    pinned = listOf(),
+                    color = "",
+                    connected = false,
+                    mutedFriend = false,
+                    statusFriend = "",
+                    image = person.image,
+                    username = person.username,
+                    status = person.status,
+                    id = person.id
+                ),
                 timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                     ?: Timestamp.now(),
                 lastMessage = matchingChat?.messages?.lastOrNull() ?: InternalMessageInstance(),
                 markedAsUnread = matchingChat?.unread?.contains(sharedViewModel.auth.currentUser?.uid.toString()) == true,
-                pinChat = person.blocked.contains(matchingChat?.chatRoomID),
+                pinChat = false,
                 chatRoomID = matchingChat?.chatRoomID ?: "",
                 read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
                     ?: 0
@@ -140,7 +161,7 @@ class DropInView {
                     availableUsers = listOf(FirebaseUser()),
                     sharedViewModel = sharedViewModel,
                 ) {
-                    sharedViewModel.gpsState.value = !sharedViewModel.gpsState.value
+                   disableDropInDialog = true
                 }
             },
             content = {
@@ -162,40 +183,46 @@ class DropInView {
                         modifier = Modifier.fillMaxWidth(),
                         content = {
                             item {
-                                UserListItem(user = userData)
+                                UserListItem(user = userData,localChatUser) {
+                                    //TODO: Navigate to your public profile
+                                }
                             }
-                            items(updatedLocalChatUsers) { chat ->
+                            items(localChatUsers) { chat ->
                                 GPSChatList(
                                     chat = chat
-                                ) { paul ->
-                                    if (paul.chatRoomID.isEmpty()) {
-                                        sharedViewModel.saveChatRoom(
-                                            person = paul.personList.id,
-                                            tab = "dropIn"
-                                        ) {
-                                            sharedViewModel.updateFriend(
-                                                InternalChatInstance(
-                                                    personList = paul.personList,
-                                                    timestampMessage = Timestamp.now(),
-                                                    lastMessage = InternalMessageInstance(),
-                                                    markedAsUnread = true,
-                                                    pinChat = false,
-                                                    chatRoomID = it,
-                                                    read = 0
-                                                )
-                                            ) {
+                                ) { locationUserInstance ->
+                                    updatedLocalChatUsers.find { it.personList.id == locationUserInstance.id }
+                                        ?.let {
+                                            if (it.chatRoomID.isEmpty()) {
+                                                sharedViewModel.saveChatRoom(
+                                                    person = it.personList.id,
+                                                    tab = "dropIn"
+                                                ) { newChat ->
+                                                    sharedViewModel.updateFriend(
+                                                        InternalChatInstance(
+                                                            personList = it.personList,
+                                                            timestampMessage = Timestamp.now(),
+                                                            lastMessage = InternalMessageInstance(),
+                                                            markedAsUnread = true,
+                                                            pinChat = false,
+                                                            chatRoomID = newChat,
+                                                            read = 0
+                                                        )
+                                                    ) {
+                                                        navController.navigate(Screens.ChatViewScreen.route)
+                                                    }
+                                                }
+                                            } else {
+                                                sharedViewModel.updateFriend(it)
                                                 navController.navigate(Screens.ChatViewScreen.route)
                                             }
                                         }
-                                    }else{
-                                        sharedViewModel.updateFriend(paul)
-                                        navController.navigate(Screens.ChatViewScreen.route)
-                                    }
+
                                 }
                             }
                         }
                     )
-                    Spacer(modifier = Modifier.height(40.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     Row {
                         Spacer(modifier = Modifier.width(15.dp))
                         Text(
@@ -214,7 +241,8 @@ class DropInView {
                     ) {
                         items(dropInData) { chat ->
                             ChatsViewChatItem(
-                                chat = chat,
+                                chatFriend = chat,
+                                chatUser = userData,
                                 displayOnlineState = true,
                                 sharedViewModel = sharedViewModel,
                             ) { context ->
@@ -235,6 +263,16 @@ class DropInView {
                             }
                         }
                     }
+                }
+                if(disableDropInDialog){
+                    DisableDropInDialog(
+                        dropInOn = !sharedViewModel.gpsState.value,
+                        onClose = { action ->
+                        if (action == "changed") {
+                            sharedViewModel.gpsState.value = !sharedViewModel.gpsState.value
+                        }
+                        disableDropInDialog = false
+                    })
                 }
             }
         )
@@ -272,7 +310,7 @@ class DropInView {
         if (showClearChatPrompt) {
             ClearChatDialog(onDismiss = { clear ->
                 if (clear == "clear") {
-                    sharedViewModel.deleteMessagesForUser()
+                    sharedViewModel.deleteMessagesForUser(friend.chatRoomID)
                 }
                 showClearChatPrompt = false
             })
@@ -327,31 +365,32 @@ class DropInView {
     }
 
     @Composable
-    fun GPSChatList(chat: InternalChatInstance, onItemClicked: (InternalChatInstance) -> Unit) {
-        val isOnline = chat.personList.status
+    fun GPSChatList(chat: LocationUserInstance, onItemClicked: (LocationUserInstance) -> Unit) {
+        val isOnline = chat.status
         Spacer(modifier = Modifier.width(10.dp))
         Column(
-            modifier = Modifier.width(90.dp),
+            modifier = Modifier.width(100.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .width(70.dp)
+                    .width(80.dp)
             ) {
                 SubcomposeAsyncImage(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .clickable { onItemClicked.invoke(chat) }
                         .align(Alignment.Center)
-                        .size(70.dp)
+                        .size(80.dp)
                         .clip(CircleShape),
-                    model = chat.personList.image,
+                    model = chat.image,
                     contentDescription = null
                 )
                 Box(
                     modifier = Modifier
+                        .offset((-5).dp)
                         .size(16.5f.dp)
                         .clip(CircleShape)
                         .background(
@@ -433,21 +472,29 @@ class DropInView {
                 }
             }
             Text(
-                text = chat.personList.username["mixedcase"].toString(),
+                text = chat.username["mixedcase"].toString(),
                 overflow = TextOverflow.Clip,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 5.dp),
-                fontSize = 12.sp,
+                fontSize = 14.sp,
                 maxLines = 1,
                 fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Normal,
                 color = Color.Black
             )
+            Text(
+                text = chat.location,
+                color = Color.Gray,
+                fontSize = 12.sp,
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Light
+            )
+
         }
     }
 
     @Composable
-    fun UserListItem(user: FirebaseUser) {
+    fun UserListItem(user: FirebaseUser,localChatUser: LocationUserInstance?,onClick: () -> Unit){
         val isOnline = user.status
         Spacer(modifier = Modifier.width(10.dp))
         Column(
@@ -458,20 +505,22 @@ class DropInView {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .width(70.dp)
+                    .width(80.dp)
             ) {
                 SubcomposeAsyncImage(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .size(70.dp)
-                        .clip(CircleShape),
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .clickable { onClick.invoke() },
                     model = user.image,
                     contentDescription = null
                 )
                 Box(
                     modifier = Modifier
                         .size(16.5f.dp)
+                        .offset((-5).dp)
                         .clip(CircleShape)
                         .background(
                             Brush.linearGradient(
@@ -561,6 +610,13 @@ class DropInView {
                 fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Normal,
                 color = Color.Black
+            )
+            Text(
+                text = localChatUser?.location ?: "Unknown",
+                color = Color.Gray,
+                fontSize = 12.sp,
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Light
             )
         }
     }

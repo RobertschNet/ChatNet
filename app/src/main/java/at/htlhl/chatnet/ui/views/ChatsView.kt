@@ -1,14 +1,7 @@
 package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
-import android.content.Context
-import android.content.pm.PackageManager
-import android.util.Log
-import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,7 +21,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItem
@@ -38,10 +30,11 @@ import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.SaveImageTask
 import at.htlhl.chatnet.ui.components.chats.EmptyChatContent
+import at.htlhl.chatnet.ui.components.dialogs.BlockUserDialog
+import at.htlhl.chatnet.ui.components.dialogs.ClearChatDialog
 import at.htlhl.chatnet.ui.components.dialogs.ShowBigUserImageDialog
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
-import at.htlhl.chatnet.ui.components.dialogs.ClearChatDialog
 import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.imageLoader
@@ -57,23 +50,36 @@ class ChatsView {
     fun ChatsScreen(
         navController: NavController, sharedViewModel: SharedViewModel
     ) {
-        Log.println(Log.INFO, "Chats", "ChatsScreen")
         val context = LocalContext.current
         val lazyListState = rememberLazyListState()
         val coroutineScope = rememberCoroutineScope()
         var showUserIconPrompt by remember { mutableStateOf(false) }
         var showClearChatPrompt by remember { mutableStateOf(false) }
+        var showBlockUserDialog by remember { mutableStateOf(false) }
         val modelSheetState = remember { mutableStateOf(false) }
-        val userDataInstanceState = sharedViewModel.completeChatList.collectAsState(initial = arrayListOf(InternalChatInstance()))
+        val userDataInstanceState = sharedViewModel.completeChatList.collectAsState(
+            initial = arrayListOf(InternalChatInstance())
+        )
         val userDataInstance: List<InternalChatInstance> = userDataInstanceState.value
-        val chatDataState = sharedViewModel.chatData.collectAsState(initial = arrayListOf(FirebaseChat()))
+        val chatDataState =
+            sharedViewModel.chatData.collectAsState(initial = arrayListOf(FirebaseChat()))
         val chatData: List<FirebaseChat> = chatDataState.value
-        val friendListDataState = sharedViewModel.friendListData.collectAsState(initial = arrayListOf(FirebaseUser()))
+        val friendListDataState =
+            sharedViewModel.friendListData.collectAsState(initial = arrayListOf(FirebaseUser()))
         val friendListData: List<FirebaseUser> = friendListDataState.value
-        val friendDataState = sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
+        val friendDataState =
+            sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
         val friendData: InternalChatInstance = friendDataState.value
+        val userDataState = sharedViewModel.user.collectAsState(initial = FirebaseUser())
+        val userData: FirebaseUser = userDataState.value
         val availableUsers = friendListData.filter { friend -> friend.statusFriend == "pending" }
-        val completePersonList = if (sharedViewModel.searchValue.value != "") userDataInstance.filter { it.personList.username["mixedcase"]?.contains(sharedViewModel.searchValue.value, ignoreCase = true) ?: false } else userDataInstance
+        val completePersonList =
+            if (sharedViewModel.searchValue.value != "") userDataInstance.filter {
+                it.personList.username["mixedcase"]?.contains(
+                    sharedViewModel.searchValue.value,
+                    ignoreCase = true
+                ) ?: false
+            } else userDataInstance
         LaunchedEffect(chatData) {
             for (chat in chatData) {
                 for (message in chat.messages) {
@@ -88,7 +94,7 @@ class ChatsView {
                 }
             }
         }
-        LaunchedEffect(sharedViewModel.localChatUserList.value){
+        LaunchedEffect(sharedViewModel.localChatUserList.value) {
             for (user in sharedViewModel.localChatUserList.value) {
                 val request = ImageRequest.Builder(context)
                     .data(user.image)
@@ -142,7 +148,8 @@ class ChatsView {
                 ) {
                     items(completePersonList) { message ->
                         ChatsViewChatItem(
-                            chat = message,
+                            chatFriend = message,
+                            chatUser = userData,
                             displayOnlineState = true,
                             sharedViewModel = sharedViewModel,
                         ) { context ->
@@ -176,11 +183,8 @@ class ChatsView {
                         }
 
                         "block" -> {
-                            sharedViewModel.updateBlockedUserList(
-                                sharedViewModel.user.value.blocked.contains(
-                                    sharedViewModel.friend.value.personList.id
-                                )
-                            )
+                            showBlockUserDialog = true
+
                         }
 
                         "image" -> {
@@ -199,10 +203,22 @@ class ChatsView {
         if (showClearChatPrompt) {
             ClearChatDialog(onDismiss = { clear ->
                 if (clear == "clear") {
-                    sharedViewModel.deleteMessagesForUser()
+                    sharedViewModel.deleteMessagesForUser(friendData.chatRoomID)
                 }
                 showClearChatPrompt = false
             })
+        }
+        if (showBlockUserDialog) {
+            BlockUserDialog(chatUser = userData, chatPartner = friendData) {
+                if (it == "blocked") {
+                    sharedViewModel.updateBlockedUserList(
+                        sharedViewModel.user.value.blocked.contains(
+                            sharedViewModel.friend.value.personList.id
+                        )
+                    )
+                }
+                showBlockUserDialog = false
+            }
         }
         if (modelSheetState.value) {
             ModalBottomSheet(

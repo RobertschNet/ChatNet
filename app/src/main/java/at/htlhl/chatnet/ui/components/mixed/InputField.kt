@@ -12,7 +12,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,7 +59,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -99,15 +97,6 @@ fun InputField(
     var chatMateResponseText by remember { mutableStateOf("ChatMate is thinking") }
     val chatMatePadding =
         if (sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) 10.dp else 0.dp
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            navController.navigate("CameraFlow")
-        } else {
-            // Show dialog
-        }
-    }
 
     val multiplePhotoPickerLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.PickMultipleVisualMedia(),
@@ -117,7 +106,34 @@ fun InputField(
                         sharedViewModel.friend.value.chatRoomID,
                         uris.map { uri -> uri })
                 }
-            })
+            }
+        )
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            navController.saveState()
+            navController.navigate("CameraFlow")
+        } else {
+            Toast.makeText(context, "Camera permission denied", Toast.LENGTH_SHORT).show()
+        }
+    }
+    val mediaLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            multiplePhotoPickerLauncher.launch(
+                PickVisualMediaRequest(
+                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                )
+            )
+        } else {
+            Toast.makeText(context, "Gallery permission denied", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
     BottomAppBar(
         elevation = 0.dp,
         modifier = if (getImageUploadList(chatPartner.chatRoomID).isEmpty()) Modifier.height(
@@ -164,14 +180,9 @@ fun InputField(
                                         currentItem
                                     )
                                 }
-                                .border(
-                                    width = Dp.Hairline,
-                                    color = Color.White,
-                                    shape = CircleShape
-                                )
                                 .align(Alignment.TopEnd)) {
                                 SubcomposeAsyncImage(
-                                    model = R.drawable.close_svgrepo_com,
+                                    model = R.drawable.close_md_svgrepo_com,
                                     contentDescription = null,
                                     modifier = Modifier
                                         .size(14.dp)
@@ -286,18 +297,19 @@ fun InputField(
                             ) {
                                 if (text.isEmpty()) {
                                     IconButton(onClick = {
-                                        if (!checkAndRequestCameraPermission(
-                                                context,
-                                                android.Manifest.permission.CAMERA,
-                                                launcher
-                                            )
-                                        ) {
-                                            createToast(true, context)
-                                        } else if (chatMateChat) {
-                                            createToast(false, context)
-                                        } else {
-                                            navController.saveState()
-                                            navController.navigate("CameraFlow")
+                                        if (chatMateChat) createToast(
+                                            false,
+                                            context
+                                        ) else {
+                                            if (checkAndRequestPermission(
+                                                    context,
+                                                    android.Manifest.permission.CAMERA,
+                                                    cameraLauncher
+                                                )
+                                            ) {
+                                                navController.saveState()
+                                                navController.navigate("CameraFlow")
+                                            }
                                         }
                                     }) {
                                         SubcomposeAsyncImage(
@@ -312,11 +324,18 @@ fun InputField(
                                         if (chatMateChat) {
                                             createToast(false, context)
                                         } else if (!isLoading) {
-                                            multiplePhotoPickerLauncher.launch(
-                                                PickVisualMediaRequest(
-                                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                            if (checkAndRequestPermission(
+                                                    context,
+                                                    android.Manifest.permission.READ_MEDIA_IMAGES,
+                                                    mediaLauncher
                                                 )
-                                            )
+                                            ) {
+                                                multiplePhotoPickerLauncher.launch(
+                                                    PickVisualMediaRequest(
+                                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                                    )
+                                                )
+                                            }
                                         }
                                     }) {
                                         SubcomposeAsyncImage(
@@ -381,12 +400,22 @@ fun InputField(
                                     )
                                 } else {
                                     IconButton(onClick = {
-                                        if (chatMateChat) createToast(
-                                            false,
-                                            context
-                                        ) else multiplePhotoPickerLauncher.launch(
-                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                        )
+                                        if (chatMateChat) {
+                                            createToast(false, context)
+                                        } else {
+                                            if (checkAndRequestPermission(
+                                                    context,
+                                                    android.Manifest.permission.READ_MEDIA_IMAGES,
+                                                    mediaLauncher
+                                                )
+                                            ) {
+                                                multiplePhotoPickerLauncher.launch(
+                                                    PickVisualMediaRequest(
+                                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                                    )
+                                                )
+                                            }
+                                        }
                                     }) {
                                         SubcomposeAsyncImage(
                                             model = R.drawable.gallery_svgrepo_com,
@@ -586,7 +615,7 @@ fun onSentPressed(
 
 }
 
-private fun checkAndRequestCameraPermission(
+private fun checkAndRequestPermission(
     context: Context,
     permission: String,
     launcher: ManagedActivityResultLauncher<String, Boolean>

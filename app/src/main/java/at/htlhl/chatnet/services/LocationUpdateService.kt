@@ -9,6 +9,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
+import android.location.Address
+import android.location.Geocoder
 import android.location.Location
 import android.os.Binder
 import android.os.Build
@@ -16,10 +18,12 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import androidx.compose.runtime.Composable
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
 import at.htlhl.chatnet.data.FirebaseUser
+import at.htlhl.chatnet.data.LocationUserInstance
 import com.firebase.geofire.GeoFireUtils
 import com.firebase.geofire.GeoLocation
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -32,6 +36,8 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.ktx.Firebase
+import java.io.IOException
+import java.util.Locale
 
 class LocationUpdateService : Service() {
     private val locationScanInterval = 60000L // 60 second
@@ -41,7 +47,7 @@ class LocationUpdateService : Service() {
     private lateinit var locationCallback: LocationCallback
     val auth: FirebaseAuth = Firebase.auth
     private var lastKnownLocation: Location? = null
-    val locationLiveData = MutableLiveData<List<FirebaseUser>>()
+    val locationLiveData = MutableLiveData<List<LocationUserInstance>>()
 
     override fun onCreate() {
         super.onCreate()
@@ -60,7 +66,6 @@ class LocationUpdateService : Service() {
             override fun onLocationResult(locationResult: LocationResult) {
                 super.onLocationResult(locationResult)
                 locationResult.lastLocation?.let { location ->
-                    if (isLocationDifferent(location)) {
                         lastKnownLocation = location
                         val latitude = location.latitude
                         val longitude = location.longitude
@@ -71,9 +76,10 @@ class LocationUpdateService : Service() {
                             "lat" to latitude,
                             "lng" to longitude,
                         )
+                    if (isLocationDifferent(location)) {
                         sendLocation(updates, auth)
-                        fetchLocation(latitude, longitude)
                     }
+                    fetchLocation(latitude, longitude)
                 }
             }
         }
@@ -97,6 +103,21 @@ class LocationUpdateService : Service() {
             .build()
     }
 
+    private fun getCityName(context: Context, latitude: Double, longitude: Double): String {
+        val geocoder = Geocoder(context, Locale.getDefault())
+        try {
+            val addresses: MutableList<Address>? = geocoder.getFromLocation(latitude, longitude, 1)
+            if (addresses != null) {
+                if (addresses.isNotEmpty()) {
+                    val cityName = addresses[0].locality
+                    return cityName ?: "Unknown City"
+                }
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        return "Unknown City"
+    }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         println(intent.toString())
         if (intent?.action == "STOP_LOCATION_SERVICE") {
@@ -106,9 +127,7 @@ class LocationUpdateService : Service() {
             super.onDestroy()
             return START_NOT_STICKY
         }
-        // Request location updates immediately
         requestLocationUpdates()
-        // Schedule periodic location updates
         handler.postDelayed(locationRunnable, locationScanInterval)
         return START_STICKY
     }
@@ -177,7 +196,6 @@ class LocationUpdateService : Service() {
 
     fun fetchLocation(latitude: Double, longitude: Double) {
         val center = GeoLocation(latitude, longitude)
-
         FirebaseFirestore.getInstance().collection("users")
             .whereEqualTo("status", "online")
             .get()
@@ -195,33 +213,28 @@ class LocationUpdateService : Service() {
                     val docLocation = GeoLocation(geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
                     GeoFireUtils.getDistanceBetween(docLocation, center)
                 }
-
                 val top5ClosestUsers = sortedUsers.take(5)
-
                 val personList = top5ClosestUsers.map { dataMap ->
                     val location = dataMap["location"] as? Map<*, *>
                     val geolocation = location?.get("geopoint") as? GeoPoint
                     val docLocation = GeoLocation(geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
                     val distanceInM = GeoFireUtils.getDistanceBetween(docLocation, center)
-
-                    FirebaseUser(
+                    LocationUserInstance(
                         id = dataMap["id"].toString(),
                         username = dataMap["username"] as? Map<String, String> ?: emptyMap(),
                         image = dataMap["image"].toString(),
-                        connected = dataMap["connected"] as? Boolean ?: false,
                         status = dataMap["status"] as? String ?: "",
-                        email = dataMap["email"].toString(),
-                        color = dataMap["color"].toString(),
                         blocked = dataMap["blocked"] as? List<String> ?: emptyList(),
-                        pinned = dataMap["pinned"] as? List<String> ?: emptyList(),
-                        mutedFriend = false,
-                        statusFriend = "User is ${distanceInM.toInt()} meters away",
+                        location = if (getCityName(applicationContext, geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0) != getCityName(applicationContext, latitude, longitude)) {
+                            getCityName(applicationContext, geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
+                        } else if (auth.currentUser?.uid == dataMap["id"].toString()) {
+                            getCityName(applicationContext, latitude, longitude)
+                        } else{
+                            distanceInM.toString() + "m away"
+                        }
                     )
                 }
-                Log.println(Log.INFO, "ottt", personList.toString())
                 locationLiveData.postValue(personList)
             }
     }
-
-
 }

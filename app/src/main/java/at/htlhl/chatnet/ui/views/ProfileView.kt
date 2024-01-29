@@ -79,6 +79,7 @@ import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.Firebase
@@ -100,6 +101,8 @@ class ProfileView {
         val userState = sharedViewModel.user.collectAsState()
         val userData: FirebaseUser = userState.value
         val context = LocalContext.current
+        val systemUiController = rememberSystemUiController()
+        systemUiController.setStatusBarColor(color =if (isSystemInDarkTheme()) Color.Black else Color.White, darkIcons = !isSystemInDarkTheme())
         var usernameText by remember {
             mutableStateOf("")
         }
@@ -167,7 +170,6 @@ class ProfileView {
                     )
                 }
             )
-
         Scaffold(
             modifier = Modifier
                 .fillMaxSize()
@@ -177,9 +179,7 @@ class ProfileView {
                     tab = "Profile",
                     availableUsers = listOf(FirebaseUser()),
                     sharedViewModel = sharedViewModel
-                ) {
-
-                }
+                )
             },
             content = {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {

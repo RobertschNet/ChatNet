@@ -16,8 +16,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.TopAppBar
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.outlined.LocationOff
+import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,7 +58,7 @@ fun TabsTopBar(
     tab: String,
     availableUsers: List<FirebaseUser>,
     sharedViewModel: SharedViewModel,
-    onClick: () -> Unit,
+    onClick: () -> Unit= {},
 ) {
     val isSearchMode = remember { mutableStateOf(false) }
     TopAppBar(
@@ -75,7 +80,7 @@ fun TabsTopBar(
                     .fillMaxWidth()
                     .weight(1f)
             )
-            if (tab!="Profile"){
+            if (tab != "Profile" && tab != "RandChat") {
                 IconButton(
                     onClick = { isSearchMode.value = true },
                     modifier = Modifier.padding(start = 108.dp, top = 5.dp)
@@ -92,14 +97,25 @@ fun TabsTopBar(
                     modifier = Modifier.padding(top = 5.dp, end = 10.dp)
                 ) {
                     Box(modifier = Modifier.size(50.dp)) {
-                        SubcomposeAsyncImage(
-                            model = if (tab == "Chats") R.drawable.add_user_social_svgrepo_com_1_ else if (tab == "ChatMate") R.drawable.add_circle_svgrepo_com else R.drawable.location_place_pin_svgrepo_com,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(35.dp)
-                                .align(Alignment.Center),
-                            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
-                        )
+                        if (tab == "DropIn") {
+                            Icon(
+                                imageVector = if (sharedViewModel.gpsState.value) Icons.Outlined.LocationOff else Icons.Outlined.LocationOn,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .size(35.dp)
+                                    .align(Alignment.Center),
+                                contentDescription = null
+                            )
+                        } else {
+                            SubcomposeAsyncImage(
+                                model = if (tab == "Chats") R.drawable.add_user_social_svgrepo_com_1_ else if (tab == "ChatMate") R.drawable.chat_add_svgrepo_com_1_ else Icons.Default.LocationOn,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(35.dp)
+                                    .align(Alignment.Center),
+                                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+                            )
+                        }
                         if (availableUsers.isNotEmpty() && tab == "Chats") {
                             Box(
                                 modifier = Modifier

@@ -2,7 +2,6 @@ package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -28,10 +27,10 @@ import at.htlhl.chatnet.data.BottomSheetItem
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
+import at.htlhl.chatnet.ui.components.dialogs.ClearChatDialog
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
-import at.htlhl.chatnet.ui.components.dialogs.ClearChatDialog
+import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 
 class ChatMateView {
@@ -42,15 +41,15 @@ class ChatMateView {
     @RequiresApi(Build.VERSION_CODES.S)
     @Composable
     fun ChatMateScreen(navController: NavController, sharedViewModel: SharedViewModel) {
-        Log.println(Log.INFO, "ChatMateView", "ChatMateScreen")
         val lazyListState = rememberLazyListState()
         val modelSheetState = remember { mutableStateOf(false) }
         val messageChatRoomDataState = sharedViewModel.completeChatMateList.collectAsState()
         val messageChatRoomData: List<InternalChatInstance> = messageChatRoomDataState.value
         val friendState = sharedViewModel.friend.collectAsState()
         val friend: InternalChatInstance = friendState.value
+        val userState = sharedViewModel.user.collectAsState()
+        val user: FirebaseUser = userState.value
         var showClearChatPrompt by remember { mutableStateOf(false) }
-        Log.println(Log.INFO, "ChatMateView", "messageChatRoomData: $messageChatRoomData")
         val bottomSheetItems = listOf(
             BottomSheetItem(
                 title = if (friend.markedAsUnread || friend.read > 0) "Mark as Read" else "Mark as Unread",
@@ -76,7 +75,7 @@ class ChatMateView {
             topBar = {
                 TabsTopBar(
                     tab = "ChatMate",
-                    sharedViewModel=sharedViewModel,
+                    sharedViewModel = sharedViewModel,
                     availableUsers = listOf(FirebaseUser()),
                 ) { sharedViewModel.createChatMateChat() }
             },
@@ -89,7 +88,8 @@ class ChatMateView {
                 ) {
                     items(messageChatRoomData) { message ->
                         ChatsViewChatItem(
-                            chat = message,
+                            chatFriend = message,
+                            chatUser = user,
                             displayOnlineState = false,
                             sharedViewModel = sharedViewModel,
                         ) { context ->
@@ -114,7 +114,7 @@ class ChatMateView {
         if (showClearChatPrompt) {
             ClearChatDialog(onDismiss = { clear ->
                 if (clear == "clear") {
-                    sharedViewModel.deleteMessagesForUser()
+                    sharedViewModel.deleteMessagesForUser(friend.chatRoomID)
                 }
                 showClearChatPrompt = false
             })

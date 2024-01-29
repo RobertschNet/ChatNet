@@ -23,6 +23,7 @@ import at.htlhl.chatnet.data.FirebaseMessage
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
+import at.htlhl.chatnet.data.LocationUserInstance
 import at.htlhl.chatnet.navigation.Screens
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -113,7 +114,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     var unfinishedGoogleRegistration = mutableStateOf("")
     val bottomBarState = mutableStateOf(false)
     val gpsState = mutableStateOf(false)
-    val localChatUserList = mutableStateOf<List<FirebaseUser>>(emptyList())
+    val localChatUserList = mutableStateOf<List<LocationUserInstance>>(emptyList())
     val searchValue = mutableStateOf("")
     val text = mutableStateOf("")
     val randState = mutableStateOf(false)
@@ -228,6 +229,11 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         if (updatedList != currentList) {
             updatedList += data!!
         }
+        if (updatedList != currentList) {
+            if (updatedList.find { friend.value.personList.id == it.id}!=null) {
+                updateFriend(friend.value.copy(personList = updatedList.find { friend.value.personList.id == it.id}!!))
+            }
+        }
         list.value = updatedList
         sortDataChats {}
     }
@@ -256,7 +262,8 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val completeDropInList: StateFlow<List<InternalChatInstance>> get() = _completeDropInList
 
     private fun createInternalChatInstance(chat: FirebaseChat): InternalChatInstance {
-        val lastMessage = chat.messages.firstOrNull() ?: InternalMessageInstance()
+        val lastMessage= chat.messages.firstOrNull { it.visible.contains(auth.currentUser?.uid) } ?: InternalMessageInstance()
+
         return InternalChatInstance(
             personList = FirebaseUser(
                 blocked = emptyList(),
@@ -329,17 +336,15 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 _completeDropInList.value =
                     _completeDropInList.value.filter { it.chatRoomID != chat.chatRoomID }
             } else {
-                fetchUser(friend) { user ->
-                    user?.let {
-                        _completeDropInList.value =
-                            _completeDropInList.value.filter { it.chatRoomID != chat.chatRoomID }
+                fetchUser(friend) { instance ->
+                    instance?.let { user ->
+                        _completeDropInList.value = _completeDropInList.value.filter { it.chatRoomID != chat.chatRoomID }
                         _completeDropInList.value += InternalChatInstance(
-                            personList = it,
-                            lastMessage = chat.messages.firstOrNull() ?: InternalMessageInstance(),
-                            timestampMessage = chat.messages.firstOrNull()?.timestamp
-                                ?: Timestamp.now(),
+                            personList = user,
+                            lastMessage = chat.messages.firstOrNull { it.visible.contains(auth.currentUser?.uid) } ?: InternalMessageInstance(),
+                            timestampMessage = chat.messages.firstOrNull{it.visible.contains(auth.currentUser?.uid)}?.timestamp ?: Timestamp.now(),
                             markedAsUnread = chat.unread.contains(auth.currentUser?.uid.toString()),
-                            pinChat = it.pinned.contains(chat.chatRoomID),
+                            pinChat = _user.value.pinned.contains(chat.chatRoomID),
                             read = if (chat.messages.firstOrNull() != InternalMessageInstance()) {
                                 chat.messages.count { it.sender != auth.currentUser?.uid.toString() && !it.read }
                             } else {
@@ -357,19 +362,31 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun fetchUser(friend: String, onComplete: (FirebaseUser?) -> Unit) {
         val userDocumentRef = FirebaseFirestore.getInstance().collection("users").document(friend)
-        userDocumentRef.get()
-            .addOnSuccessListener { documentSnapshot ->
-                if (documentSnapshot.exists()) {
-                    val user = documentSnapshot.toObject(FirebaseUser::class.java)
-                    onComplete(user)
-                } else {
-                    onComplete(null)
-                }
-            }
-            .addOnFailureListener { exception ->
+
+        // Add a SnapshotListener to get real-time updates
+        userDocumentRef.addSnapshotListener { documentSnapshot, exception ->
+            if (exception != null) {
                 exception.printStackTrace()
                 onComplete(null)
+                return@addSnapshotListener
             }
+
+            if (documentSnapshot != null && documentSnapshot.exists()) {
+                // The document exists and has been updated
+                val user = documentSnapshot.toObject(FirebaseUser::class.java)
+
+                if (user != null) {
+                    if (user.id==_friend.value.personList.id){
+                        updateFriend(_friend.value.copy(personList = user))
+
+                    }
+                }
+                onComplete(user)
+            } else {
+                // The document doesn't exist or has been deleted
+                onComplete(null)
+            }
+        }
     }
 
 
@@ -792,35 +809,36 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun deleteMessagesForUser() {
-        for (chat in chatData.value) {
-            if (chat.members.contains(friend.value.personList.id) && chat.members.contains(auth.currentUser?.uid.toString())) {
-                val chatRef =
-                    getChatDocumentRef().document(chat.chatRoomID).collection(MESSAGES_COLLECTION)
-                chatRef.get().addOnSuccessListener { querySnapshot ->
-                    for (document in querySnapshot.documents) {
-                        val sender = document.get("visible") as List<*>
-                        if (auth.currentUser?.uid.toString() in sender) {
-                            val updatedVisible = sender.toMutableList()
-                            updatedVisible.remove(auth.currentUser?.uid.toString())
+    fun deleteMessagesForUser(chatRoomId: String) {
 
-                            chatRef.document(document.id)
-                                .update("visible", updatedVisible)
-                                .addOnSuccessListener {
-                                    // Successfully removed the entry from the "visible" array
-                                }
-                                .addOnFailureListener { exception ->
-                                    exception.printStackTrace()
-                                    // Handle the failure here
-                                }
+        val specificChat = chatData.value.find { it.chatRoomID == chatRoomId }
+
+
+        val chatRef = getChatDocumentRef().document(specificChat!!.chatRoomID).collection(MESSAGES_COLLECTION)
+        chatRef.get().addOnSuccessListener { querySnapshot ->
+            for (document in querySnapshot.documents) {
+                val sender = document.get("visible") as List<*>
+                if (auth.currentUser?.uid.toString() in sender) {
+                    val updatedVisible = sender.toMutableList()
+                    updatedVisible.remove(auth.currentUser?.uid.toString())
+
+                    chatRef.document(document.id)
+                        .update("visible", updatedVisible)
+                        .addOnSuccessListener {
+                            // Successfully removed the entry from the "visible" array
                         }
-                    }
-                }.addOnFailureListener { exception ->
-                    exception.printStackTrace()
-                    // Handle the failure here
+                        .addOnFailureListener { exception ->
+                            exception.printStackTrace()
+                            // Handle the failure here
+                        }
                 }
             }
+        }.addOnFailureListener { exception ->
+            exception.printStackTrace()
+            // Handle the failure here
         }
+
+
     }
 
     fun sendDataToServer(data: String, onReceived: (String) -> Unit) {

@@ -1,10 +1,9 @@
 package at.htlhl.chatnet
 
-import android.content.BroadcastReceiver
+import android.Manifest
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Build
@@ -12,8 +11,6 @@ import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -22,7 +19,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.compose.rememberNavController
 import at.htlhl.chatnet.navigation.NavigationBarLayout
 import at.htlhl.chatnet.navigation.Screens
@@ -31,7 +27,6 @@ import at.htlhl.chatnet.ui.theme.TestingTheme
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.imageLoader
 import coil.request.ImageRequest
-import com.google.firebase.messaging.FirebaseMessaging
 
 
 class MainActivity : ComponentActivity() {
@@ -95,7 +90,13 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-            manageLocationServiceStatus(viewModel, serviceIntent)
+            if (checkFineLocationPermission()) {
+                manageLocationServiceStatus(viewModel, serviceIntent)
+            } else {
+                requestFineLocationPermissionLauncher.launch(
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                )
+            }
         }
     }
 
@@ -150,4 +151,23 @@ class MainActivity : ComponentActivity() {
             bindService(serviceIntent, serviceConnection!!, Context.BIND_AUTO_CREATE)
         }
     }
+
+    private fun checkFineLocationPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private val requestFineLocationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                manageLocationServiceStatus(
+                    (application as MyApplication).sharedViewModel,
+                    Intent(this, LocationUpdateService::class.java)
+                )
+            } else {
+                // Fine location permission denied, handle accordingly (e.g., show a message)
+            }
+        }
 }

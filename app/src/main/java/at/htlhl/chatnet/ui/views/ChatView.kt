@@ -128,7 +128,7 @@ class ChatView : ViewModel() {
                     sharedViewModel = sharedViewModel
                 ) {
                     if (it == "return") {
-                        navController.navigate(if (chatMateChat) Screens.ChatMateScreen.route else Screens.ChatsViewScreen.route)
+                        navController.navigateUp()
                     } else {
                         blockDialog = true
                     }
@@ -232,37 +232,6 @@ class ChatView : ViewModel() {
                 ),
                 state = lazyListState
             ) {
-                items(
-                    key = { it.id },
-                    items = filteredMessages
-                ) { message ->
-                    val messageIndex = messages.indexOf(message)
-                    val previousMessageIndex =
-                        messages.getOrNull(messageIndex + 1)
-                    val nextMessageIndex =
-                        messages.getOrNull(messageIndex - 1)
-                    MessageItem(
-                        sharedViewModel = sharedViewModel,
-                        chatMateChat = chatMateChat,
-                        previousMessage = previousMessageIndex,
-                        nextMessage = nextMessageIndex,
-                        message = InternalMessageInstance(
-                            isFromCache = message.isFromCache,
-                            id = message.id,
-                            sender = message.sender,
-                            images = message.images,
-                            read = message.read,
-                            text = message.text,
-                            timestamp = message.timestamp,
-                            visible = message.visible,
-                        ), chatRoomId = chatRoomId, onClick = { image ->
-                            sharedViewModel.imageList.value = createImageList(filteredMessages)
-                            sharedViewModel.imagePosition.intValue = sharedViewModel.imageList.value.find { it.images[0] == image }?.let { sharedViewModel.imageList.value.indexOf(it) } ?: 0
-                            navController.navigate(Screens.ImageViewScreen.route)
-                        }, chatMateResponse = { chatMateResponse.invoke(it) }
-                    )
-
-                }
                 item {
                     if (isBlockSeparatorNeeded(sharedViewModel)) {
                         Column(
@@ -293,6 +262,37 @@ class ChatView : ViewModel() {
                             }
                         }
                     }
+                }
+                items(
+                    key = { it.id },
+                    items = filteredMessages
+                ) { message ->
+                    val messageIndex = messages.indexOf(message)
+                    val previousMessageIndex =
+                        messages.getOrNull(messageIndex + 1)
+                    val nextMessageIndex =
+                        messages.getOrNull(messageIndex - 1)
+                    MessageItem(
+                        sharedViewModel = sharedViewModel,
+                        chatMateChat = chatMateChat,
+                        previousMessage = previousMessageIndex,
+                        nextMessage = nextMessageIndex,
+                        message = InternalMessageInstance(
+                            isFromCache = message.isFromCache,
+                            id = message.id,
+                            sender = message.sender,
+                            images = message.images,
+                            read = message.read,
+                            text = message.text,
+                            timestamp = message.timestamp,
+                            visible = message.visible,
+                        ), chatRoomId = chatRoomId, onClick = { image ->
+                            sharedViewModel.imageList.value = createImageList(filteredMessages)
+                            sharedViewModel.imagePosition.intValue = sharedViewModel.imageList.value.find { it.images[0] == image }?.let { sharedViewModel.imageList.value.indexOf(it) } ?: 0
+                            navController.navigate(Screens.ImageViewScreen.route)
+                        }, chatMateResponse = { chatMateResponse.invoke(it) }
+                    )
+
                 }
             }
 
