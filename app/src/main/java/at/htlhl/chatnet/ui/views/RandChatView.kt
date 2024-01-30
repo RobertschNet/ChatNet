@@ -12,16 +12,24 @@ import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Scaffold
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -36,8 +44,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import at.chatnet.R
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.InternalChatInstance
@@ -45,11 +55,12 @@ import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.dialogs.DeleteMessageDialog
 import at.htlhl.chatnet.ui.components.dialogs.OptionsDialog
+import at.htlhl.chatnet.ui.components.dialogs.UnblockToMessageDialog
 import at.htlhl.chatnet.ui.components.mixed.ChatViewMessageComponent
 import at.htlhl.chatnet.ui.components.mixed.ChatViewTopBar
 import at.htlhl.chatnet.ui.components.mixed.InputField
-import at.htlhl.chatnet.ui.components.randchat.LoadingChat
 import at.htlhl.chatnet.viewmodels.SharedViewModel
+import coil.compose.SubcomposeAsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -96,12 +107,12 @@ class RandChatView {
                             sharedViewModel = sharedViewModel
                         )
                     } else {
-                        LoadingChat(navController)
+                        LoadingScreen(navController)
                     }
                 }
 
                 1 -> {
-                    LoadingChat(navController)
+                    LoadingScreen(navController)
                 }
             }
         }
@@ -155,31 +166,22 @@ class RandChatView {
         chatRoomId: String,
         chatMateChat: Boolean
     ) {
-        val coroutineScope = rememberCoroutineScope()
         var chatMateResponse by remember { mutableStateOf("") }
+        var unblockDialog by remember { mutableStateOf(false) }
         val filteredMessages = messagesForChat.filter { message ->
             message.visible.contains(sharedViewModel.auth.currentUser?.uid.toString())
         }.toMutableList()
-        val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = 0)
+        val lazyListState = rememberLazyListState()
         Scaffold(
             modifier = Modifier
-                .imePadding()
-                .onSizeChanged {
-                    coroutineScope.launch {
-                        lazyListState.scrollToItem(
-                            messagesForChat.size
-                        )
-                    }
-                },
+                .imePadding(),
             topBar = {
                 ChatViewTopBar(
                     navController = navController,
                     chatPartner = chatPartner,
                     sharedViewModel = sharedViewModel
                 ) {
-                    navController.navigate(
-                        Screens.RandChatStartScreen.route
-                    )
+                    navController.navigateUp()
                 }
             },
             content = {
@@ -203,10 +205,21 @@ class RandChatView {
                     navController = navController,
                     chatMateChat = chatMateChat
                 ) {
-                    //TODO blocked is not implemented yet
+                    unblockDialog = true
                 }
             }
+
         )
+        if (unblockDialog) {
+            UnblockToMessageDialog(
+                chatPartner = chatPartner,
+            ) { value ->
+                if (value == "unblock") {
+                    sharedViewModel.updateBlockedUserList(true)
+                }
+                unblockDialog = false
+            }
+        }
     }
 
     @Composable
@@ -218,7 +231,7 @@ class RandChatView {
         chatRoomId: String,
         onChatMateResponseState: (String) -> Unit
     ) {
-        var animatedText by remember { mutableStateOf("Robert is writing") }
+        var animatedText by remember { mutableStateOf("ChatMate is thinking") }
         LaunchedEffect(sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
             while (true) {
                 delay(750)
@@ -232,7 +245,7 @@ class RandChatView {
             }
         }
         LaunchedEffect(messages.size) {
-            lazyListState.animateScrollToItem(messages.size)
+            lazyListState.animateScrollToItem(0)
         }
         Column(
             modifier = Modifier
@@ -349,5 +362,48 @@ class RandChatView {
                 menuDialog = false
             }
         }
+    }
+
+    @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
+    @Composable
+    fun LoadingScreen(navController: NavController) {
+        Scaffold(
+            topBar = {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    IconButton(
+                        onClick = { navController.navigateUp() },
+                        modifier = Modifier.size(45.dp)
+                    ) {
+                        SubcomposeAsyncImage(
+                            model = R.drawable.back_svgrepo_com_1_,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+            }, content = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(50.dp))
+                    Spacer(modifier = Modifier.height(5.dp))
+                    Text(
+                        text = "Searching for User...",
+                        color = Color.Black,
+                        fontFamily = FontFamily.SansSerif
+                    )
+                }
+            }
+        )
     }
 }

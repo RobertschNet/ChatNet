@@ -62,7 +62,6 @@ class FindUserView : ViewModel() {
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun FindUserScreen(navController: NavController, sharedViewModel: SharedViewModel) {
-        Log.println(Log.INFO, "FindUserView", "FindUserView")
         val scaffoldState = rememberBackdropScaffoldState(BackdropValue.Concealed)
         val coroutineScope = rememberCoroutineScope()
         val interactionSource = remember { MutableInteractionSource() }

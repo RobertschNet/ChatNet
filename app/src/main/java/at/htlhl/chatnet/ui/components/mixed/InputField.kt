@@ -298,7 +298,7 @@ fun InputField(
                                 if (text.isEmpty()) {
                                     IconButton(onClick = {
                                         if (chatMateChat) createToast(
-                                            false,
+                                            true,
                                             context
                                         ) else {
                                             if (checkAndRequestPermission(

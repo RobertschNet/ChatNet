@@ -4,13 +4,11 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -23,14 +21,13 @@ class RandChatStartView {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @Composable
     fun RandChatStartScreen(navController: NavController, sharedViewModel: SharedViewModel) {
-        if (sharedViewModel.isConnected.value&&navController.previousBackStackEntry?.destination?.route!=Screens.RandChatScreen.route&& navController.currentDestination?.route==Screens.RandChatStartScreen.route ) {
-            LaunchedEffect(Unit) {
-                navController.navigate(Screens.RandChatScreen.route)
-            }
-        }
         Scaffold(
             topBar = {
-               TabsTopBar(tab = "RandChat", availableUsers = listOf(), sharedViewModel =sharedViewModel )
+                TabsTopBar(
+                    tab = "RandChat",
+                    availableUsers = listOf(),
+                    sharedViewModel = sharedViewModel
+                )
             },
             content = {
                 Box(modifier = Modifier.fillMaxSize()) {

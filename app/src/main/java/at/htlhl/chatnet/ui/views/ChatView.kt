@@ -197,7 +197,7 @@ class ChatView : ViewModel() {
         chatRoomId: String,
         chatMateResponse: (String) -> Unit
     ) {
-        var animatedText by remember { mutableStateOf("Robert is writing") }
+        var animatedText by remember { mutableStateOf("ChatMate is thinking") }
         var unblockDialog by remember { mutableStateOf(false) }
         LaunchedEffect(sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
             while (true) {

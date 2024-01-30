@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.htlhl.chatnet.data.FirebaseUser
+import at.htlhl.chatnet.ui.components.TagElement
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -173,16 +174,7 @@ fun FindUserPersonElement(
                     modifier = Modifier
                         .padding(start = 5.dp)
                 )
-                Text(
-                    text = "Last Message",
-                    color = Color.Gray,
-                    fontSize = 14.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    fontWeight = FontWeight.Light,
-                    modifier = Modifier
-                        .padding(start = 5.dp)
-                )
+                TagElement()
             }
         }
         Row {
