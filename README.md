@@ -46,7 +46,63 @@ Provider = Password
 - [x] Change E-Mail
 - [x] Change Password
 - [x] UI for Login/Registration
-- [] UI for Reset Password Dialog
-- [] UI for Confirm E-Mail Dialog
+- [x] UI for Reset Password Dialog
+- [x] UI for Confirm E-Mail Dialog
 - [x] UI for Error Handling
 - [x] Error Handling for Login/Registration
+
+### 2. Chats
+- [ ] Muted Funktionalität implementieren
+- [ ] DarkMode gestalten
+- [ ] Icons ändern
+- [ ] Empty ChatsList Graphik anzeigen
+- [ ] Suchen überarbeiten
+
+### 3. Chat
+- [ ] Bilder zentral cropen
+- [ ] Bilder ausrichtung im vorhinein bestimmen
+- [ ] Suchen von Nachrichten überarbeiten
+- [ ] DarkMode gestalten
+- [ ] offline Image Handling implementieren
+
+### 4. Drop in
+- [ ] Design noch leicht überarbeiten
+- [ ] DarkMode designen
+- [ ] Muted Funktionalität implementieren
+- [ ] Leere Benutzer in Kontakt Liste visuell anzeigen
+- [ ] DropIn Icons ändern
+- [ ] Suchen Funktionalität hinzufügen
+
+### 5. RandChat
+- [ ] Komplett neu designen
+- [ ] Auf Fehler und Probleme überprüfen
+- [ ] DarkMode designen
+
+### 6. ChatMate
+- [ ] DarkMode implementieren
+- [ ] Icons überarbeiten
+- [ ] offline Handling hinzufügen
+
+### 7. Profile
+- [ ] Tags hinzufügen
+- [ ] DarkMode hinzufügen
+- [ ] DropIn einstellung hinzufügen
+- [ ] Delete Account Funktionalität erstellen
+
+### 8. Camera
+- [ ] EingabeFeld senden Funktionalität überarbeiten
+- [ ] EingabeFeld designen
+
+### 9. Freunde
+- [ ] Design leicht anpassen
+- [ ] DarkMode designen
+- [ ] Tags hinzufügen
+
+### 10. ProfileInfoView
+- [ ] Design überarbeiten
+- [ ] DarkMode designen
+- [ ] Tags hinzufügen
+
+### 11. Generell
+- [ ] Push Notifications implementieren
+- [ ] Öffentliche Benutzer Profil erstellen
