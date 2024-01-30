@@ -115,7 +115,7 @@ class DropInView {
                     pinned = listOf(),
                     color = "",
                     connected = false,
-                    mutedFriend = false,
+                    muted = person.muted,
                     statusFriend = "",
                     image = person.image,
                     username = person.username,
@@ -142,8 +142,8 @@ class DropInView {
                 title = "Clear Chat", icon = R.drawable.comment_delete_svgrepo_com, tag = "clear"
             ),
             BottomSheetItem(
-                title = if (friend.personList.mutedFriend) "Unmute User" else "Mute User",
-                icon = if (friend.personList.mutedFriend) R.drawable.speaker_none_svgrepo_com else R.drawable.speaker_svgrepo_com,
+                title = if (userData.muted.contains(friend.personList.id)) "Unmute User" else "Mute User",
+                icon = if (userData.muted.contains(friend.personList.id)) R.drawable.speaker_none_svgrepo_com else R.drawable.speaker_svgrepo_com,
                 tag = "mute"
             ),
             BottomSheetItem(
@@ -341,7 +341,7 @@ class DropInView {
                                 }
 
                                 "mute" -> {
-                                    if (friend.personList.mutedFriend) {
+                                    if (userData.muted.contains(friend.personList.id)) {
                                         sharedViewModel.updateMuteFriendStatus(true)
                                     } else {
                                         sharedViewModel.updateMuteFriendStatus(false)

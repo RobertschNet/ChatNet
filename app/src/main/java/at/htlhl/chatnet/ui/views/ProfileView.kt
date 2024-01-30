@@ -83,6 +83,7 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.Firebase
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.storage
 import kotlinx.coroutines.delay
@@ -812,7 +813,7 @@ class ProfileView {
     ) {
         val storage = Firebase.storage
         val storageRef = storage.reference
-        val webpImageRef = storageRef.child("images/${webpByteArray.size}\"")
+        val webpImageRef = storageRef.child("users/${Timestamp.now().seconds}.webp")
 
         webpImageRef.putBytes(webpByteArray)
             .addOnSuccessListener {

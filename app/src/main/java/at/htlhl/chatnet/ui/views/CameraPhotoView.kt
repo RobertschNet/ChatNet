@@ -117,7 +117,7 @@ class CameraPhotoView {
                             )
                             outputStream.close()
                             val imageRef =
-                                storageRef.child("images/${System.currentTimeMillis()}") // Not safe
+                                storageRef.child("chats/${Timestamp.now().seconds}.webp") // Not safe
                             val uploadTask = imageRef.putFile(Uri.fromFile(cachePath))
                             uploadTask.addOnCompleteListener { task ->
                                 if (task.isSuccessful) {

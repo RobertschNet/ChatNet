@@ -112,8 +112,8 @@ class ChatsView {
                 title = "Clear Chat", icon = R.drawable.comment_delete_svgrepo_com, tag = "clear"
             ),
             BottomSheetItem(
-                title = if (friendData.personList.mutedFriend) "Unmute User" else "Mute User",
-                icon = if (friendData.personList.mutedFriend) R.drawable.speaker_none_svgrepo_com else R.drawable.speaker_svgrepo_com,
+                title = if (userData.muted.contains(friendData.personList.id)) "Unmute User" else "Mute User",
+                icon = if (userData.muted.contains(friendData.personList.id)) R.drawable.speaker_none_svgrepo_com else R.drawable.speaker_svgrepo_com,
                 tag = "mute"
             ),
             BottomSheetItem(
@@ -246,7 +246,7 @@ class ChatsView {
                                 }
 
                                 "mute" -> {
-                                    if (friendData.personList.mutedFriend) {
+                                    if (userData.muted.contains(friendData.personList.id)) {
                                         sharedViewModel.updateMuteFriendStatus(true)
                                     } else {
                                         sharedViewModel.updateMuteFriendStatus(false)

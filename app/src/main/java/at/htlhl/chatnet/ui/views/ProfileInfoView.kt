@@ -490,7 +490,7 @@ class ProfileInfoView {
                     modifier = Modifier
                         .height(50.dp)
                         .clickable {
-                            if (friend.personList.mutedFriend) {
+                            if (user.muted.contains(friend.personList.id)) {
                                 sharedViewModel.updateMuteFriendStatus(true)
                                 sharedViewModel.updateFriend(
                                     InternalChatInstance(
@@ -504,7 +504,7 @@ class ProfileInfoView {
                                             friend.personList.pinned,
                                             friend.personList.color,
                                             friend.personList.connected,
-                                            false,
+                                            friend.personList.muted,
                                             friend.personList.statusFriend
                                         ),
                                         timestampMessage = friend.timestampMessage,
@@ -529,7 +529,7 @@ class ProfileInfoView {
                                             friend.personList.pinned,
                                             friend.personList.color,
                                             friend.personList.connected,
-                                            true,
+                                            friend.personList.muted,
                                             friend.personList.statusFriend
                                         ),
                                         timestampMessage = friend.timestampMessage,
@@ -549,7 +549,7 @@ class ProfileInfoView {
                     SubcomposeAsyncImage(
                         contentScale = ContentScale.Crop,
                         colorFilter = ColorFilter.tint(Color.Black),
-                        model = if (friend.personList.mutedFriend) R.drawable.speaker_svgrepo_com else R.drawable.speaker_none_svgrepo_com,
+                        model = if (user.muted.contains(friend.personList.id)) R.drawable.speaker_svgrepo_com else R.drawable.speaker_none_svgrepo_com,
                         modifier = Modifier.size(30.dp),
                         contentDescription = null
                     )
@@ -557,7 +557,7 @@ class ProfileInfoView {
                     Text(
                         textAlign = TextAlign.Center,
                         overflow = TextOverflow.Ellipsis,
-                        text = if (friend.personList.mutedFriend) "Unmute ${friend.personList.username["mixedcase"]}" else "Mute ${friend.personList.username["mixedcase"]}",
+                        text = if (user.muted.contains(friend.personList.id)) "Unmute ${friend.personList.username["mixedcase"]}" else "Mute ${friend.personList.username["mixedcase"]}",
                         fontSize = 16.sp,
                         color = Color.Black,
                     )

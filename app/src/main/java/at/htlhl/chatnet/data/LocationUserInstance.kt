@@ -6,6 +6,7 @@ data class LocationUserInstance(
     val username: Map<String, String>, // username of the user in different cases (lowercase, mixedcase)
     val status: String, // the current status of the user (online, offline, idle)
     val id: String, // id of the user
+    val muted: List<String>, // if the friend has been muted by the user
     val location:String // location of the user
 ) {
     constructor() : this(
@@ -14,6 +15,7 @@ data class LocationUserInstance(
         mapOf(),
         "",
         "",
+        listOf(),
         ""
     ) // default constructor for Firebase
 }

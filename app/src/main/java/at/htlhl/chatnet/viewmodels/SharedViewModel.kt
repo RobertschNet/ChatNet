@@ -90,7 +90,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 pinned = emptyList(),
                 color = "",
                 connected = false,
-                mutedFriend = false,
+                muted = emptyList(),
                 statusFriend = "accepted"
             ),
             Timestamp.now(),
@@ -198,7 +198,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                         blocked = it.blocked,
                                         connected = it.connected,
                                         pinned = it.pinned,
-                                        mutedFriend = friend.muted,
+                                        muted = it.muted,
                                         statusFriend = friend.status
                                     )
                                     personListData.add(finalData)
@@ -275,7 +275,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 pinned = emptyList(),
                 color = "",
                 connected = false,
-                mutedFriend = false,
+                muted = emptyList(),
                 statusFriend = ""
             ),
             lastMessage = lastMessage,
@@ -615,12 +615,11 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     fun saveFriendForFriend(person: FirebaseUser, status: String) {
         val fieldUpdates = mapOf(
             "status" to status,
-            "muted" to false,
             "id" to auth.currentUser!!.uid
         )
         firebaseInstance.collection("$USER_COLLECTION/${person.id}/$FRIENDS_COLLECTION")
             .document(auth.currentUser!!.uid)
-            .set(fieldUpdates, SetOptions.mergeFields("status", "muted", "id"))
+            .set(fieldUpdates, SetOptions.mergeFields("status", "id"))
             .addOnFailureListener { exception ->
                 exception.printStackTrace()
             }
@@ -630,11 +629,10 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     fun saveFriendForUser(person: FirebaseUser, status: String) {
         val fieldUpdates = mapOf(
             "status" to status,
-            "muted" to false,
             "id" to person.id,
         )
         firebaseInstance.collection("$USER_COLLECTION/${auth.currentUser!!.uid}/$FRIENDS_COLLECTION")
-            .document(person.id).set(fieldUpdates, SetOptions.mergeFields("status", "muted", "id"))
+            .document(person.id).set(fieldUpdates, SetOptions.mergeFields("status", "id"))
             .addOnFailureListener { exception -> exception.printStackTrace() }
     }
 
@@ -755,15 +753,13 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun updateMuteFriendStatus(isAlreadyMuted: Boolean) {
-        val chatRef =
-            firebaseInstance.collection("$USER_COLLECTION/${auth.currentUser?.uid.toString()}/$FRIENDS_COLLECTION")
-                .document(friend.value.personList.id)
+        val userRef = getUserDocumentRef().document(auth.currentUser?.uid.toString())
         val updateData = if (isAlreadyMuted) {
-            mapOf("muted" to false)
+            mapOf("muted" to FieldValue.arrayRemove(friend.value.personList.id))
         } else {
-            mapOf("muted" to true)
+            mapOf("muted" to FieldValue.arrayUnion(friend.value.personList.id))
         }
-        chatRef.update(updateData)
+        userRef.update(updateData)
             .addOnSuccessListener {
             }
             .addOnFailureListener { exception ->
@@ -964,7 +960,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                                 blocked = data.blocked,
                                                 connected = data.connected,
                                                 pinned = data.pinned,
-                                                mutedFriend = friend.muted,
+                                                muted = data.muted,
                                                 statusFriend = friend.status,
                                             )
                                             personListData.add(finalData)
@@ -1134,7 +1130,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                                 blocked = data.blocked,
                                                 connected = data.connected,
                                                 pinned = data.pinned,
-                                                mutedFriend = friend.muted,
+                                                muted = data.muted,
                                                 statusFriend = friend.status,
                                             )
                                             personListData.add(finalData)

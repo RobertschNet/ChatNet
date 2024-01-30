@@ -479,7 +479,7 @@ private fun uploadWebPImage(
 ) {
     val storage = Firebase.storage
     val storageRef = storage.reference
-    val webpImageRef = storageRef.child("images/${webpByteArray.hashCode()}\"")
+    val webpImageRef = storageRef.child("chats/${Timestamp.now().seconds}.webp")
 
     webpImageRef.putBytes(webpByteArray)
         .addOnSuccessListener {

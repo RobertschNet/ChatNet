@@ -273,7 +273,7 @@ fun ChatsViewChatItem(
                         ) else Color.LightGray,
                     )
                 }
-                if (chatFriend.personList.mutedFriend) {
+                if (chatUser.muted.contains(chatFriend.personList.id)) {
                     SubcomposeAsyncImage(
                         modifier = Modifier
                             .size(20.dp)

@@ -355,6 +355,7 @@ class RegisterWithGoggleView {
             "pinned" to emptyList<String>(),
             "color" to "",
             "connected" to false,
+            "muted" to emptyList<String>(),
             "email" to account.currentUser?.email.toString(),
             "id" to account.currentUser?.uid.toString(),
             "image" to "https://www.w3schools.com/howto/img_avatar2.png",
