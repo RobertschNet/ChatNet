@@ -66,6 +66,7 @@ import at.htlhl.chatnet.ui.components.dialogs.ShowBigUserImageDialog
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
 import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
+import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
@@ -384,7 +385,8 @@ class DropInView {
                         .clickable { onItemClicked.invoke(chat) }
                         .align(Alignment.Center)
                         .size(80.dp)
-                        .clip(CircleShape),
+                        .clip(CircleShape)
+                        .shimmerEffect(),
                     model = chat.image,
                     contentDescription = null
                 )

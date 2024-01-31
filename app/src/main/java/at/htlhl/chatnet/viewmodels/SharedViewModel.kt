@@ -38,6 +38,8 @@ import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -1100,68 +1102,48 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     private val _friendFriendsListData = MutableStateFlow<List<FirebaseUser>>(emptyList())
     val friendFriendsListData: StateFlow<List<FirebaseUser>> get() = _friendFriendsListData
 
-    fun fetchFriendsFriends() {
-        val randomFriend = friend.value.personList.id
-        getUserDocumentRef().document(randomFriend).collection("/$FRIENDS_COLLECTION")
-            .whereNotEqualTo("status", "accepted").get()
-            .addOnSuccessListener { friendQuerySnapshot ->
-                val personListData = mutableListOf<FirebaseUser>()
-                friendQuerySnapshot?.let { friendSnapshot ->
-                    try {
-                        val subCollectionData = friendSnapshot.toObjects(FirebaseFriend::class.java)
-                        var completedCount = 0
-                        val totalFriends = subCollectionData.size
-                        for (friend in subCollectionData) {
-                            Log.println(Log.INFO, "Friend", friend.toString())
-                            getUserDocumentRef()
-                                .document(friend.id)
-                                .get().addOnSuccessListener { userDocumentSnapshot ->
-                                    try {
-                                        val data =
-                                            userDocumentSnapshot?.toObject(FirebaseUser::class.java)
-                                        if (data != null) {
-                                            val finalData = FirebaseUser(
-                                                image = data.image,
-                                                username = data.username,
-                                                id = data.id,
-                                                status = data.status,
-                                                email = data.email,
-                                                color = data.color,
-                                                blocked = data.blocked,
-                                                connected = data.connected,
-                                                pinned = data.pinned,
-                                                muted = data.muted,
-                                                statusFriend = friend.status,
-                                            )
-                                            personListData.add(finalData)
-                                        }
-                                        completedCount++
-                                        if (completedCount == totalFriends) {
-                                            _friendFriendsListData.value =
-                                                personListData.filter { person ->
-                                                    friendListData.value.any { friend -> friend.id == person.id }
-                                                }
-                                            Log.println(
-                                                Log.INFO,
-                                                "FriendFriendsList",
-                                                personListData.toString()
-                                            )
-                                        }
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
-                                    }
-                                }.addOnFailureListener { exception ->
-                                    exception.printStackTrace()
-                                }
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
+    fun fetchFriendsFriends(friend:InternalChatInstance) = CoroutineScope(Dispatchers.IO).launch {
+        Log.println(Log.INFO, "FriendFriendsList", friend.toString())
+        try {
+            val randomFriend = friend.personList.id
+            val friendQuerySnapshot = getUserDocumentRef().document(randomFriend)
+                .collection(FRIENDS_COLLECTION)
+                .get()
+                .await()
+
+            val personListData = mutableListOf<FirebaseUser>()
+            val subCollectionData = friendQuerySnapshot.toObjects(FirebaseFriend::class.java)
+
+            subCollectionData.forEach { friend ->
+                try {
+                    val userDocumentSnapshot = getUserDocumentRef().document(friend.id).get().await()
+                    val data = userDocumentSnapshot?.toObject(FirebaseUser::class.java)
+                    if (data != null) {
+                        val finalData = FirebaseUser(
+                            image = data.image,
+                            username = data.username,
+                            id = data.id,
+                            status = data.status,
+                            email = data.email,
+                            color = data.color,
+                            blocked = data.blocked,
+                            connected = data.connected,
+                            pinned = data.pinned,
+                            muted = data.muted,
+                            statusFriend = friend.status,
+                        )
+                        personListData.add(finalData)
                     }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-            }.addOnFailureListener { exception ->
-                exception.printStackTrace()
             }
+            _friendFriendsListData.value = personListData.filter { it.id != auth.currentUser?.uid.toString() && it.statusFriend == "accepted" }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
+
 
     fun changeMediaVisibility(userContext: Boolean, isMedia: Boolean) {
         for (chat in chatData.value) {

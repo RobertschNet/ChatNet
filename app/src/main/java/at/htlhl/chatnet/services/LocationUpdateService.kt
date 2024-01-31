@@ -40,7 +40,7 @@ import java.io.IOException
 import java.util.Locale
 
 class LocationUpdateService : Service() {
-    private val locationScanInterval = 60000L // 60 second
+    private val locationScanInterval = 30000L // 60 second
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
@@ -219,6 +219,8 @@ class LocationUpdateService : Service() {
                     val geolocation = location?.get("geopoint") as? GeoPoint
                     val docLocation = GeoLocation(geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
                     val distanceInM = GeoFireUtils.getDistanceBetween(docLocation, center)
+                    val formattedDistance = String.format("%.2f", distanceInM)
+
                     LocationUserInstance(
                         id = dataMap["id"].toString(),
                         username = dataMap["username"] as? Map<String, String> ?: emptyMap(),
@@ -230,10 +232,11 @@ class LocationUpdateService : Service() {
                             getCityName(applicationContext, geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
                         } else if (auth.currentUser?.uid == dataMap["id"].toString()) {
                             getCityName(applicationContext, latitude, longitude)
-                        } else{
-                            distanceInM.toString() + "m away"
+                        } else {
+                            "$formattedDistance m away"
                         }
                     )
+
                 }
                 locationLiveData.postValue(personList)
             }

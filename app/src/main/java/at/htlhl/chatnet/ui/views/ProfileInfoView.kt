@@ -23,15 +23,14 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Card
-import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.DirectionsBike
 import androidx.compose.material.icons.filled.Fastfood
-import androidx.compose.material.icons.filled.SportsFootball
+import androidx.compose.material.icons.filled.Mouse
+import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -71,6 +70,7 @@ import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
+import at.htlhl.chatnet.ui.components.TagElement
 import at.htlhl.chatnet.ui.components.dialogs.BlockUserDialog
 import at.htlhl.chatnet.ui.components.dialogs.DeleteAllMediaDialog
 import at.htlhl.chatnet.ui.components.dialogs.DeleteAllMessagesDialog
@@ -88,8 +88,7 @@ class ProfileInfoView {
         var progress by remember { mutableFloatStateOf(1f) }
         val totalHeight = remember { mutableFloatStateOf(0f) }
         val lazyListState = rememberLazyListState()
-        val friendsFromFriendsListState =
-            sharedViewModel.friendFriendsListData.collectAsState(initial = emptyList())
+        val friendsFromFriendsListState = sharedViewModel.friendFriendsListData.collectAsState()
         val friendsFromFriendsList: List<FirebaseUser> = friendsFromFriendsListState.value
         val friendState = sharedViewModel.friend.collectAsState()
         val friend: InternalChatInstance = friendState.value
@@ -97,6 +96,8 @@ class ProfileInfoView {
         val user: FirebaseUser = userState.value
         val chatDataState = sharedViewModel.chatData.collectAsState()
         val chatData: List<FirebaseChat> = chatDataState.value
+        sharedViewModel.fetchFriendsFriends(friend)
+
         val chat: FirebaseChat =
             chatData.find {
                 it.chatRoomID ==
@@ -204,7 +205,6 @@ class ProfileInfoView {
                 Spacer(
                     modifier = Modifier
                         .width(10.dp)
-                        .shadow(10.dp)
                 )
                 Column {
                     Text(
@@ -234,7 +234,7 @@ class ProfileInfoView {
             ) {
                 Row {
                     Text(
-                        textAlign = TextAlign.Center,
+                        textAlign = TextAlign.Start,
                         overflow = TextOverflow.Ellipsis,
                         text = "Tags",
                         fontSize = 12.sp,
@@ -242,136 +242,38 @@ class ProfileInfoView {
                     )
                 }
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .border(
-                                width = 0.2f.dp,
-                                color = Color.Red.copy(alpha = 0.5f),
-                                shape = CircleShape
-                            )
-                            .background(Color.Red.copy(alpha = 0.5f), CircleShape)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DirectionsBike,
-                                contentDescription = "Biking",
-                                tint = Color.White,
-                                modifier = Modifier
-                                    .padding(2.dp)
-                            )
-                            Text(
-                                text = "Biking",
-                                textAlign = TextAlign.Start,
-                                overflow = TextOverflow.Ellipsis,
-                                color = Color.White,
-                            )
-                        }
-                    }
-                    Box(
-                        modifier = Modifier
-                            .border(
-                                width = 0.2f.dp,
-                                color = Color.Yellow.copy(alpha = 0.5f),
-                                shape = CircleShape
-                            )
-                            .background(Color.Yellow.copy(alpha = 0.5f), CircleShape)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Fastfood,
-                                contentDescription = "Eating",
-                                tint = Color.White,
-                                modifier = Modifier
-                                    .padding(2.dp)
-                            )
-                            Text(
-                                text = "Eating",
-                                textAlign = TextAlign.Start,
-                                overflow = TextOverflow.Ellipsis,
-                                color = Color.White,
-                            )
-                        }
-                    }
+                    TagElement(
+                        element = "Programming",
+                        color = Color(0xFFE91E63),
+                        icon = Icons.Default.Code,
+                        smallSize = false
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    TagElement(
+                        element = "Eating",
+                        color = Color(0xFF4CAF50),
+                        icon = Icons.Default.Fastfood,
+                        smallSize = false
+                    )
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .border(
-                                width = 0.2f.dp,
-                                color = Color.Green.copy(alpha = 0.5f),
-                                shape = CircleShape
-                            )
-                            .background(Color.Green.copy(alpha = 0.5f), CircleShape)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Code,
-                                contentDescription = "Programming",
-                                tint = Color.White,
-                                modifier = Modifier
-                                    .padding(2.dp)
-                            )
-                            Text(
-                                text = "Programming",
-                                textAlign = TextAlign.Start,
-                                overflow = TextOverflow.Ellipsis,
-                                color = Color.White,
-                            )
-                        }
-                    }
-                    Box(
-                        modifier = Modifier
-                            .border(
-                                width = 0.2f.dp,
-                                color = Color.Blue.copy(alpha = 0.5f),
-                                shape = CircleShape
-                            )
-                            .background(Color.Blue.copy(alpha = 0.5f), CircleShape)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SportsFootball,
-                                contentDescription = "Football",
-                                tint = Color.White,
-                                modifier = Modifier
-                                    .padding(2.dp)
-                            )
-                            Text(
-                                text = "Football",
-                                textAlign = TextAlign.Start,
-                                overflow = TextOverflow.Ellipsis,
-                                color = Color.White,
-                            )
-                        }
-                    }
+                Row {
+                    TagElement(
+                        element = "Sports",
+                        color = Color(0xFF9C27B0),
+                        icon = Icons.Default.SportsSoccer,
+                        smallSize = false
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    TagElement(
+                        element = "Gaming",
+                        color = Color(0xFFFFEB3B),
+                        icon = Icons.Default.Mouse,
+                        smallSize = false
+                    )
                 }
-                Spacer(
-                    modifier = Modifier
-                        .height(10.dp)
-                        .fillMaxWidth()
-                )
+                Spacer(modifier = Modifier.height(5.dp))
             }
         }
         Spacer(modifier = Modifier.height(5.dp))
@@ -381,10 +283,10 @@ class ProfileInfoView {
                     .fillMaxWidth()
                     .height(130.dp)
                     .background(Color.White),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
                 Column {
-                    Row {
+                    Row(verticalAlignment = Alignment.Top) {
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             textAlign = TextAlign.Center,
@@ -727,7 +629,7 @@ class ProfileInfoView {
                     Text(
                         textAlign = TextAlign.Center,
                         overflow = TextOverflow.Ellipsis,
-                        text = "Remove Tobias Brandl",
+                        text = "Remove ${friend.personList.username["mixedcase"]}",
                         fontSize = 16.sp,
                         color = Color.Red,
                     )
@@ -780,13 +682,25 @@ class ProfileInfoView {
                                         fontSize = 16.sp,
                                         color = Color.Black,
                                     )
-                                    Text(
-                                        textAlign = TextAlign.Start,
-                                        overflow = TextOverflow.Ellipsis,
-                                        text = "1 mutual friend",
-                                        fontSize = 14.sp,
-                                        color = Color.Gray,
-                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        TagElement(
+                                            element = "Sports",
+                                            color = Color(0xFF4CAF50),
+                                            icon = Icons.Default.SportsSoccer,
+                                            smallSize = true
+                                        )
+                                        TagElement(
+                                            element = "Programming",
+                                            color = Color(0xFFE91E63),
+                                            icon = Icons.Default.Code,
+                                            smallSize = true
+                                        )
+                                    }
                                 }
                             }
                         }

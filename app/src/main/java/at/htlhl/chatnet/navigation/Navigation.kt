@@ -206,7 +206,6 @@ fun Navigation(
                 enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
                 exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
                 onBottomBarDisabled.invoke(false)
-                sharedViewModel.fetchFriendsFriends()
                 ProfileInfoView().ProfileInfoScreen(sharedViewModel, navController)
             }
             composable("ImageViewScreen",

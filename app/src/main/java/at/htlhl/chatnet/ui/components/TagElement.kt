@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -27,36 +28,35 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-@Preview
-fun TagElement() {
-    Box(modifier = Modifier.fillMaxSize().background(Color.White).padding(start = 5.dp)) {
+fun TagElement(element: String, color: Color, icon:ImageVector, smallSize:Boolean) {
+    Box(modifier = Modifier.background(Color.White)) {
         Box(
             modifier = Modifier
-                .background(Color.Green.copy(alpha = 0.5f), CircleShape)
+                .background(color.copy(alpha = 0.5f), CircleShape)
         ) {
             Row(
-                modifier = Modifier.padding(0.5f.dp),
+                modifier = Modifier.padding(if (smallSize) 0.5f.dp else 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                Spacer(modifier = Modifier.size(2.dp))
+                Spacer(modifier = Modifier.size(if (smallSize) 2.dp else 5.dp))
                 Icon(
-                    imageVector = Icons.Default.Code,
-                    contentDescription = "Programming",
+                    imageVector = icon,
+                    contentDescription = "",
                     tint = Color.White,
-                    modifier = Modifier.size(15.dp)
+                    modifier = Modifier.size(if (smallSize) 15.dp else 25.dp)
                 )
-                Spacer(modifier = Modifier.size(2.dp))
+                Spacer(modifier = Modifier.size(if (smallSize) 2.dp else 5.dp))
                 Text(
-                    text = "Student",
+                    text = element,
                     color = Color.White,
                     fontFamily = FontFamily.SansSerif,
                     textAlign = TextAlign.Center,
-                    fontSize = 10.sp,
-                    modifier = Modifier.offset(x = 0.dp, y = (-0.6f).dp),
+                    fontSize = if (smallSize) 10.sp else 18.sp,
+                    modifier = Modifier.offset(y = (-0.6f).dp),
                 )
 
-                Spacer(modifier = Modifier.size(2.dp))
+                Spacer(modifier = Modifier.size(if (smallSize) 2.dp else 5.dp))
             }
         }
     }

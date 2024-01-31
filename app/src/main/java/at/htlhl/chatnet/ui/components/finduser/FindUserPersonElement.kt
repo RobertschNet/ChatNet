@@ -5,21 +5,30 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Fastfood
+import androidx.compose.material.icons.filled.Laptop
+import androidx.compose.material.icons.filled.SportsSoccer
+import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -174,7 +183,23 @@ fun FindUserPersonElement(
                     modifier = Modifier
                         .padding(start = 5.dp)
                 )
-                TagElement()
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(modifier= Modifier
+                    .fillMaxWidth()
+                    .padding(start = 5.dp),horizontalArrangement = Arrangement.spacedBy(5.dp),verticalAlignment = Alignment.CenterVertically) {
+                    TagElement(
+                        element = "Programming",
+                        color = Color(0xFFFF5722),
+                        icon = Icons.Default.Code,
+                        smallSize = true
+                    )
+                    TagElement(
+                        element = "Sports",
+                        color = Color(0xFF00BCD4),
+                        icon = Icons.Default.SportsSoccer,
+                        smallSize = true
+                    )
+                }
             }
         }
         Row {

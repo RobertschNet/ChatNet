@@ -27,6 +27,7 @@ import at.htlhl.chatnet.ui.theme.TestingTheme
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.imageLoader
 import coil.request.ImageRequest
+import com.google.firebase.messaging.FirebaseMessaging
 
 
 class MainActivity : ComponentActivity() {
@@ -49,6 +50,16 @@ class MainActivity : ComponentActivity() {
                     viewModel = viewModel,
                     context = applicationContext
                 )
+                FirebaseMessaging.getInstance().token
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            val token = task.result
+                            // Use the FCM token as needed (e.g., send it to your server)
+                            Log.d("FCM Token", "Token: $token")
+                        } else {
+                            Log.e("FCM Token", "Failed to get token", task.exception)
+                        }
+                    }
                 LaunchedEffect(Unit) {
                     if (viewModel.checkIfUserIsLoggedIn()) {
                         Log.println(Log.INFO, "User", "User is logged in!!!!!!!!!")
