@@ -45,7 +45,6 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
@@ -70,7 +69,7 @@ import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.TagElement
+import at.htlhl.chatnet.ui.components.mixed.TagElement
 import at.htlhl.chatnet.ui.components.dialogs.BlockUserDialog
 import at.htlhl.chatnet.ui.components.dialogs.DeleteAllMediaDialog
 import at.htlhl.chatnet.ui.components.dialogs.DeleteAllMessagesDialog

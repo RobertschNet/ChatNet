@@ -15,20 +15,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Fastfood
-import androidx.compose.material.icons.filled.Laptop
 import androidx.compose.material.icons.filled.SportsSoccer
-import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,7 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.htlhl.chatnet.data.FirebaseUser
-import at.htlhl.chatnet.ui.components.TagElement
+import at.htlhl.chatnet.ui.components.mixed.TagElement
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -189,7 +184,7 @@ fun FindUserPersonElement(
                     .padding(start = 5.dp),horizontalArrangement = Arrangement.spacedBy(5.dp),verticalAlignment = Alignment.CenterVertically) {
                     TagElement(
                         element = "Programming",
-                        color = Color(0xFFFF5722),
+                        color = Color(0xFFE91E63),
                         icon = Icons.Default.Code,
                         smallSize = true
                     )

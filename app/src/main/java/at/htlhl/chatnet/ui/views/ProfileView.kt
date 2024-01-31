@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -42,6 +43,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material.Scaffold
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Mouse
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -74,6 +78,7 @@ import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.navigation.Screens
+import at.htlhl.chatnet.ui.components.mixed.TagElement
 import at.htlhl.chatnet.ui.components.dialogs.DeleteAccountDialog
 import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.ui.theme.shimmerEffect
@@ -173,6 +178,7 @@ class ProfileView {
             )
         Scaffold(
             modifier = Modifier
+                .background(if (isSystemInDarkTheme()) Color.Black else Color.White)
                 .fillMaxSize()
                 .imePadding(),
             topBar = {
@@ -183,7 +189,7 @@ class ProfileView {
                 )
             },
             content = {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(modifier = Modifier.fillMaxSize().background(if (isSystemInDarkTheme()) Color.Black else Color.White)) {
                     item {
                         Column(
                             modifier = Modifier.fillMaxSize(),
@@ -363,7 +369,7 @@ class ProfileView {
                                     modifier = Modifier.padding(start = 15.dp)
                                 ) {
                                     Text(
-                                        text = "Status",
+                                        text = "Tags",
                                         color = Color.DarkGray,
                                         fontSize = 14.sp,
                                         fontFamily = FontFamily.SansSerif,
@@ -371,7 +377,39 @@ class ProfileView {
                                         modifier = Modifier
                                             .padding(bottom = 3.dp)
                                     )
-                                    Spacer(modifier = Modifier.height(40.dp)) //TODO: ADD TAGS
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Row(modifier=Modifier.fillMaxWidth()) {
+                                        TagElement(
+                                            element = "Programming",
+                                            color = Color(0xFF00A0E8),
+                                            icon = Icons.Default.Code,
+                                            smallSize = false
+                                        )
+                                        Spacer(modifier = Modifier.width(5.dp))
+                                        TagElement(
+                                            element = "Sports",
+                                            color = Color(0xFFE91E63),
+                                            icon = Icons.Default.Code,
+                                            smallSize = false
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(5.dp))
+                                    Row(modifier=Modifier.fillMaxWidth()) {
+                                        TagElement(
+                                            element = "LGBTQ+",
+                                            color = Color(0xFF4CAF50),
+                                            icon = Icons.Default.Flag,
+                                            smallSize = false
+                                        )
+                                        Spacer(modifier = Modifier.width(5.dp))
+                                        TagElement(
+                                            element = "Gaming",
+                                            color = Color(0xFFFFC107),
+                                            icon = Icons.Default.Mouse,
+                                            smallSize = false
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = "This are your tags. Other users will see this tags when they view your profile.",
                                         color = Color.DarkGray,

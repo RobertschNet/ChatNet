@@ -30,8 +30,10 @@ import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.AnnotatedString
@@ -78,7 +80,7 @@ fun ChatViewMessageComponent(
     val backgroundColor = if (isUser) {
         if (isSystemInDarkTheme()) Color(0xFF00A0E8) else Color(0xFF00A0E8)
     } else {
-        if (isSystemInDarkTheme()) Color.DarkGray else Color.White
+        if (isSystemInDarkTheme()) Color.DarkGray else Color(0xFFFFFDFD)
     }
     val alignment = if (isUser) Arrangement.End else Arrangement.Start
     if (isDateNeeded(message, nextMessage)) {
@@ -116,7 +118,7 @@ fun ChatViewMessageComponent(
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Start,
                     modifier =
-                    Modifier.padding(start = 15.dp)
+                    Modifier.padding(start = 15.dp, top = 2.dp)
                 )
             }
         }
@@ -405,15 +407,21 @@ fun ChatViewMessageComponent(
                 horizontalArrangement = alignment,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Spacer(
+                    modifier = Modifier
+                        .width(15.dp)
+                        .background(Color.Transparent)
+                )
                 Card(
                     backgroundColor = backgroundColor,
                     contentColor = backgroundColor,
+                    elevation = 10.dp,
                     shape = RoundedCornerShape(18.dp),
                     modifier = Modifier
                         .widthIn(min = 140.dp)
                         .padding(
-                            start = if (isUser) 80.dp else 10.dp,
-                            end = if (isUser) 10.dp else 80.dp,
+                            start = if (isUser) 80.dp else 0.dp,
+                            end = if (isUser) 0.dp else 80.dp,
                             top = if (isTopPaddingNeeded(message, previousMessage)) 20.dp else 5.dp,
                         )
                         .pointerInput(Unit) {
@@ -423,8 +431,45 @@ fun ChatViewMessageComponent(
                                 }
                             )
                         }
+                        .drawWithContent {
+                            drawContent()
+                            drawPath(
+                                path = Path().apply {
+                                    if (isUser) {
+                                        moveTo(size.width, size.height)
+                                        lineTo(size.width, size.height - 50f)
+                                        lineTo(size.width - 50f, size.height)
+                                        close()
+                                    } else {
+                                        moveTo(0f, size.height)
+                                        lineTo(0f, size.height - 50f)
+                                        lineTo(50f, size.height)
+                                        close()
+                                    }
+                                },
+                                color = backgroundColor,
+                            )
+                            drawPath(
+                                path = Path().apply {
+                                    if (isUser) {
+                                        moveTo(size.width - 30f, size.height)
+                                        lineTo(size.width + 15f, size.height + 15f)
+                                        lineTo(size.width, size.height - 30f)
+                                        close()
+                                    } else {
+                                        moveTo(30f, size.height)
+                                        lineTo(-15f, size.height + 15f)
+                                        lineTo(0f, size.height - 30f)
+                                        close()
+                                    }
+
+                                },
+                                color = backgroundColor,
+
+
+                                )
+                        }
                         .background(backgroundColor, shape = RoundedCornerShape(18.dp)),
-                    elevation = 10.dp
                 ) {
                     val messageContent = message.text
                     val maxLineLength = 30
@@ -476,6 +521,11 @@ fun ChatViewMessageComponent(
                         color = if (isUser) Color.White else Color.Black
                     )
                 }
+                Spacer(
+                    modifier = Modifier
+                        .width(15.dp)
+                        .background(Color.Transparent)
+                )
             }
         }
     }
@@ -529,6 +579,7 @@ private fun formatDateForSeparator(timestamp: Timestamp): String {
         }
     }
 }
+
 
 private fun isTopPaddingNeeded(
     currentMessage: InternalMessageInstance,
