@@ -54,7 +54,6 @@ class MainActivity : ComponentActivity() {
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
                             val token = task.result
-                            // Use the FCM token as needed (e.g., send it to your server)
                             Log.d("FCM Token", "Token: $token")
                         } else {
                             Log.e("FCM Token", "Failed to get token", task.exception)

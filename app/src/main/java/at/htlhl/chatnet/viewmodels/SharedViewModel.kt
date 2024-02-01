@@ -1099,11 +1099,10 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         return uri
     }
 
-    private val _friendFriendsListData = MutableStateFlow<List<FirebaseUser>>(emptyList())
-    val friendFriendsListData: StateFlow<List<FirebaseUser>> get() = _friendFriendsListData
-
-    fun fetchFriendsFriends(friend:InternalChatInstance) = CoroutineScope(Dispatchers.IO).launch {
-        Log.println(Log.INFO, "FriendFriendsList", friend.toString())
+    fun fetchFriendsFriends(
+        friend: InternalChatInstance,
+        onSuccess: (List<FirebaseUser>) -> Unit
+    ) = CoroutineScope(Dispatchers.IO).launch {
         try {
             val randomFriend = friend.personList.id
             val friendQuerySnapshot = getUserDocumentRef().document(randomFriend)
@@ -1138,11 +1137,13 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     e.printStackTrace()
                 }
             }
-            _friendFriendsListData.value = personListData.filter { it.id != auth.currentUser?.uid.toString() && it.statusFriend == "accepted" }
+            val filteredList = personListData.filter { it.id != auth.currentUser?.uid.toString() && it.statusFriend == "accepted" }
+            onSuccess(filteredList)
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
+
 
 
     fun changeMediaVisibility(userContext: Boolean, isMedia: Boolean) {

@@ -1,9 +1,6 @@
 package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
-import android.util.Log
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,22 +19,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
 import androidx.compose.material.IconButton
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.Mouse
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -48,84 +41,46 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.layoutId
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.constraintlayout.compose.ExperimentalMotionApi
-import androidx.constraintlayout.compose.MotionLayout
-import androidx.constraintlayout.compose.MotionScene
 import androidx.navigation.NavController
 import at.chatnet.R
-import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.mixed.TagElement
 import at.htlhl.chatnet.ui.components.dialogs.BlockUserDialog
 import at.htlhl.chatnet.ui.components.dialogs.DeleteAllMediaDialog
 import at.htlhl.chatnet.ui.components.dialogs.DeleteAllMessagesDialog
 import at.htlhl.chatnet.ui.components.dialogs.DeleteFriendDialog
-import at.htlhl.chatnet.ui.theme.shimmerEffect
+import at.htlhl.chatnet.ui.components.mixed.TagElement
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 class ProfileInfoView {
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
-    @OptIn(ExperimentalFoundationApi::class)
     @Composable
     fun ProfileInfoScreen(sharedViewModel: SharedViewModel, navController: NavController) {
-        var progress by remember { mutableFloatStateOf(1f) }
-        val totalHeight = remember { mutableFloatStateOf(0f) }
         val lazyListState = rememberLazyListState()
-        val friendsFromFriendsListState = sharedViewModel.friendFriendsListData.collectAsState()
-        val friendsFromFriendsList: List<FirebaseUser> = friendsFromFriendsListState.value
         val friendState = sharedViewModel.friend.collectAsState()
         val friend: InternalChatInstance = friendState.value
         val userState = sharedViewModel.user.collectAsState()
         val user: FirebaseUser = userState.value
-        val chatDataState = sharedViewModel.chatData.collectAsState()
-        val chatData: List<FirebaseChat> = chatDataState.value
-        sharedViewModel.fetchFriendsFriends(friend)
-
-        val chat: FirebaseChat =
-            chatData.find {
-                it.chatRoomID ==
-                        friend.chatRoomID
-            }!!
-        val messageListFromMatchingChat: List<InternalMessageInstance> = chat.let {
-            it.messages.map { message ->
-                InternalMessageInstance(
-                    isFromCache = message.isFromCache,
-                    id = message.id,
-                    sender = message.sender,
-                    images = message.images,
-                    read = message.read,
-                    text = message.text,
-                    timestamp = message.timestamp,
-                    visible = message.visible,
-                )
-            }
-        }
-        sharedViewModel.imageList.value =
-            createImageList(messageListFromMatchingChat, sharedViewModel)
         val imageList = sharedViewModel.imageList.value.toMutableStateList()
-        val systemUiController = rememberSystemUiController()
-        systemUiController.setStatusBarColor(
-            color = Color.Transparent,
-            darkIcons = true
-        )
-        LaunchedEffect(Unit) {
-            totalHeight.floatValue = lazyListState.layoutInfo.viewportSize.height.toFloat()
+        var friendsFromFriendsList by remember {
+            mutableStateOf(
+                listOf<FirebaseUser>()
+            )
+        }
+        sharedViewModel.fetchFriendsFriends(friend){
+            friendsFromFriendsList=it
         }
         Scaffold(
             content = {
@@ -140,9 +95,8 @@ class ProfileInfoView {
                             .align(Alignment.BottomCenter),
                         state = lazyListState,
                         content = {
-                            stickyHeader {
+                            item {
                                 ProfileHeader(
-                                    progress = derivedStateOf { progress },
                                     navController = navController,
                                     friend = friend
                                 )
@@ -162,21 +116,6 @@ class ProfileInfoView {
                 }
             }
         )
-        if (remember { derivedStateOf { lazyListState.firstVisibleItemIndex } }.value == 0) {
-            val currentScroll =
-                remember { derivedStateOf { lazyListState.firstVisibleItemScrollOffset.toFloat() } }
-            Log.println(Log.INFO, "currentScroll", currentScroll.toString())
-            Log.println(Log.INFO, "totalHeight", totalHeight.floatValue.toString())
-            val sensitivity = 0.2f
-            progress =
-                (1 - (currentScroll.value / (totalHeight.floatValue * sensitivity))).coerceIn(
-                    0f,
-                    1.0f
-                )
-            Log.println(Log.INFO, "progress", progress.toString())
-        }
-
-
     }
 
     @Composable
@@ -192,199 +131,141 @@ class ProfileInfoView {
         var removeFriendDialog by remember { mutableStateOf(false) }
         var deleteAllMediaDialog by remember { mutableStateOf(false) }
         var deleteAllMessagesDialog by remember { mutableStateOf(false) }
-        Spacer(modifier = Modifier.height(15.dp))
-        Card(modifier = Modifier.fillMaxWidth(), elevation = 10.dp) {
-            Row(
+        Spacer(modifier = Modifier.height(10.dp))
+        if (imageList.isNotEmpty()) {
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(60.dp)
-                    .background(Color.White),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(start = 15.dp, end = 15.dp),
+                shape = RoundedCornerShape(25.dp),
+                elevation = 10.dp
             ) {
-                Spacer(
-                    modifier = Modifier
-                        .width(10.dp)
-                )
-                Column {
-                    Text(
-                        textAlign = TextAlign.Center,
-                        overflow = TextOverflow.Ellipsis,
-                        text = "Hallo! Ich bin Tobias Brandl",
-                        fontSize = 16.sp,
-                        color = Color.Black,
-                    )
-                    Text(
-                        text = "10 January 2021",
-                        fontSize = 12.sp,
-                        color = Color.Gray,
-                    )
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(5.dp))
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(), elevation = 10.dp
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(start = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Row {
-                    Text(
-                        textAlign = TextAlign.Start,
-                        overflow = TextOverflow.Ellipsis,
-                        text = "Tags",
-                        fontSize = 12.sp,
-                        color = Color.Gray,
-                    )
-                }
                 Row(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp)
+                        .background(Color.White),
+                    verticalAlignment = Alignment.Top
                 ) {
-                    TagElement(
-                        element = "Programming",
-                        color = Color(0xFFE91E63),
-                        icon = Icons.Default.Code,
-                        smallSize = false
-                    )
-                    Spacer(modifier = Modifier.width(5.dp))
-                    TagElement(
-                        element = "Eating",
-                        color = Color(0xFF4CAF50),
-                        icon = Icons.Default.Fastfood,
-                        smallSize = false
-                    )
-                }
-                Row {
-                    TagElement(
-                        element = "Sports",
-                        color = Color(0xFF9C27B0),
-                        icon = Icons.Default.SportsSoccer,
-                        smallSize = false
-                    )
-                    Spacer(modifier = Modifier.width(5.dp))
-                    TagElement(
-                        element = "Gaming",
-                        color = Color(0xFFFFEB3B),
-                        icon = Icons.Default.Mouse,
-                        smallSize = false
-                    )
-                }
-                Spacer(modifier = Modifier.height(5.dp))
-            }
-        }
-        Spacer(modifier = Modifier.height(5.dp))
-        Card(modifier = Modifier.fillMaxWidth(), elevation = 10.dp) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(130.dp)
-                    .background(Color.White),
-                verticalAlignment = Alignment.Top
-            ) {
-                Column {
-                    Row(verticalAlignment = Alignment.Top) {
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            textAlign = TextAlign.Center,
-                            overflow = TextOverflow.Ellipsis,
-                            text = "Media and links",
-                            fontSize = 12.sp,
-                            color = Color.Gray,
-                        )
-                        Spacer(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
-                        )
-                        Text(
-                            modifier = Modifier
-                                .clickable {
-                                    sharedViewModel.imagePosition.intValue = 0
-                                    navController.navigate(Screens.ImageViewScreen.route)
-                                },
-                            textAlign = TextAlign.Center,
-                            overflow = TextOverflow.Ellipsis,
-                            text = buildAnnotatedString {
-                                withStyle(
-                                    style = SpanStyle(
-                                        fontSize = 12.sp,
-                                        color = Color.Gray
-                                    )
-                                ) {
-                                    append(imageList.size.toString())
-                                }
-                                withStyle(
-                                    style = SpanStyle(
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.Gray,
-                                        fontSize = 14.sp
-                                    )
-                                ) {
-                                    append(" >")
-                                }
-                            },
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                    }
-                    Spacer(modifier = Modifier.height(2.5f.dp))
-                    LazyRow(
-                        verticalAlignment = Alignment.CenterVertically,
-                        content = {
-                            item {
-                                Spacer(modifier = Modifier.width(5.dp))
-                            }
-
-                            items(imageList.size) {
-                                SubcomposeAsyncImage(
-                                    modifier = Modifier
-                                        .clickable {
-                                            sharedViewModel.imagePosition.intValue = it
-                                            navController.navigate(Screens.ImageViewScreen.route)
-                                        }
-                                        .height(100.dp)
-                                        .width(100.dp)
-                                        .padding(5.dp)
-                                        .border(
-                                            width = 2.dp,
-                                            color = Color.White,
-                                        ),
-                                    model = imageList[it].images[0],
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                            if (imageList.isNotEmpty()) {
-                                item {
-                                    IconButton(onClick = {
+                    Column {
+                        Spacer(modifier = Modifier.height(7.5f.dp))
+                        Row(verticalAlignment = Alignment.Top) {
+                            Spacer(modifier = Modifier.width(15.dp))
+                            Text(
+                                textAlign = TextAlign.Center,
+                                overflow = TextOverflow.Ellipsis,
+                                text = "Media and links",
+                                fontSize = 12.sp,
+                                fontFamily = FontFamily.SansSerif,
+                                fontWeight = FontWeight.Normal,
+                                color = Color.Gray,
+                            )
+                            Spacer(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                            )
+                            Text(
+                                modifier = Modifier
+                                    .clickable {
                                         sharedViewModel.imagePosition.intValue = 0
                                         navController.navigate(Screens.ImageViewScreen.route)
-                                    }) {
-                                        SubcomposeAsyncImage(
-                                            model = R.drawable.arrow_right_svgrepo_com,
-                                            contentDescription = null,
-                                            colorFilter = ColorFilter.tint(Color.Gray),
-                                            modifier = Modifier.size(30.dp)
+                                    },
+                                textAlign = TextAlign.Center,
+                                fontFamily = FontFamily.SansSerif,
+                                fontWeight = FontWeight.Normal,
+                                overflow = TextOverflow.Ellipsis,
+                                text = buildAnnotatedString {
+                                    withStyle(
+                                        style = SpanStyle(
+                                            fontSize = 12.sp,
+                                            fontFamily = FontFamily.SansSerif,
+                                            fontWeight = FontWeight.Normal,
+                                            color = Color.Gray
                                         )
+                                    ) {
+                                        append(imageList.size.toString())
+                                    }
+                                    withStyle(
+                                        style = SpanStyle(
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color.Gray,
+                                            fontFamily = FontFamily.SansSerif,
+                                            fontSize = 14.sp
+                                        )
+                                    ) {
+                                        append(" >")
+                                    }
+                                },
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                        }
+                        Spacer(modifier = Modifier.height(2.5f.dp))
+                        LazyRow(
+                            verticalAlignment = Alignment.CenterVertically,
+                            content = {
+                                item {
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                }
+                                items(imageList.size) {
+                                    SubcomposeAsyncImage(
+                                        modifier = Modifier
+                                            .clickable {
+                                                sharedViewModel.imagePosition.intValue = it
+                                                navController.navigate(Screens.ImageViewScreen.route)
+                                            }
+                                            .height(100.dp)
+                                            .width(100.dp)
+                                            .padding(5.dp)
+                                            .border(
+                                                width = 2.dp,
+                                                color = Color.White,
+                                            )
+                                            .clip(RoundedCornerShape(16.dp)),
+                                        model = imageList[it].images[0],
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+                                if (imageList.isNotEmpty()) {
+                                    item {
+                                        IconButton(onClick = {
+                                            sharedViewModel.imagePosition.intValue = 0
+                                            navController.navigate(Screens.ImageViewScreen.route)
+                                        }) {
+                                            SubcomposeAsyncImage(
+                                                model = R.drawable.arrow_right_svgrepo_com,
+                                                contentDescription = null,
+                                                colorFilter = ColorFilter.tint(Color.Gray),
+                                                modifier = Modifier.size(30.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
+            Spacer(modifier = Modifier.height(10.dp))
         }
-        Spacer(modifier = Modifier.height(5.dp))
-        Card(modifier = Modifier.fillMaxWidth(), elevation = 10.dp) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 15.dp, end = 15.dp),
+            elevation = 10.dp,
+            shape = RoundedCornerShape(25.dp)
+        ) {
             Column(modifier = Modifier.background(Color.White)) {
+                Spacer(modifier = Modifier.height(7.5f.dp))
                 Text(
                     textAlign = TextAlign.Center,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(start = 10.dp, top = 5.dp),
+                    modifier = Modifier.padding(start = 15.dp),
                     text = "Chat Settings",
                     fontSize = 12.sp,
+                    fontFamily = FontFamily.SansSerif,
+                    fontWeight = FontWeight.Normal,
                     color = Color.Gray
                 )
                 Row(
@@ -569,14 +450,23 @@ class ProfileInfoView {
                 }
             }
         }
-        Spacer(modifier = Modifier.height(5.dp))
-        Card(modifier = Modifier.fillMaxWidth(), elevation = 10.dp) {
+        Spacer(modifier = Modifier.height(10.dp))
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 15.dp, end = 15.dp),
+            elevation = 10.dp,
+            shape = RoundedCornerShape(25.dp)
+        ) {
             Column(modifier = Modifier.background(Color.White)) {
+                Spacer(modifier = Modifier.height(7.5f.dp))
                 Text(
                     textAlign = TextAlign.Center,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(start = 10.dp, top = 5.dp),
+                    modifier = Modifier.padding(start = 15.dp),
                     text = "Friend Settings",
+                    fontFamily = FontFamily.SansSerif,
+                    fontWeight = FontWeight.Normal,
                     fontSize = 12.sp,
                     color = Color.Gray
                 )
@@ -636,77 +526,91 @@ class ProfileInfoView {
                 }
             }
         }
-        Spacer(modifier = Modifier.height(5.dp))
-        Card(modifier = Modifier.fillMaxWidth(), elevation = 10.dp) {
-            Row(
+        if (friendsFromFriendsList.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(start = 15.dp, end = 15.dp),
+                elevation = 10.dp,
+                shape = RoundedCornerShape(25.dp)
             ) {
-                Column {
-                    Text(
-                        textAlign = TextAlign.Center,
-                        overflow = TextOverflow.Ellipsis,
-                        text = "Friends in common",
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(start = 10.dp, top = 5.dp),
-                        color = Color.Gray,
-                    )
-                    Spacer(modifier = Modifier.height(2.5f.dp))
-                    Column(content = {
-                        Spacer(modifier = Modifier.height(5.dp))
-                        friendsFromFriendsList.forEach {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Spacer(modifier = Modifier.width(10.dp))
-                                SubcomposeAsyncImage(
-                                    modifier = Modifier
-                                        .height(50.dp)
-                                        .width(50.dp)
-                                        .padding(5.dp)
-                                        .clip(CircleShape),
-                                    model = it.image,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column(
-                                    verticalArrangement = Arrangement.Center,
-                                    horizontalAlignment = Alignment.Start
-                                ) {
-                                    Text(
-                                        textAlign = TextAlign.Start,
-                                        overflow = TextOverflow.Ellipsis,
-                                        text = it.username["mixedcase"].toString(),
-                                        fontSize = 16.sp,
-                                        color = Color.Black,
-                                    )
-                                    Row(
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Spacer(modifier = Modifier.height(7.5f.dp))
+                        Text(
+                            textAlign = TextAlign.Center,
+                            overflow = TextOverflow.Ellipsis,
+                            text = "Friends in common",
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(start = 15.dp),
+                            fontFamily = FontFamily.SansSerif,
+                            fontWeight = FontWeight.Normal,
+                            color = Color.Gray,
+                        )
+                        Spacer(modifier = Modifier.height(2.5f.dp))
+                        Column(content = {
+                            Spacer(modifier = Modifier.height(5.dp))
+                            friendsFromFriendsList.forEach {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    SubcomposeAsyncImage(
                                         modifier = Modifier
-                                            .fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(5.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                            .height(50.dp)
+                                            .width(50.dp)
+                                            .padding(5.dp)
+                                            .clip(CircleShape),
+                                        model = it.image,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(
+                                        verticalArrangement = Arrangement.Center,
+                                        horizontalAlignment = Alignment.Start
                                     ) {
-                                        TagElement(
-                                            element = "Sports",
-                                            color = Color(0xFF4CAF50),
-                                            icon = Icons.Default.SportsSoccer,
-                                            smallSize = true
+                                        Text(
+                                            textAlign = TextAlign.Start,
+                                            overflow = TextOverflow.Ellipsis,
+                                            text = it.username["mixedcase"].toString(),
+                                            fontSize = 16.sp,
+                                            color = Color.Black,
                                         )
-                                        TagElement(
-                                            element = "Programming",
-                                            color = Color(0xFFE91E63),
-                                            icon = Icons.Default.Code,
-                                            smallSize = true
-                                        )
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            TagElement(
+                                                element = "Sports",
+                                                color = Color(0xFF4CAF50),
+                                                icon = Icons.Default.SportsSoccer,
+                                                smallSize = true
+                                            )
+                                            TagElement(
+                                                element = "Programming",
+                                                color = Color(0xFFE91E63),
+                                                icon = Icons.Default.Code,
+                                                smallSize = true
+                                            )
+                                        }
                                     }
                                 }
                             }
-                        }
-                    })
+                            Spacer(modifier = Modifier.height(5.dp))
+                        })
+                    }
                 }
             }
         }
+
+
         if (removeFriendDialog) {
             DeleteFriendDialog(friend = friend) { value ->
                 if (value == "deleted") {
@@ -753,88 +657,99 @@ class ProfileInfoView {
             }
         }
         Spacer(modifier = Modifier.height(20.dp))
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            SubcomposeAsyncImage(
+                model = R.drawable.logo__1_,
+                contentDescription = null,
+                modifier = Modifier.size(60.dp),
+                colorFilter = ColorFilter.tint(Color.LightGray),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.height(5.dp))
+            Text(
+                text = "ChatNet",
+                fontSize = 24.sp,
+                color = Color.LightGray,
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+        }
+
     }
 
-    @OptIn(ExperimentalMotionApi::class)
     @Composable
     fun ProfileHeader(
-        progress: State<Float>,
         navController: NavController,
         friend: InternalChatInstance
     ) {
-        Log.println(Log.INFO, "Hallo", progress.toString())
-        val context = LocalContext.current
-        val motionScene = remember {
-            context.resources
-                .openRawResource(R.raw.userinfo_motion_layout)
-                .readBytes()
-                .decodeToString()
-        }
-        MotionLayout(
-            motionScene = MotionScene(content = motionScene),
-            progress = progress.value,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            val profilePicProperties = motionProperties(id = "profile_pic")
-            Card(
-                elevation = 10.dp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White)
-                    .layoutId("box")
-            ) {}
-            Image(
-                painter = painterResource(id = R.drawable.back_svgrepo_com_1_),
-                contentDescription = null,
-                modifier = Modifier
-                    .clickable { navController.navigateUp() }
-                    .clip(CircleShape)
-                    .layoutId("back_arrow")
-            )
-            SubcomposeAsyncImage(
-                model = friend.personList.image,
-                contentScale = ContentScale.Crop,
-                contentDescription = null,
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .layoutId("profile_pic")
-                    .shimmerEffect()
-            )
-            Text(
-                text = friend.personList.username["mixedcase"].toString(),
-                overflow = TextOverflow.Ellipsis,
-                fontSize = 26.sp,
-                modifier = Modifier.layoutId("username"),
-                color = profilePicProperties.value.color("background")
-            )
-        }
-    }
-
-    private fun createImageList(
-        messages: List<InternalMessageInstance>,
-        sharedViewModel: SharedViewModel
-    ): List<InternalMessageInstance> {
-        val imageList = arrayListOf<InternalMessageInstance>()
-        messages.forEach {
-            if (it.images.isNotEmpty()) {
-                it.images.forEach { image ->
-                    if (it.visible.contains(sharedViewModel.auth.currentUser!!.uid)) {
-                        imageList.add(
-                            InternalMessageInstance(
-                                isFromCache = it.isFromCache,
-                                id = it.id,
-                                sender = it.sender,
-                                images = arrayListOf(image),
-                                read = it.read,
-                                text = it.text,
-                                timestamp = it.timestamp,
-                                visible = it.visible
-                            )
+        Card(modifier = Modifier.fillMaxWidth(), elevation = 10.dp) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                SubcomposeAsyncImage(model = R.drawable.back_svgrepo_com_1_,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .clickable {
+                            navController.navigateUp()
+                        }
+                        .align(Alignment.TopStart)
+                        .padding(10.dp)
+                        .size(30.dp))
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    SubcomposeAsyncImage(
+                        model = friend.personList.image,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .size(150.dp)
+                            .clip(CircleShape)
+                    )
+                    Text(
+                        text = friend.personList.username["mixedcase"].toString(),
+                        fontSize = 24.sp,
+                        color = Color.Black,
+                        fontFamily = FontFamily.SansSerif,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Spacer(modifier = Modifier.height(5.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TagElement(
+                            element = "Programming",
+                            color = Color(0xFF9C27B0),
+                            icon = Icons.Default.Code,
+                            smallSize = false
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        TagElement(
+                            element = "Sports",
+                            color = Color(0xFF4CAF50),
+                            icon = Icons.Default.SportsSoccer,
+                            smallSize = false
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        TagElement(
+                            element = "Gaming",
+                            color = Color(0xFFFFEB3B),
+                            icon = Icons.Default.Mouse,
+                            smallSize = false
                         )
                     }
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
             }
         }
-        return imageList
+
     }
 }

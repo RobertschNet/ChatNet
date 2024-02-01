@@ -127,10 +127,18 @@ class ChatView : ViewModel() {
                     chatPartner = chatPartner,
                     sharedViewModel = sharedViewModel
                 ) {
-                    if (it == "return") {
-                        navController.navigateUp()
-                    } else {
-                        blockDialog = true
+                    when (it) {
+                        "return" -> {
+                            navController.navigateUp()
+                        }
+                        "profile" -> {
+                            sharedViewModel.imageList.value = createImageList(filteredMessages)
+                            navController.navigate(Screens.ProfileInfoScreen.route)
+                        }
+                        else -> {
+                            blockDialog = true
+
+                        }
                     }
                 }
             },

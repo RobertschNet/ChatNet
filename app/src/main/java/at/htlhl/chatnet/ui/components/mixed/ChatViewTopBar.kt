@@ -99,7 +99,7 @@ fun ChatViewTopBar(
                         .fillMaxWidth()
                         .clip(CircleShape)
                         .clickable {
-                            navController.navigate(Screens.ProfileInfoScreen.route)
+                            onClick.invoke("profile")
                         }
                         .weight(1f)) {
                     if (!chatPartner.personList.blocked.contains(sharedViewModel.auth.currentUser?.uid.toString())) {

@@ -415,7 +415,7 @@ fun ChatViewMessageComponent(
                 Card(
                     backgroundColor = backgroundColor,
                     contentColor = backgroundColor,
-                    elevation = 10.dp,
+                    elevation = 4.dp,
                     shape = RoundedCornerShape(18.dp),
                     modifier = Modifier
                         .widthIn(min = 140.dp)

@@ -27,6 +27,7 @@ import at.htlhl.chatnet.data.BottomSheetItem
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
+import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.SaveImageTask
 import at.htlhl.chatnet.ui.components.chats.EmptyChatContent
@@ -80,26 +81,30 @@ class ChatsView {
                     ignoreCase = true
                 ) ?: false
             } else userDataInstance
-        LaunchedEffect(chatData) {
-            for (chat in chatData) {
-                for (message in chat.messages) {
-                    if (message.images.isNotEmpty()) {
-                        for (image in message.images) {
-                            val request = ImageRequest.Builder(context)
-                                .data(image)
-                                .build()
-                            context.imageLoader.enqueue(request)
+        if (chatData.isNotEmpty()) {
+            LaunchedEffect(chatData) {
+                for (chat in chatData) {
+                    for (message in chat.messages) {
+                        if (message.images.isNotEmpty()) {
+                            for (image in message.images) {
+                                val request = ImageRequest.Builder(context)
+                                    .data(image)
+                                    .build()
+                                context.imageLoader.enqueue(request)
+                            }
                         }
                     }
                 }
             }
         }
-        LaunchedEffect(sharedViewModel.localChatUserList.value) {
-            for (user in sharedViewModel.localChatUserList.value) {
-                val request = ImageRequest.Builder(context)
-                    .data(user.image)
-                    .build()
-                context.imageLoader.enqueue(request)
+        if (sharedViewModel.localChatUserList.value.isNotEmpty()) {
+            LaunchedEffect(sharedViewModel.localChatUserList.value) {
+                for (user in sharedViewModel.localChatUserList.value) {
+                    val request = ImageRequest.Builder(context)
+                        .data(user.image)
+                        .build()
+                    context.imageLoader.enqueue(request)
+                }
             }
         }
         val bottomSheetItems = listOf(
@@ -194,6 +199,26 @@ class ChatsView {
                         }
 
                         "info" -> {
+                            val chat: FirebaseChat =
+                                chatData.find {
+                                    it.chatRoomID ==
+                                            friendData.chatRoomID
+                                }!!
+                            val messageListFromMatchingChat: List<InternalMessageInstance> = chat.let {
+                                it.messages.map { message ->
+                                    InternalMessageInstance(
+                                        isFromCache = message.isFromCache,
+                                        id = message.id,
+                                        sender = message.sender,
+                                        images = message.images,
+                                        read = message.read,
+                                        text = message.text,
+                                        timestamp = message.timestamp,
+                                        visible = message.visible,
+                                    )
+                                }
+                            }
+                            sharedViewModel.imageList.value = createImageList(messageListFromMatchingChat, sharedViewModel)
                             navController.navigate(Screens.ProfileInfoScreen.route)
                         }
                     }
@@ -267,5 +292,32 @@ class ChatsView {
                 }
             )
         }
+    }
+    private fun createImageList(
+        messages: List<InternalMessageInstance>,
+        sharedViewModel: SharedViewModel
+    ): List<InternalMessageInstance> {
+        val imageList = arrayListOf<InternalMessageInstance>()
+        messages.forEach {
+            if (it.images.isNotEmpty()) {
+                it.images.forEach { image ->
+                    if (it.visible.contains(sharedViewModel.auth.currentUser!!.uid)) {
+                        imageList.add(
+                            InternalMessageInstance(
+                                isFromCache = it.isFromCache,
+                                id = it.id,
+                                sender = it.sender,
+                                images = arrayListOf(image),
+                                read = it.read,
+                                text = it.text,
+                                timestamp = it.timestamp,
+                                visible = it.visible
+                            )
+                        )
+                    }
+                }
+            }
+        }
+        return imageList
     }
 }
