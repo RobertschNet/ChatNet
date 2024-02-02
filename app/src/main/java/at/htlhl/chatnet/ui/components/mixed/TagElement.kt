@@ -33,6 +33,7 @@ fun TagElement(element: String, color: Color, icon:ImageVector, smallSize:Boolea
     Box(modifier = Modifier.background(if (isSystemInDarkTheme()) Color.Black else Color.White)) {
         Box(
             modifier = Modifier
+                .border(1.dp, color.copy(alpha = 0.7f), CircleShape)
                 .background(color.copy(alpha = if (isSystemInDarkTheme()) 0.2f else 0.5f), CircleShape)
         ) {
             Row(

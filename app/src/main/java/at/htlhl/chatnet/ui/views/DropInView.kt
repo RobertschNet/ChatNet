@@ -102,7 +102,7 @@ class DropInView {
         val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
             localUser.id != sharedViewModel.auth.currentUser?.uid
         }
-        val localChatUser= sharedViewModel.localChatUserList.value.find { localUser ->
+        val localChatUser = sharedViewModel.localChatUserList.value.find { localUser ->
             localUser.id == sharedViewModel.auth.currentUser?.uid
         }
         val updatedLocalChatUsers: List<InternalChatInstance> = localChatUsers.map { person ->
@@ -120,7 +120,7 @@ class DropInView {
                     statusFriend = "",
                     image = person.image,
                     username = person.username,
-                    status = person.status,
+                    online = person.online,
                     id = person.id
                 ),
                 timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
@@ -184,7 +184,7 @@ class DropInView {
                         modifier = Modifier.fillMaxWidth(),
                         content = {
                             item {
-                                UserListItem(user = userData,localChatUser) {
+                                UserListItem(user = userData, localChatUser) {
                                     //TODO: Navigate to your public profile
                                 }
                             }
@@ -265,15 +265,15 @@ class DropInView {
                         }
                     }
                 }
-                if(disableDropInDialog){
+                if (disableDropInDialog) {
                     DisableDropInDialog(
                         dropInOn = !sharedViewModel.gpsState.value,
                         onClose = { action ->
-                        if (action == "changed") {
-                            sharedViewModel.gpsState.value = !sharedViewModel.gpsState.value
-                        }
-                        disableDropInDialog = false
-                    })
+                            if (action == "changed") {
+                                sharedViewModel.gpsState.value = !sharedViewModel.gpsState.value
+                            }
+                            disableDropInDialog = false
+                        })
                 }
             }
         )
@@ -367,7 +367,7 @@ class DropInView {
 
     @Composable
     fun GPSChatList(chat: LocationUserInstance, onItemClicked: (LocationUserInstance) -> Unit) {
-        val isOnline = chat.status
+        val isOnline = chat.online
         Spacer(modifier = Modifier.width(10.dp))
         Column(
             modifier = Modifier.width(100.dp),
@@ -406,220 +406,166 @@ class DropInView {
                         )
                         .align(Alignment.BottomEnd)
                 ) {
-                    when (isOnline) {
-                        "online" -> {
-                            Box(
-                                modifier = Modifier
-                                    .size(14.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
-                                            start = Offset(0f, 0f),
-                                            end = Offset(14.dp.value, 14.dp.value)
-                                        )
+                    if (isOnline) {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(14.dp.value, 14.dp.value)
                                     )
-                                    .align(Alignment.Center)
-                            )
-                        }
-
-                        "offline" -> {
-                            Box(
-                                modifier = Modifier
-                                    .size(14.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(Color.Gray, Color(0xFF808080)),
-                                            start = Offset(0f, 0f),
-                                            end = Offset(14.dp.value, 14.dp.value)
-                                        )
-                                    )
-                                    .align(Alignment.Center)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.DarkGray)
-                                        .align(Alignment.Center)
                                 )
-                            }
-                        }
-
-                        "idle" -> {
-                            Box(
-                                modifier = Modifier
-                                    .size(14.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(Color(0xFFFFC107), Color(0xFFFFC107)),
-                                            start = Offset(0f, 0f),
-                                            end = Offset(14.dp.value, 14.dp.value)
-                                        )
-                                    )
-                                    .align(Alignment.Center)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.2f.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White)
-                                        .align(Alignment.TopStart)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            Text(
-                text = chat.username["mixedcase"].toString(),
-                overflow = TextOverflow.Clip,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 5.dp),
-                fontSize = 14.sp,
-                maxLines = 1,
-                fontFamily = FontFamily.SansSerif,
-                fontWeight = FontWeight.Normal,
-                color = Color.Black
-            )
-            Text(
-                text = chat.location,
-                color = Color.Gray,
-                fontSize = 12.sp,
-                fontFamily = FontFamily.SansSerif,
-                fontWeight = FontWeight.Light
-            )
-
-        }
-    }
-
-    @Composable
-    fun UserListItem(user: FirebaseUser,localChatUser: LocationUserInstance?,onClick: () -> Unit){
-        val isOnline = user.status
-        Spacer(modifier = Modifier.width(10.dp))
-        Column(
-            modifier = Modifier.width(90.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .width(80.dp)
-            ) {
-                SubcomposeAsyncImage(
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .clickable { onClick.invoke() },
-                    model = user.image,
-                    contentDescription = null
-                )
-                Box(
-                    modifier = Modifier
-                        .size(16.5f.dp)
-                        .offset((-5).dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(
-                                colors = if (!isSystemInDarkTheme()) listOf(
-                                    Color.White, Color.White
-                                ) else listOf(Color(0xF1161616), Color(0xF1161616)),
-                                start = Offset(0f, 0f),
-                                end = Offset(14.dp.value, 14.dp.value)
-                            )
+                                .align(Alignment.Center)
                         )
-                        .align(Alignment.BottomEnd)
-                ) {
-                    when (isOnline) {
-                        "online" -> {
+                    } else {
+
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Color.Gray, Color(0xFF808080)),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(14.dp.value, 14.dp.value)
+                                    )
+                                )
+                                .align(Alignment.Center)
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .size(14.dp)
+                                    .size(8.dp)
                                     .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
-                                            start = Offset(0f, 0f),
-                                            end = Offset(14.dp.value, 14.dp.value)
-                                        )
-                                    )
+                                    .background(Color.DarkGray)
                                     .align(Alignment.Center)
                             )
-                        }
-
-                        "offline" -> {
-                            Box(
-                                modifier = Modifier
-                                    .size(14.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(Color.Gray, Color(0xFF808080)),
-                                            start = Offset(0f, 0f),
-                                            end = Offset(14.dp.value, 14.dp.value)
-                                        )
-                                    )
-                                    .align(Alignment.Center)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.DarkGray)
-                                        .align(Alignment.Center)
-                                )
-                            }
-                        }
-
-                        "idle" -> {
-                            Box(
-                                modifier = Modifier
-                                    .size(14.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(Color(0xFFFFC107), Color(0xFFFFC107)),
-                                            start = Offset(0f, 0f),
-                                            end = Offset(14.dp.value, 14.dp.value)
-                                        )
-                                    )
-                                    .align(Alignment.Center)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.2f.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White)
-                                        .align(Alignment.TopStart)
-                                )
-                            }
                         }
                     }
                 }
             }
-            Text(
-                text = "You",
-                overflow = TextOverflow.Clip,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 5.dp),
-                fontSize = 12.sp,
-                maxLines = 1,
-                fontFamily = FontFamily.SansSerif,
-                fontWeight = FontWeight.Normal,
-                color = Color.Black
-            )
-            Text(
-                text = localChatUser?.location ?: "Unknown",
-                color = Color.Gray,
-                fontSize = 12.sp,
-                fontFamily = FontFamily.SansSerif,
-                fontWeight = FontWeight.Light
-            )
         }
+        Text(
+            text = chat.username["mixedcase"].toString(),
+            overflow = TextOverflow.Clip,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 5.dp),
+            fontSize = 14.sp,
+            maxLines = 1,
+            fontFamily = FontFamily.SansSerif,
+            fontWeight = FontWeight.Normal,
+            color = Color.Black
+        )
+        Text(
+            text = chat.location,
+            color = Color.Gray,
+            fontSize = 12.sp,
+            fontFamily = FontFamily.SansSerif,
+            fontWeight = FontWeight.Light
+        )
+
+    }
+}
+
+@Composable
+fun UserListItem(user: FirebaseUser, localChatUser: LocationUserInstance?, onClick: () -> Unit) {
+    val isOnline = user.online
+    Spacer(modifier = Modifier.width(10.dp))
+    Column(
+        modifier = Modifier.width(90.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .width(80.dp)
+        ) {
+            SubcomposeAsyncImage(
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .clickable { onClick.invoke() },
+                model = user.image,
+                contentDescription = null
+            )
+            Box(
+                modifier = Modifier
+                    .size(16.5f.dp)
+                    .offset((-5).dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            colors = if (!isSystemInDarkTheme()) listOf(
+                                Color.White, Color.White
+                            ) else listOf(Color(0xF1161616), Color(0xF1161616)),
+                            start = Offset(0f, 0f),
+                            end = Offset(14.dp.value, 14.dp.value)
+                        )
+                    )
+                    .align(Alignment.BottomEnd)
+            ) {
+                if (isOnline) {
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
+                                    start = Offset(0f, 0f),
+                                    end = Offset(14.dp.value, 14.dp.value)
+                                )
+                            )
+                            .align(Alignment.Center)
+                    )
+                } else {
+
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(Color.Gray, Color(0xFF808080)),
+                                    start = Offset(0f, 0f),
+                                    end = Offset(14.dp.value, 14.dp.value)
+                                )
+                            )
+                            .align(Alignment.Center)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(Color.DarkGray)
+                                .align(Alignment.Center)
+                        )
+                    }
+                }
+            }
+        }
+        Text(
+            text = "You",
+            overflow = TextOverflow.Clip,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 5.dp),
+            fontSize = 12.sp,
+            maxLines = 1,
+            fontFamily = FontFamily.SansSerif,
+            fontWeight = FontWeight.Normal,
+            color = Color.Black
+        )
+        Text(
+            text = localChatUser?.location ?: "Unknown",
+            color = Color.Gray,
+            fontSize = 12.sp,
+            fontFamily = FontFamily.SansSerif,
+            fontWeight = FontWeight.Light
+        )
     }
 }

@@ -37,6 +37,7 @@ import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
+import coil.compose.rememberAsyncImagePainter
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -69,7 +70,7 @@ fun ChatsViewChatItem(
             .background(if (isSystemInDarkTheme()) Color(0xF1161616) else Color.White)
             .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
     ) {
-        val isOnline = chatFriend.personList.status
+        val isOnline = chatFriend.personList.online
         Box(
             modifier = Modifier.size(50.dp)
         ) {
@@ -117,69 +118,41 @@ fun ChatsViewChatItem(
                         )
                         .align(Alignment.BottomEnd)
                 ) {
-                    when (isOnline) {
-                        "online" -> {
+                    if (isOnline) {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(14.dp.value, 14.dp.value)
+                                    )
+                                )
+                                .align(Alignment.Center)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Color.Gray, Color(0xFF808080)),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(14.dp.value, 14.dp.value)
+                                    )
+                                )
+                                .align(Alignment.Center)
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .size(14.dp)
+                                    .size(8.dp)
                                     .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
-                                            start = Offset(0f, 0f),
-                                            end = Offset(14.dp.value, 14.dp.value)
-                                        )
-                                    )
+                                    .background(Color.DarkGray)
                                     .align(Alignment.Center)
                             )
-                        }
-
-                        "offline" -> {
-                            Box(
-                                modifier = Modifier
-                                    .size(14.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(Color.Gray, Color(0xFF808080)),
-                                            start = Offset(0f, 0f),
-                                            end = Offset(14.dp.value, 14.dp.value)
-                                        )
-                                    )
-                                    .align(Alignment.Center)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.DarkGray)
-                                        .align(Alignment.Center)
-                                )
-                            }
-                        }
-
-                        "idle" -> {
-                            Box(
-                                modifier = Modifier
-                                    .size(14.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(Color(0xFFFFC107), Color(0xFFFFC107)),
-                                            start = Offset(0f, 0f),
-                                            end = Offset(14.dp.value, 14.dp.value)
-                                        )
-                                    )
-                                    .align(Alignment.Center)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.2f.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White)
-                                        .align(Alignment.TopStart)
-                                )
-                            }
                         }
                     }
                 }
@@ -226,7 +199,7 @@ fun ChatsViewChatItem(
                         fontSize = 15.sp,
                         color = Color.LightGray,
                     )
-                }else{
+                } else {
                     val messageContent =
                         if (chatFriend.lastMessage.text.isEmpty() && chatFriend.lastMessage.images.isNotEmpty()) "Image" else chatFriend.lastMessage.text
                     val senderPrefix =

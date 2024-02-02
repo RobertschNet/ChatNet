@@ -42,7 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -50,9 +49,9 @@ import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.FirebaseChat
+import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
-import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.dialogs.DeleteMessageDialog
 import at.htlhl.chatnet.ui.components.dialogs.OptionsDialog
 import at.htlhl.chatnet.ui.components.dialogs.UnblockToMessageDialog
@@ -95,10 +94,9 @@ class RandChatView {
                                     "User left\nSwipe right to search for another user",
                                     Toast.LENGTH_SHORT
                                 ).show()
-                                delay(500)
-                                pageState.animateScrollBy(150f)
-                                delay(1000)
-                                pageState.animateScrollBy(-150f)
+                                coroutineScope.launch {
+                                    pageState.scrollToPage(1)
+                                }
                             }
                         }
                         ChatViewScreen(

@@ -240,7 +240,7 @@ class FindUserView : ViewModel() {
                     val usernameMap = document["username"] as? Map<String, String>
                     val image = document.getString("image")
                     val id = document.getString("id")
-                    val status = document.getString("status")
+                    val online = document.getBoolean("online")
                     val email = document.getString("email")
                     val color = document.getString("color")
                     val blocked = document.get("blocked") as? List<String>
@@ -248,14 +248,14 @@ class FindUserView : ViewModel() {
                     val muted = document.get("muted") as? List<String>
                     val connected = document.getBoolean("connected")
 
-                    if (usernameMap != null && image != null && id != null && status != null
+                    if (usernameMap != null && image != null && id != null && online != null
                         && email != null && color != null && blocked != null && pinned != null && connected != null && muted != null
                     ) {
                         return@mapNotNull FirebaseUser(
                             image = image,
                             username = usernameMap,
                             id = id,
-                            status = status,
+                            online = online,
                             email = email,
                             color = color,
                             blocked = blocked,

@@ -63,7 +63,7 @@ fun FindUserPersonElement(
             .clickable { }
             .padding(top = 10.dp, bottom = 10.dp, start = 15.dp, end = 10.dp)
     ) {
-        val isOnline = person.status
+        val isOnline = person.online
         Box(
             modifier = Modifier.size(50.dp)
         ) {
@@ -94,69 +94,41 @@ fun FindUserPersonElement(
                         )
                         .align(Alignment.BottomEnd)
                 ) {
-                    when (isOnline) {
-                        "online" -> {
+                    if (isOnline) {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(14.dp.value, 14.dp.value)
+                                    )
+                                )
+                                .align(Alignment.Center)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Color.Gray, Color(0xFF808080)),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(14.dp.value, 14.dp.value)
+                                    )
+                                )
+                                .align(Alignment.Center)
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .size(14.dp)
+                                    .size(8.dp)
                                     .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
-                                            start = Offset(0f, 0f),
-                                            end = Offset(14.dp.value, 14.dp.value)
-                                        )
-                                    )
+                                    .background(Color.DarkGray)
                                     .align(Alignment.Center)
                             )
-                        }
-
-                        "offline" -> {
-                            Box(
-                                modifier = Modifier
-                                    .size(14.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(Color.Gray, Color(0xFF808080)),
-                                            start = Offset(0f, 0f),
-                                            end = Offset(14.dp.value, 14.dp.value)
-                                        )
-                                    )
-                                    .align(Alignment.Center)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.DarkGray)
-                                        .align(Alignment.Center)
-                                )
-                            }
-                        }
-
-                        "idle" -> {
-                            Box(
-                                modifier = Modifier
-                                    .size(14.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(Color(0xFFFFC107), Color(0xFFFFC107)),
-                                            start = Offset(0f, 0f),
-                                            end = Offset(14.dp.value, 14.dp.value)
-                                        )
-                                    )
-                                    .align(Alignment.Center)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.2f.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White)
-                                        .align(Alignment.TopStart)
-                                )
-                            }
                         }
                     }
                 }
@@ -179,9 +151,13 @@ fun FindUserPersonElement(
                         .padding(start = 5.dp)
                 )
                 Spacer(modifier = Modifier.height(2.dp))
-                Row(modifier= Modifier
-                    .fillMaxWidth()
-                    .padding(start = 5.dp),horizontalArrangement = Arrangement.spacedBy(5.dp),verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 5.dp),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     TagElement(
                         element = "Programming",
                         color = Color(0xFFE91E63),

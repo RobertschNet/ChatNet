@@ -418,7 +418,7 @@ fun ChatViewMessageComponent(
                     elevation = 4.dp,
                     shape = RoundedCornerShape(18.dp),
                     modifier = Modifier
-                        .widthIn(min = 140.dp)
+                        .widthIn(min = 100.dp)
                         .padding(
                             start = if (isUser) 80.dp else 0.dp,
                             end = if (isUser) 0.dp else 80.dp,

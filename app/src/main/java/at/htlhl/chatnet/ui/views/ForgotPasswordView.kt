@@ -162,7 +162,7 @@ class ForgotPasswordView {
                                     checkIfUserExists(it) {
                                         println("Sign-in successful")
                                         if (it) {
-                                            sharedViewModel.updateOnlineStatus("online")
+                                            sharedViewModel.updateOnlineStatus(true)
                                             sharedViewModel.getUserData{
                                                 loadImage(context = context , imageUrl = sharedViewModel.user.value.image)
                                             }

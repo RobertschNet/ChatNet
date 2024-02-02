@@ -225,7 +225,7 @@ class LocationUpdateService : Service() {
                         id = dataMap["id"].toString(),
                         username = dataMap["username"] as? Map<String, String> ?: emptyMap(),
                         image = dataMap["image"].toString(),
-                        status = dataMap["status"] as? String ?: "",
+                        online = dataMap["online"] as? Boolean ?: false,
                         blocked = dataMap["blocked"] as? List<String> ?: emptyList(),
                         muted = dataMap["muted"] as? List<String> ?: emptyList(),
                         location = if (getCityName(applicationContext, geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0) != getCityName(applicationContext, latitude, longitude)) {

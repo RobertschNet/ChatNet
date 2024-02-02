@@ -184,7 +184,7 @@ class RegisterView {
                                     checkIfUserExists(it) {
                                         println("Sign-in successful")
                                         if (it) {
-                                            sharedViewModel.updateOnlineStatus("online")
+                                            sharedViewModel.updateOnlineStatus(true)
                                             sharedViewModel.getUserData{
                                                 loadImage(context = context , imageUrl = sharedViewModel.user.value.image)
                                             }
@@ -632,7 +632,7 @@ class RegisterView {
             "email" to account.currentUser?.email.toString(),
             "id" to account.currentUser?.uid.toString(),
             "image" to "https://www.w3schools.com/howto/img_avatar2.png",
-            "status" to "online",
+            "online" to true,
             "username" to mapOf(
                 "lowercase" to name.lowercase(Locale.ROOT),
                 "mixedcase" to name,

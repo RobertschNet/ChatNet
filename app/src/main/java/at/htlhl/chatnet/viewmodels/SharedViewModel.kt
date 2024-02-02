@@ -47,6 +47,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.FormBody
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -80,38 +81,8 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     val auth: FirebaseAuth = Firebase.auth
     val chatMateResponseState = mutableStateOf(ChatMateResponseState.Success)
-    private val _friend = MutableStateFlow(
-        InternalChatInstance(
-            FirebaseUser(
-                blocked = emptyList(),
-                image = "https://firebasestorage.googleapis.com/v0/b/chatnet-97f9a.appspot.com/o/images%2FDALL%C2%B7E%202023-09-17%2014.29.57%20-%20Profile%20picture%20for%20an%20AI-Asistent%2C%20digital%20art.png?alt=media&token=f41b85e7-8012-4d5d-87f0-e4bdd7f55030",
-                username = mapOf("lowercase" to "chatmate", "mixedcase" to "ChatMate"),
-                status = "online",
-                id = "1s8vrpKw4GXO6HbaUKl3w2wdP3w2",
-                email = "dick@lol.at",
-                pinned = emptyList(),
-                color = "",
-                connected = false,
-                muted = emptyList(),
-                statusFriend = "accepted"
-            ),
-            Timestamp.now(),
-            InternalMessageInstance(
-                isFromCache = false,
-                id = "1szRRaAM2MEYnPEsQAIX",
-                sender = "E8LJ593frbcCjOPrLhXRvn1W0Du1",
-                images = arrayListOf(),
-                read = false,
-                text = "Hey",
-                timestamp = Timestamp.now(),
-                visible = arrayListOf()
-            ),
-            false,
-            0,
-            false,
-            "Run6JfBNdYtH3C6g2HQT"
-        )
-    )
+    var previousRandChatUser = mutableStateOf<List<FirebaseUser>>(emptyList())
+    private val _friend = MutableStateFlow(InternalChatInstance())
     val friend: StateFlow<InternalChatInstance> get() = _friend
     var unfinishedGoogleRegistration = mutableStateOf("")
     val bottomBarState = mutableStateOf(false)
@@ -194,7 +165,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                         image = it.image,
                                         username = it.username,
                                         id = it.id,
-                                        status = it.status,
+                                        online = it.online,
                                         email = it.email,
                                         color = it.color,
                                         blocked = it.blocked,
@@ -232,8 +203,8 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             updatedList += data!!
         }
         if (updatedList != currentList) {
-            if (updatedList.find { friend.value.personList.id == it.id}!=null) {
-                updateFriend(friend.value.copy(personList = updatedList.find { friend.value.personList.id == it.id}!!))
+            if (updatedList.find { friend.value.personList.id == it.id } != null) {
+                updateFriend(friend.value.copy(personList = updatedList.find { friend.value.personList.id == it.id }!!))
             }
         }
         list.value = updatedList
@@ -264,14 +235,15 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val completeDropInList: StateFlow<List<InternalChatInstance>> get() = _completeDropInList
 
     private fun createInternalChatInstance(chat: FirebaseChat): InternalChatInstance {
-        val lastMessage= chat.messages.firstOrNull { it.visible.contains(auth.currentUser?.uid) } ?: InternalMessageInstance()
+        val lastMessage = chat.messages.firstOrNull { it.visible.contains(auth.currentUser?.uid) }
+            ?: InternalMessageInstance()
 
         return InternalChatInstance(
             personList = FirebaseUser(
                 blocked = emptyList(),
                 image = "https://firebasestorage.googleapis.com/v0/b/chatnet-97f9a.appspot.com/o/images%2FDALL%C2%B7E%202023-09-17%2014.29.57%20-%20Profile%20picture%20for%20an%20AI-Asistent%2C%20digital%20art.png?alt=media&token=f41b85e7-8012-4d5d-87f0-e4bdd7f55030",
                 username = mapOf("lowercase" to "chatmate", "mixedcase" to "ChatMate"),
-                status = "online",
+                online = false,
                 id = chat.members.find { it != auth.currentUser?.uid.toString() } ?: "",
                 email = "",
                 pinned = emptyList(),
@@ -340,11 +312,14 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             } else {
                 fetchUser(friend) { instance ->
                     instance?.let { user ->
-                        _completeDropInList.value = _completeDropInList.value.filter { it.chatRoomID != chat.chatRoomID }
+                        _completeDropInList.value =
+                            _completeDropInList.value.filter { it.chatRoomID != chat.chatRoomID }
                         _completeDropInList.value += InternalChatInstance(
                             personList = user,
-                            lastMessage = chat.messages.firstOrNull { it.visible.contains(auth.currentUser?.uid) } ?: InternalMessageInstance(),
-                            timestampMessage = chat.messages.firstOrNull{it.visible.contains(auth.currentUser?.uid)}?.timestamp ?: Timestamp.now(),
+                            lastMessage = chat.messages.firstOrNull { it.visible.contains(auth.currentUser?.uid) }
+                                ?: InternalMessageInstance(),
+                            timestampMessage = chat.messages.firstOrNull { it.visible.contains(auth.currentUser?.uid) }?.timestamp
+                                ?: Timestamp.now(),
                             markedAsUnread = chat.unread.contains(auth.currentUser?.uid.toString()),
                             pinChat = _user.value.pinned.contains(chat.chatRoomID),
                             read = if (chat.messages.firstOrNull() != InternalMessageInstance()) {
@@ -378,7 +353,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 val user = documentSnapshot.toObject(FirebaseUser::class.java)
 
                 if (user != null) {
-                    if (user.id==_friend.value.personList.id){
+                    if (user.id == _friend.value.personList.id) {
                         updateFriend(_friend.value.copy(personList = user))
 
                     }
@@ -572,6 +547,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     .add(message)
                     .await()
                 onComplete.invoke()
+                sendNotification(message)
             } catch (e: Exception) {
                 onError.invoke(e)
             }
@@ -690,7 +666,6 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     _user.value = personList!!
                     isConnected.value = personList.connected
                     onComplete.invoke()
-                    Log.println(Log.INFO, "User", personList.toString())
                     sortDataChats {}
                 }
             }
@@ -701,13 +676,13 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
      * for handling different user availability states, based on app state.
      */
 
-    fun updateOnlineStatus(status: String) {
+    fun updateOnlineStatus(status: Boolean) {
         if (auth.currentUser == null) {
             return
         }
         try {
             val fieldUpdates = hashMapOf<String, Any>(
-                "status" to status,
+                "online" to status,
             )
             getUserDocumentRef().document(auth.currentUser!!.uid).update(fieldUpdates)
                 .addOnSuccessListener {}
@@ -722,6 +697,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         _friend.value = InternalChatInstance()
         _friendListData.value = emptyList()
         _user.value = FirebaseUser()
+        previousRandChatUser.value = emptyList()
         randState.value = false
     }
 
@@ -812,7 +788,8 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         val specificChat = chatData.value.find { it.chatRoomID == chatRoomId }
 
 
-        val chatRef = getChatDocumentRef().document(specificChat!!.chatRoomID).collection(MESSAGES_COLLECTION)
+        val chatRef =
+            getChatDocumentRef().document(specificChat!!.chatRoomID).collection(MESSAGES_COLLECTION)
         chatRef.get().addOnSuccessListener { querySnapshot ->
             for (document in querySnapshot.documents) {
                 val sender = document.get("visible") as List<*>
@@ -872,6 +849,79 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             }
         })
     }
+
+    fun sendDeviceToken(data: String) {
+        val url = "https://settoken-ie4mphraqq-uc.a.run.app/setToken"
+        val client = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+
+        val requestBody = FormBody.Builder()
+            .add("token", data)
+            .add("uid", auth.currentUser?.uid.toString())
+            .build()
+
+        val request = Request.Builder()
+            .url(url)
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                // Handle failure
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string()
+                    Log.println(Log.INFO, "Response", responseBody ?: "")
+                    val jsonObject = JSONObject(responseBody ?: "")
+                    val resultText = jsonObject.optString("result", "")
+                    // Handle the response as needed
+                }
+            }
+        })
+    }
+
+
+    private fun sendNotification(data: FirebaseMessage) {
+        val url = "https://sendnotification-ie4mphraqq-uc.a.run.app/sendNotifications"
+        val client = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+
+        val requestBody = FormBody.Builder()
+            .add("uid", auth.currentUser?.uid.toString())
+            .add("other", friend.value.personList.id)
+            .add("content", data.text)
+            .build()
+
+        val request = Request.Builder()
+            .url(url)
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                // Handle failure
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string()
+                    Log.println(Log.INFO, "Response", responseBody ?: "")
+                    val jsonObject = JSONObject(responseBody ?: "")
+                    val resultText = jsonObject.optString("result", "")
+                    // Handle the response as needed
+                }
+            }
+        })
+    }
+
 
     fun copyToClipboard(context: Context, text: String) {
         val clipboardManager =
@@ -956,7 +1006,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                                 image = data.image,
                                                 username = data.username,
                                                 id = data.id,
-                                                status = data.status,
+                                                online = data.online,
                                                 email = data.email,
                                                 color = data.color,
                                                 blocked = data.blocked,
@@ -1052,6 +1102,9 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 if (documentSnapshot.exists()) {
                     Log.println(Log.INFO, "Response", sharedViewModel.chatData.value.toString())
                     val personList = documentSnapshot.toObject(FirebaseUser::class.java)
+                    if (!previousRandChatUser.value.contains(personList)) {
+                        previousRandChatUser.value += personList!!
+                    }
                     val specificChat = sharedViewModel.chatData.value.find {
                         it.tab == "randchat" && it.members.contains(uID) && it.members.contains(auth.currentUser?.uid.toString())
                     }
@@ -1115,14 +1168,15 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
             subCollectionData.forEach { friend ->
                 try {
-                    val userDocumentSnapshot = getUserDocumentRef().document(friend.id).get().await()
+                    val userDocumentSnapshot =
+                        getUserDocumentRef().document(friend.id).get().await()
                     val data = userDocumentSnapshot?.toObject(FirebaseUser::class.java)
                     if (data != null) {
                         val finalData = FirebaseUser(
                             image = data.image,
                             username = data.username,
                             id = data.id,
-                            status = data.status,
+                            online = data.online,
                             email = data.email,
                             color = data.color,
                             blocked = data.blocked,
@@ -1137,13 +1191,13 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     e.printStackTrace()
                 }
             }
-            val filteredList = personListData.filter { it.id != auth.currentUser?.uid.toString() && it.statusFriend == "accepted" }
+            val filteredList =
+                personListData.filter { it.id != auth.currentUser?.uid.toString() && it.statusFriend == "accepted" }
             onSuccess(filteredList)
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
-
 
 
     fun changeMediaVisibility(userContext: Boolean, isMedia: Boolean) {

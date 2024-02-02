@@ -4,7 +4,7 @@ data class FirebaseUser(
     val blocked: List<String>, // list of ids of users that have been blocked by the user
     val image: String, // url of the users profile picture
     val username: Map<String, String>, // username of the user in different cases (lowercase, mixedcase)
-    val status: String, // the current status of the user (online, offline, idle)
+    val online: Boolean, // the current status of the user (online, offline)
     val id: String, // id of the user
     val email: String, // email of the user
     val pinned: List<String>, // list of ids of chats that have been pinned by the user
@@ -17,7 +17,7 @@ data class FirebaseUser(
         listOf(),
         "",
         mapOf(),
-        "",
+        false,
         "",
         "",
         listOf(),

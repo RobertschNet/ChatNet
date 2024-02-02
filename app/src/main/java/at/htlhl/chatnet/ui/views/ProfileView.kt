@@ -496,7 +496,7 @@ class ProfileView {
                                 modifier = Modifier
                                     .padding(start = 20.dp, top = 20.dp)
                                     .clickable {
-                                        sharedViewModel.updateOnlineStatus("offline")
+                                        sharedViewModel.updateOnlineStatus(true)
                                         logout()
                                         sharedViewModel.reset()
                                         sharedViewModel.auth.signOut()

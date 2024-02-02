@@ -183,7 +183,7 @@ class LoginView {
                                     checkIfUserExists(it) {
                                         println("Sign-in successful")
                                         if (it) {
-                                            sharedViewModel.updateOnlineStatus("online")
+                                            sharedViewModel.updateOnlineStatus(true)
                                             sharedViewModel.getUserData {
                                                 loadImage(
                                                     context = context,
@@ -337,7 +337,7 @@ class LoginView {
                                     if (task.isSuccessful) {
                                         Log.d(ContentValues.TAG, "createUserWithEmail:success")
                                         if (!isUserEmailVerified()) {
-                                            sharedViewModel.updateOnlineStatus("online")
+                                            sharedViewModel.updateOnlineStatus(true)
                                             sharedViewModel.getUserData {
                                                 loadImage(
                                                     context = context,

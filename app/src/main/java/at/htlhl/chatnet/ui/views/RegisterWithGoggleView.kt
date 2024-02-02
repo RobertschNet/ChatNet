@@ -234,7 +234,7 @@ class RegisterWithGoggleView {
                                 if (it.isSuccessful) {
                                    Log.println(Log.INFO, "Google", "Success")
                                     createUserEntry(auth, username, {
-                                        sharedViewModel.updateOnlineStatus("online")
+                                        sharedViewModel.updateOnlineStatus(true)
                                         sharedViewModel.getUserData{
                                             loadImage(context = context , imageUrl = sharedViewModel.user.value.image)
                                         }
@@ -359,7 +359,7 @@ class RegisterWithGoggleView {
             "email" to account.currentUser?.email.toString(),
             "id" to account.currentUser?.uid.toString(),
             "image" to "https://www.w3schools.com/howto/img_avatar2.png",
-            "status" to "online",
+            "online" to true,
             "username" to mapOf(
                 "lowercase" to name.lowercase(Locale.ROOT),
                 "mixedcase" to name,

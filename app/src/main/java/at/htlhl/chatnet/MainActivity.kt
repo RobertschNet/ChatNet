@@ -55,6 +55,7 @@ class MainActivity : ComponentActivity() {
                         if (task.isSuccessful) {
                             val token = task.result
                             Log.d("FCM Token", "Token: $token")
+                            viewModel.sendDeviceToken(token)
                         } else {
                             Log.e("FCM Token", "Failed to get token", task.exception)
                         }
@@ -62,7 +63,7 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(Unit) {
                     if (viewModel.checkIfUserIsLoggedIn()) {
                         Log.println(Log.INFO, "User", "User is logged in!!!!!!!!!")
-                        viewModel.updateOnlineStatus("online")
+                        viewModel.updateOnlineStatus(true)
                         viewModel.getUserData {
                             loadImage(applicationContext, viewModel.user.value.image)
                         }
@@ -121,17 +122,16 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         serviceConnection?.let { unbindService(it) }
         stopService(Intent(this, LocationUpdateService::class.java))
-        (application as MyApplication).sharedViewModel.resetRandChat()
-        (application as MyApplication).sharedViewModel.updateOnlineStatus("offline")
     }
 
     override fun onPause() {
         super.onPause()
-        (application as MyApplication).sharedViewModel.updateOnlineStatus("idle")
+        (application as MyApplication).sharedViewModel.resetRandChat()
+        (application as MyApplication).sharedViewModel.updateOnlineStatus(false)
     }
     override fun onResume() {
         super.onResume()
-        (application as MyApplication).sharedViewModel.updateOnlineStatus("online")
+        (application as MyApplication).sharedViewModel.updateOnlineStatus(true)
     }
 
     private fun manageLocationServiceStatus(viewModel: SharedViewModel, serviceIntent: Intent) {
