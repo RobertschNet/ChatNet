@@ -1,28 +1,19 @@
 package at.htlhl.chatnet.services
 
 import android.Manifest
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.pm.ServiceInfo
 import android.location.Address
 import android.location.Geocoder
 import android.location.Location
 import android.os.Binder
-import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.util.Log
-import androidx.compose.runtime.Composable
-import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
-import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.LocationUserInstance
 import com.firebase.geofire.GeoFireUtils
 import com.firebase.geofire.GeoLocation
@@ -51,13 +42,6 @@ class LocationUpdateService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        val notification = createNotification()
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            startForeground(11, notification)
-        } else {
-            startForeground(11, notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
-        }
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         locationRequest = LocationRequest.create()
             .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
@@ -66,16 +50,16 @@ class LocationUpdateService : Service() {
             override fun onLocationResult(locationResult: LocationResult) {
                 super.onLocationResult(locationResult)
                 locationResult.lastLocation?.let { location ->
-                        lastKnownLocation = location
-                        val latitude = location.latitude
-                        val longitude = location.longitude
-                        val hash =
-                            GeoFireUtils.getGeoHashForLocation(GeoLocation(latitude, longitude))
-                        val updates: MutableMap<String, Any> = mutableMapOf(
-                            "geohash" to hash,
-                            "lat" to latitude,
-                            "lng" to longitude,
-                        )
+                    lastKnownLocation = location
+                    val latitude = location.latitude
+                    val longitude = location.longitude
+                    val hash =
+                        GeoFireUtils.getGeoHashForLocation(GeoLocation(latitude, longitude))
+                    val updates: MutableMap<String, Any> = mutableMapOf(
+                        "geohash" to hash,
+                        "lat" to latitude,
+                        "lng" to longitude,
+                    )
                     if (isLocationDifferent(location)) {
                         sendLocation(updates, auth)
                     }
@@ -83,24 +67,6 @@ class LocationUpdateService : Service() {
                 }
             }
         }
-    }
-
-    private fun createNotification(): Notification {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channelId = "my_service_channel"
-            val channelName = "My Service Channel"
-            val notificationChannel =
-                NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_DEFAULT)
-
-            val notificationManager =
-                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(notificationChannel)
-        }
-
-        return NotificationCompat.Builder(this, "my_service_channel")
-            .setContentTitle("My Foreground Service")
-            .setContentText("Service is running")
-            .build()
     }
 
     private fun getCityName(context: Context, latitude: Double, longitude: Double): String {
@@ -118,6 +84,7 @@ class LocationUpdateService : Service() {
         }
         return "Unknown City"
     }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         println(intent.toString())
         if (intent?.action == "STOP_LOCATION_SERVICE") {
@@ -197,7 +164,7 @@ class LocationUpdateService : Service() {
     fun fetchLocation(latitude: Double, longitude: Double) {
         val center = GeoLocation(latitude, longitude)
         FirebaseFirestore.getInstance().collection("users")
-            .whereEqualTo("status", "online")
+            .whereEqualTo("online", true)
             .get()
             .addOnSuccessListener { snapshot ->
                 val matchingDocs: MutableList<Map<String, Any>> = ArrayList()
@@ -210,14 +177,16 @@ class LocationUpdateService : Service() {
                 val sortedUsers = matchingDocs.sortedBy {
                     val location = it["location"] as? Map<*, *>
                     val geolocation = location?.get("geopoint") as? GeoPoint
-                    val docLocation = GeoLocation(geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
+                    val docLocation =
+                        GeoLocation(geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
                     GeoFireUtils.getDistanceBetween(docLocation, center)
                 }
                 val top5ClosestUsers = sortedUsers.take(5)
                 val personList = top5ClosestUsers.map { dataMap ->
                     val location = dataMap["location"] as? Map<*, *>
                     val geolocation = location?.get("geopoint") as? GeoPoint
-                    val docLocation = GeoLocation(geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
+                    val docLocation =
+                        GeoLocation(geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
                     val distanceInM = GeoFireUtils.getDistanceBetween(docLocation, center)
                     val formattedDistance = String.format("%.2f", distanceInM)
 
@@ -228,8 +197,17 @@ class LocationUpdateService : Service() {
                         online = dataMap["online"] as? Boolean ?: false,
                         blocked = dataMap["blocked"] as? List<String> ?: emptyList(),
                         muted = dataMap["muted"] as? List<String> ?: emptyList(),
-                        location = if (getCityName(applicationContext, geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0) != getCityName(applicationContext, latitude, longitude)) {
-                            getCityName(applicationContext, geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
+                        location = if (getCityName(
+                                applicationContext,
+                                geolocation?.latitude ?: 0.0,
+                                geolocation?.longitude ?: 0.0
+                            ) != getCityName(applicationContext, latitude, longitude)
+                        ) {
+                            getCityName(
+                                applicationContext,
+                                geolocation?.latitude ?: 0.0,
+                                geolocation?.longitude ?: 0.0
+                            )
                         } else if (auth.currentUser?.uid == dataMap["id"].toString()) {
                             getCityName(applicationContext, latitude, longitude)
                         } else {

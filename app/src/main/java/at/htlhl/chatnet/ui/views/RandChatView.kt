@@ -8,7 +8,6 @@ import android.os.VibratorManager
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -49,7 +48,6 @@ import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.FirebaseChat
-import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.ui.components.dialogs.DeleteMessageDialog
@@ -170,6 +168,9 @@ class RandChatView {
             message.visible.contains(sharedViewModel.auth.currentUser?.uid.toString())
         }.toMutableList()
         val lazyListState = rememberLazyListState()
+        val coroutineScope = rememberCoroutineScope()
+        val context = LocalContext.current
+        var currentIndex = 0
         Scaffold(
             modifier = Modifier
                 .imePadding(),
@@ -177,10 +178,47 @@ class RandChatView {
                 ChatViewTopBar(
                     navController = navController,
                     chatPartner = chatPartner,
-                    sharedViewModel = sharedViewModel
-                ) {
-                    navController.navigateUp()
-                }
+                    sharedViewModel = sharedViewModel,
+                    onClick = {
+                        navController.navigateUp()
+                    }, onNavigate = {
+                        coroutineScope.launch {
+                            val indexes = filteredMessages
+                                .mapIndexedNotNull { index, message ->
+                                    if (message.text.contains(
+                                            sharedViewModel.searchValue.value,
+                                            ignoreCase = true
+                                        )
+                                    ) {
+                                        index
+                                    } else {
+                                        null
+                                    }
+                                }
+                            if (indexes.isNotEmpty()) {
+                                currentIndex = if (it) {
+                                    (currentIndex + 1)
+                                } else {
+                                    (currentIndex - 1)
+                                }
+                                if (currentIndex >= indexes.size) {
+                                    currentIndex = 0
+                                } else if (currentIndex < 0) {
+                                    currentIndex = indexes.size - 1
+                                }
+
+                                lazyListState.animateScrollToItem(indexes[currentIndex])
+                            }
+                            if (indexes.isEmpty()) {
+                                Toast.makeText(context, "No results", Toast.LENGTH_SHORT).show()
+                            } else if (indexes.size < 2) {
+                                Toast.makeText(context, "No more results", Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+
+                        }
+                    }
+                )
             },
             content = {
                 it.calculateBottomPadding()

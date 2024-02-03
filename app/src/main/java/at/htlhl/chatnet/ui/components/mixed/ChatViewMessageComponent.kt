@@ -124,7 +124,7 @@ fun ChatViewMessageComponent(
         }
     }
     Column {
-        if (isDateSeparatorNeeded(message, previousMessage, searchValue)) {
+        if (isDateSeparatorNeeded(message, previousMessage)) {
             Card(
                 elevation = 10.dp,
                 modifier = Modifier
@@ -534,8 +534,7 @@ fun ChatViewMessageComponent(
 
 private fun isDateSeparatorNeeded(
     currentMessage: InternalMessageInstance,
-    previousMessage: InternalMessageInstance?,
-    searchValue: String?
+    previousMessage: InternalMessageInstance?
 ): Boolean {
     if (previousMessage == null) {
         return true
@@ -549,14 +548,8 @@ private fun isDateSeparatorNeeded(
         timeInMillis = previousMessage.timestamp.toDate().time
     }
 
-    val isSearchActive = !searchValue.isNullOrBlank()
+    return currentCalendar.get(Calendar.YEAR) != previousCalendar.get(Calendar.YEAR) || currentCalendar.get(Calendar.DAY_OF_YEAR) != previousCalendar.get(Calendar.DAY_OF_YEAR)
 
-    return if (isSearchActive) {
-        true
-    } else {
-        currentCalendar.get(Calendar.YEAR) != previousCalendar.get(Calendar.YEAR) ||
-                currentCalendar.get(Calendar.DAY_OF_YEAR) != previousCalendar.get(Calendar.DAY_OF_YEAR)
-    }
 }
 
 

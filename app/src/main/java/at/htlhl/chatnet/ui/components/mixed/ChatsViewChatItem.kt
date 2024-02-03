@@ -27,8 +27,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.chatnet.R
@@ -37,7 +41,6 @@ import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
-import coil.compose.rememberAsyncImagePainter
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -166,7 +169,10 @@ fun ChatsViewChatItem(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = chatFriend.personList.username["mixedcase"].toString(),
+                    text = buildAnnotatedStringWithColorHighlights(
+                        chatFriend.personList.username["mixedcase"].toString(),
+                        sharedViewModel.searchValue.value
+                    ),
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .weight(1f)
@@ -237,7 +243,10 @@ fun ChatsViewChatItem(
                         modifier = Modifier
                             .align(Alignment.CenterVertically)
                             .weight(1f),
-                        text = messageContent,
+                        text = buildAnnotatedStringWithColorHighlights(
+                            messageContent,
+                            sharedViewModel.searchValue.value
+                        ),
                         overflow = TextOverflow.Ellipsis,
                         maxLines = 1,
                         fontSize = 15.sp,
@@ -289,6 +298,32 @@ fun ChatsViewChatItem(
                     }
                 }
             }
+        }
+    }
+}
+
+fun buildAnnotatedStringWithColorHighlights(content: String, text: String): AnnotatedString {
+    val lowercase = text.lowercase(Locale.getDefault())
+    val occurrences = if (text.isNotEmpty()) {
+        findAllOccurrences(content.lowercase(Locale.getDefault()), lowercase)
+    } else {
+        emptyList()
+    }
+
+    return buildAnnotatedString {
+        var lastIndex = 0
+        occurrences.forEach { ottoIndex ->
+            append(content.substring(lastIndex, ottoIndex))
+            if (text.isNotEmpty()) {
+                withStyle(style = SpanStyle(background = Color.Yellow, color = Color.Black)) {
+                    val ottoLength = text.length
+                    append(content.substring(ottoIndex, ottoIndex + ottoLength))
+                }
+            }
+            lastIndex = ottoIndex + text.length
+        }
+        if (lastIndex < content.length) {
+            append(content.substring(lastIndex))
         }
     }
 }

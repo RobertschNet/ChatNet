@@ -18,6 +18,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
@@ -41,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -143,14 +145,29 @@ fun TabsTopBar(
                     }
                 }
             }
+            if (tab=="RandChat"){
+                IconButton(
+                    onClick = { isSearchMode.value = true },
+                    modifier = Modifier.padding(top = 5.dp, end = 10.dp)
+                ) {
+                    SubcomposeAsyncImage(
+                        model = R.drawable.search_svgrepo_com_1_,
+                        contentDescription = null,
+                        modifier = Modifier.size(30.dp),
+                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+                    )
+                }
+            }
 
         } else {
             val (text, setText) = remember { mutableStateOf("") }
             val keyboardController = LocalSoftwareKeyboardController.current
             val interactionSource = remember { MutableInteractionSource() }
             val focusRequester = remember { FocusRequester() }
-            Box(
-                modifier = Modifier
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier.fillMaxWidth()
                     .padding(start = 10.dp, end = 10.dp)
             ) {
                 BasicTextField(
@@ -176,15 +193,16 @@ fun TabsTopBar(
                             RoundedCornerShape(36.dp)
                         )
                         .focusRequester(focusRequester),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.primary),
+                    textStyle = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontWeight = FontWeight.Normal,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 16.sp
+                    ),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     decorationBox = { innerTextField: @Composable () -> Unit ->
-                        Text(
-                            text = if (sharedViewModel.searchValue.value != "") "" else "Search...",
-                            modifier = Modifier.padding(top = 9.dp, start = 50.dp)
-                        )
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().padding(end=10.dp),
                             horizontalArrangement = Arrangement.Start,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -201,14 +219,7 @@ fun TabsTopBar(
                                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                                 )
                             }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 8.dp, end = 8.dp, start = 0.dp)
-                                    .height(30.dp)
-                            ) {
                                 innerTextField()
-                            }
                         }
                     }
                 )
@@ -218,9 +229,8 @@ fun TabsTopBar(
                     keyboardController?.show()
                     focusRequester.requestFocus()
                 }
-                onDispose { }
+                onDispose {sharedViewModel.searchValue.value = ""}
             }
         }
     }
-
 }

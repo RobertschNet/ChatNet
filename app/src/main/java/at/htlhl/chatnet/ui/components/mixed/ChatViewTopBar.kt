@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -46,6 +47,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -67,7 +69,8 @@ fun ChatViewTopBar(
     navController: NavController,
     chatPartner: InternalChatInstance,
     sharedViewModel: SharedViewModel,
-    onClick: (String) -> Unit
+    onClick: (String) -> Unit,
+    onNavigate:(Boolean) -> Unit
 ) {
     var offsetState by remember { mutableStateOf(Offset(0f, 0f)) }
     val isSearchMode = remember { mutableStateOf(false) }
@@ -204,8 +207,11 @@ fun ChatViewTopBar(
             val keyboardController = LocalSoftwareKeyboardController.current
             val interactionSource = remember { MutableInteractionSource() }
             val focusRequester = remember { FocusRequester() }
-            Box(
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
                 modifier = Modifier
+                    .fillMaxWidth()
                     .padding(start = 10.dp, end = 10.dp)
             ) {
                 BasicTextField(
@@ -226,21 +232,27 @@ fun ChatViewTopBar(
                             MaterialTheme.colorScheme.secondary,
                             RoundedCornerShape(36.dp)
                         )
-                        .background(MaterialTheme.colorScheme.background, RoundedCornerShape(36.dp))
+                        .background(
+                            MaterialTheme.colorScheme.background,
+                            RoundedCornerShape(36.dp)
+                        )
                         .focusRequester(focusRequester),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.primary),
+                    textStyle = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontWeight = FontWeight.Normal,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 16.sp
+                    ),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     decorationBox = { innerTextField: @Composable () -> Unit ->
-                        Text(
-                            text = if (sharedViewModel.searchValue.value != "") "" else "Search...",
-                            modifier = Modifier.padding(top = 9.dp, start = 50.dp)
-                        )
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(end = 10.dp),
                             horizontalArrangement = Arrangement.Start,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            androidx.compose.material.IconButton(
+                            IconButton(
                                 onClick = {
                                     isSearchMode.value = false
                                     sharedViewModel.searchValue.value = ""
@@ -253,14 +265,31 @@ fun ChatViewTopBar(
                                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                                 )
                             }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 8.dp, end = 8.dp, start = 0.dp)
-                                    .height(30.dp)
-                            ) {
+                            Box(modifier = Modifier.weight(1f)) {
                                 innerTextField()
                             }
+                            Spacer(modifier = Modifier.width(5.dp))
+                            SubcomposeAsyncImage(
+                                model = R.drawable.arrow_down_svgrepo_com,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(25.dp)
+                                    .clickable {
+                                        keyboardController?.hide()
+                                        onNavigate.invoke(false)},
+                                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            SubcomposeAsyncImage(
+                                model = R.drawable.arrow_up_svgrepo_com,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(25.dp)
+                                    .clickable {
+                                        keyboardController?.hide()
+                                        onNavigate.invoke(true) },
+                                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+                            )
                         }
                     }
                 )
@@ -270,7 +299,7 @@ fun ChatViewTopBar(
                     keyboardController?.show()
                     focusRequester.requestFocus()
                 }
-                onDispose { }
+                onDispose { sharedViewModel.searchValue.value = "" }
             }
         }
     }

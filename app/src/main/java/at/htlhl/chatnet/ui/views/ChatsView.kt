@@ -76,10 +76,9 @@ class ChatsView {
         val availableUsers = friendListData.filter { friend -> friend.statusFriend == "pending" }
         val completePersonList =
             if (sharedViewModel.searchValue.value != "") userDataInstance.filter {
-                it.personList.username["mixedcase"]?.contains(
-                    sharedViewModel.searchValue.value,
-                    ignoreCase = true
-                ) ?: false
+                it.personList.username["mixedcase"]?.contains(sharedViewModel.searchValue.value, ignoreCase = true) ?: false
+                        ||
+                        it.lastMessage.text.contains(sharedViewModel.searchValue.value, ignoreCase = true)
             } else userDataInstance
         if (chatData.isNotEmpty()) {
             LaunchedEffect(chatData) {

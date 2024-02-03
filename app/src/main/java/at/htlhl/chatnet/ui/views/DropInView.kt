@@ -66,6 +66,7 @@ import at.htlhl.chatnet.ui.components.dialogs.ShowBigUserImageDialog
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
 import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
+import at.htlhl.chatnet.ui.components.mixed.buildAnnotatedStringWithColorHighlights
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -102,9 +103,36 @@ class DropInView {
         val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
             localUser.id != sharedViewModel.auth.currentUser?.uid
         }
+        val completeDropInList =
+            if (sharedViewModel.searchValue.value != "") dropInData.filter {
+                it.personList.username["mixedcase"]?.contains(
+                    sharedViewModel.searchValue.value,
+                    ignoreCase = true
+                ) ?: false
+                        ||
+                        it.lastMessage.text.contains(
+                            sharedViewModel.searchValue.value,
+                            ignoreCase = true
+                        )
+            } else dropInData
+        val completeLocalChatUsers =
+            if (sharedViewModel.searchValue.value != "") localChatUsers.filter {
+                it.username["mixedcase"]?.contains(
+                    sharedViewModel.searchValue.value,
+                    ignoreCase = true
+                ) ?: false
+                        ||
+                        it.location.contains(sharedViewModel.searchValue.value, ignoreCase = true)
+            } else localChatUsers
+
         val localChatUser = sharedViewModel.localChatUserList.value.find { localUser ->
             localUser.id == sharedViewModel.auth.currentUser?.uid
         }
+        val userInSearchValue = java.lang.String("You").contains(
+            sharedViewModel.searchValue.value,
+            ignoreCase = true
+        ) || localChatUser!!.location.contains(sharedViewModel.searchValue.value, ignoreCase = true)
+
         val updatedLocalChatUsers: List<InternalChatInstance> = localChatUsers.map { person ->
             val matchingChat = chatData.find { chat ->
                 chat.members.contains(person.id)
@@ -162,7 +190,7 @@ class DropInView {
                     availableUsers = listOf(FirebaseUser()),
                     sharedViewModel = sharedViewModel,
                 ) {
-                   disableDropInDialog = true
+                    disableDropInDialog = true
                 }
             },
             content = {
@@ -179,18 +207,23 @@ class DropInView {
                         )
                     }
                     Spacer(modifier = Modifier.height(10.dp))
+
+
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
                         modifier = Modifier.fillMaxWidth(),
                         content = {
                             item {
-                                UserListItem(user = userData, localChatUser) {
-                                    //TODO: Navigate to your public profile
+                                if (userInSearchValue || sharedViewModel.searchValue.value.isEmpty()) {
+                                    UserListItem(userData, localChatUser, sharedViewModel) {
+                                        //TODO: Navigate to user profile
+                                    }
                                 }
                             }
-                            items(localChatUsers) { chat ->
+                            items(completeLocalChatUsers) { chat ->
                                 GPSChatList(
-                                    chat = chat
+                                    chat = chat,
+                                    sharedViewModel = sharedViewModel
                                 ) { locationUserInstance ->
                                     updatedLocalChatUsers.find { it.personList.id == locationUserInstance.id }
                                         ?.let {
@@ -223,16 +256,18 @@ class DropInView {
                             }
                         }
                     )
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Row {
-                        Spacer(modifier = Modifier.width(15.dp))
-                        Text(
-                            text = "Users you chatted with",
-                            color = MaterialTheme.colorScheme.primary,
-                            fontFamily = FontFamily.SansSerif,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                    if (dropInData.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(40.dp))
+                        Row {
+                            Spacer(modifier = Modifier.width(15.dp))
+                            Text(
+                                text = "Users you chatted with",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontFamily = FontFamily.SansSerif,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                     LazyColumn(
                         Modifier
@@ -240,7 +275,7 @@ class DropInView {
                             .background(MaterialTheme.colorScheme.tertiary),
                         state = lazyListState
                     ) {
-                        items(dropInData) { chat ->
+                        items(completeDropInList) { chat ->
                             ChatsViewChatItem(
                                 chatFriend = chat,
                                 chatUser = userData,
@@ -366,7 +401,11 @@ class DropInView {
     }
 
     @Composable
-    fun GPSChatList(chat: LocationUserInstance, onItemClicked: (LocationUserInstance) -> Unit) {
+    fun GPSChatList(
+        chat: LocationUserInstance,
+        sharedViewModel: SharedViewModel,
+        onItemClicked: (LocationUserInstance) -> Unit
+    ) {
         val isOnline = chat.online
         Spacer(modifier = Modifier.width(10.dp))
         Column(
@@ -446,35 +485,44 @@ class DropInView {
                     }
                 }
             }
+            Text(
+                text = buildAnnotatedStringWithColorHighlights(
+                    chat.username["mixedcase"].toString(), sharedViewModel.searchValue.value
+                ),
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 5.dp),
+                fontSize = 12.sp,
+                maxLines = 1,
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Normal,
+                color = Color.Black
+            )
+            Text(
+                text = buildAnnotatedStringWithColorHighlights(
+                    chat.location,
+                    sharedViewModel.searchValue.value
+                ),
+                color = Color.Gray,
+                fontSize = 12.sp,
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Light
+            )
         }
-        Text(
-            text = chat.username["mixedcase"].toString(),
-            overflow = TextOverflow.Clip,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 5.dp),
-            fontSize = 14.sp,
-            maxLines = 1,
-            fontFamily = FontFamily.SansSerif,
-            fontWeight = FontWeight.Normal,
-            color = Color.Black
-        )
-        Text(
-            text = chat.location,
-            color = Color.Gray,
-            fontSize = 12.sp,
-            fontFamily = FontFamily.SansSerif,
-            fontWeight = FontWeight.Light
-        )
-
     }
 }
 
 @Composable
-fun UserListItem(user: FirebaseUser, localChatUser: LocationUserInstance?, onClick: () -> Unit) {
+fun UserListItem(
+    user: FirebaseUser,
+    localChatUser: LocationUserInstance?,
+    sharedViewModel: SharedViewModel,
+    onClick: () -> Unit
+) {
     val isOnline = user.online
     Spacer(modifier = Modifier.width(10.dp))
     Column(
-        modifier = Modifier.width(90.dp),
+        modifier = Modifier.width(100.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -524,7 +572,6 @@ fun UserListItem(user: FirebaseUser, localChatUser: LocationUserInstance?, onCli
                             .align(Alignment.Center)
                     )
                 } else {
-
                     Box(
                         modifier = Modifier
                             .size(14.dp)
@@ -550,7 +597,9 @@ fun UserListItem(user: FirebaseUser, localChatUser: LocationUserInstance?, onCli
             }
         }
         Text(
-            text = "You",
+            text = buildAnnotatedStringWithColorHighlights(
+                "You", sharedViewModel.searchValue.value
+            ),
             overflow = TextOverflow.Clip,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 5.dp),
@@ -561,7 +610,10 @@ fun UserListItem(user: FirebaseUser, localChatUser: LocationUserInstance?, onCli
             color = Color.Black
         )
         Text(
-            text = localChatUser?.location ?: "Unknown",
+            text = buildAnnotatedStringWithColorHighlights(
+                localChatUser?.location ?: "Unknown",
+                sharedViewModel.searchValue.value
+            ),
             color = Color.Gray,
             fontSize = 12.sp,
             fontFamily = FontFamily.SansSerif,

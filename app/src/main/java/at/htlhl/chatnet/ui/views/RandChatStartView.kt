@@ -40,6 +40,7 @@ import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.finduser.FindUserPersonElement
 import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.ui.components.mixed.TagElement
+import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 
@@ -55,6 +56,12 @@ class RandChatStartView {
         val userData: FirebaseUser = userDataState.value
         val chatDataState = sharedViewModel.chatData.collectAsState()
         val chatData: List<FirebaseChat> = chatDataState.value
+        val previousRandChatUsers= sharedViewModel.previousRandChatUser.value
+        val completePreviousRandChatUsers=
+            if (sharedViewModel.searchValue.value != "") previousRandChatUsers.filter {
+                it.username["mixedcase"]?.contains(sharedViewModel.searchValue.value, ignoreCase = true) ?: false
+                      //TODO:  Add filtering for tags
+            } else previousRandChatUsers
 
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -76,6 +83,7 @@ class RandChatStartView {
                             .size(120.dp)
                             .align(Alignment.CenterHorizontally)
                             .clip(CircleShape)
+                            .shimmerEffect()
                     )
                     Spacer(modifier = Modifier.height(5.dp))
                     Text(
@@ -125,8 +133,7 @@ class RandChatStartView {
                         Text(text = if (!userData.connected) "Start RandChat" else "Continue to Chat with User")
                     }
                     Spacer(modifier = Modifier.height(20.dp))
-                    if (sharedViewModel.previousRandChatUser.value.isNotEmpty()) {
-
+                    if (completePreviousRandChatUsers.isNotEmpty()) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
                             Spacer(modifier = Modifier.width(15.dp))
                             Text(
@@ -142,9 +149,7 @@ class RandChatStartView {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                     ) {
-
-
-                        items(sharedViewModel.previousRandChatUser.value) { previousUser ->
+                        items(completePreviousRandChatUsers) { previousUser ->
                             val savedUser = friendListData.find { previousUser.id == it.id }
                             FindUserPersonElement(
                                 person = previousUser,

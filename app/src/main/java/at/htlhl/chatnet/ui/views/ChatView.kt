@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.VibratorManager
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -29,6 +30,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +58,7 @@ import at.htlhl.chatnet.ui.components.mixed.InputField
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class ChatView : ViewModel() {
     @Composable
@@ -64,7 +67,8 @@ class ChatView : ViewModel() {
         systemUiController.setStatusBarColor(color = Color.Transparent, darkIcons = true)
         val chatDataState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val chatData: List<FirebaseChat> = chatDataState.value
-        val friendDataState = sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
+        val friendDataState =
+            sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
         val friendData: InternalChatInstance = friendDataState.value
         val userDataState = sharedViewModel.user.collectAsState(initial = FirebaseUser())
         val userData: FirebaseUser = userDataState.value
@@ -114,10 +118,14 @@ class ChatView : ViewModel() {
         var chatMateResponse by remember { mutableStateOf("") }
         var blockDialog by remember { mutableStateOf(false) }
         var unblockDialog by remember { mutableStateOf(false) }
-        val filteredMessages = messagesForChat.filter { message ->
-            message.visible.contains(sharedViewModel.auth.currentUser?.uid.toString())
-        }.toMutableList()
+        val coroutineScope = rememberCoroutineScope()
+        val filteredMessages =
+            messagesForChat.filter { message -> message.visible.contains(sharedViewModel.auth.currentUser?.uid.toString()) }
+                .toMutableList()
         val lazyListState = rememberLazyListState()
+        val context = LocalContext.current
+        var currentIndex = 0
+
         Scaffold(
             modifier = Modifier
                 .imePadding(),
@@ -125,22 +133,62 @@ class ChatView : ViewModel() {
                 ChatViewTopBar(
                     navController = navController,
                     chatPartner = chatPartner,
-                    sharedViewModel = sharedViewModel
-                ) {
-                    when (it) {
-                        "return" -> {
-                            navController.navigateUp()
+                    sharedViewModel = sharedViewModel,
+                    onClick = {
+                        when (it) {
+                            "return" -> {
+                                navController.navigateUp()
+                            }
+
+                            "profile" -> {
+                                sharedViewModel.imageList.value = createImageList(filteredMessages)
+                                navController.navigate(Screens.ProfileInfoScreen.route)
+                            }
+
+                            else -> {
+                                blockDialog = true
+                            }
                         }
-                        "profile" -> {
-                            sharedViewModel.imageList.value = createImageList(filteredMessages)
-                            navController.navigate(Screens.ProfileInfoScreen.route)
-                        }
-                        else -> {
-                            blockDialog = true
+                    },
+                    onNavigate = {
+                        coroutineScope.launch {
+                            val indexes = filteredMessages
+                                .mapIndexedNotNull { index, message ->
+                                    if (message.text.contains(
+                                            sharedViewModel.searchValue.value,
+                                            ignoreCase = true
+                                        )
+                                    ) {
+                                        index
+                                    } else {
+                                        null
+                                    }
+                                }
+                            if (indexes.isNotEmpty()) {
+                                currentIndex = if (it) {
+                                    (currentIndex + 1)
+                                } else {
+                                    (currentIndex - 1)
+                                }
+                                if (currentIndex >= indexes.size) {
+                                    currentIndex = 0
+                                } else if (currentIndex < 0) {
+                                    currentIndex = indexes.size - 1
+                                }
+
+                                lazyListState.animateScrollToItem(indexes[currentIndex])
+                            }
+                            if (indexes.isEmpty()) {
+                                Toast.makeText(context, "No results", Toast.LENGTH_SHORT).show()
+                            } else if (indexes.size < 2) {
+                                Toast.makeText(context, "No more results", Toast.LENGTH_SHORT)
+                                    .show()
+                            }
 
                         }
                     }
-                }
+
+                )
             },
             content = {
                 ChatViewContentList(
@@ -222,9 +270,6 @@ class ChatView : ViewModel() {
         LaunchedEffect(messages.size) {
             lazyListState.animateScrollToItem(0)
         }
-        val filteredMessages = messages.filter {
-            it.text.contains(sharedViewModel.searchValue.value, ignoreCase = true)
-        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -273,7 +318,7 @@ class ChatView : ViewModel() {
                 }
                 items(
                     key = { it.id },
-                    items = filteredMessages
+                    items = messages
                 ) { message ->
                     val messageIndex = messages.indexOf(message)
                     val previousMessageIndex =
@@ -295,8 +340,10 @@ class ChatView : ViewModel() {
                             timestamp = message.timestamp,
                             visible = message.visible,
                         ), chatRoomId = chatRoomId, onClick = { image ->
-                            sharedViewModel.imageList.value = createImageList(filteredMessages)
-                            sharedViewModel.imagePosition.intValue = sharedViewModel.imageList.value.find { it.images[0] == image }?.let { sharedViewModel.imageList.value.indexOf(it) } ?: 0
+                            sharedViewModel.imageList.value = createImageList(messages)
+                            sharedViewModel.imagePosition.intValue =
+                                sharedViewModel.imageList.value.find { it.images[0] == image }
+                                    ?.let { sharedViewModel.imageList.value.indexOf(it) } ?: 0
                             navController.navigate(Screens.ImageViewScreen.route)
                         }, chatMateResponse = { chatMateResponse.invoke(it) }
                     )

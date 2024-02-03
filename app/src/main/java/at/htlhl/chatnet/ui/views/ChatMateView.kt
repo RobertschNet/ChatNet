@@ -50,6 +50,12 @@ class ChatMateView {
         val userState = sharedViewModel.user.collectAsState()
         val user: FirebaseUser = userState.value
         var showClearChatPrompt by remember { mutableStateOf(false) }
+        val completeMessageChatRoomData=
+            if (sharedViewModel.searchValue.value != "") messageChatRoomData.filter {
+                it.personList.username["mixedcase"]?.contains(sharedViewModel.searchValue.value, ignoreCase = true) ?: false
+                        ||
+                        it.lastMessage.text.contains(sharedViewModel.searchValue.value, ignoreCase = true)
+            } else messageChatRoomData
         val bottomSheetItems = listOf(
             BottomSheetItem(
                 title = if (friend.markedAsUnread || friend.read > 0) "Mark as Read" else "Mark as Unread",
@@ -86,7 +92,7 @@ class ChatMateView {
                         .background(if (isSystemInDarkTheme()) Color.Black else Color.White),
                     state = lazyListState
                 ) {
-                    items(messageChatRoomData) { message ->
+                    items(completeMessageChatRoomData) { message ->
                         ChatsViewChatItem(
                             chatFriend = message,
                             chatUser = user,
