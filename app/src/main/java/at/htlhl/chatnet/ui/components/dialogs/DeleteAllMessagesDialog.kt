@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -35,6 +34,7 @@ import androidx.compose.ui.window.DialogProperties
 
 @Composable
 fun DeleteAllMessagesDialog(
+    isChatMateChat: Boolean,
     onClose: (String) -> Unit = {}
 ) {
     var selected by remember { mutableStateOf(true) }
@@ -71,29 +71,41 @@ fun DeleteAllMessagesDialog(
                     end = 10.dp
                 )
             )
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start, modifier = Modifier.fillMaxWidth().clickable { selected=true }) {
-                Spacer(modifier = Modifier.width(20.dp))
-                RadioButton(selected = selected, onClick = { selected=true })
-                Text(
-                    text = "Delete for me",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
-                    color = Color.Black,
-                    modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
-                )
+            if (!isChatMateChat) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { selected = true }) {
+                    Spacer(modifier = Modifier.width(20.dp))
+                    RadioButton(selected = selected, onClick = { selected = true })
+                    Text(
+                        text = "Delete for me",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp,
+                        color = Color.Black,
+                        modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
+                    )
 
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start, modifier = Modifier.fillMaxWidth().clickable { selected=false }) {
-                Spacer(modifier = Modifier.width(20.dp))
-                RadioButton(selected = !selected, onClick = { selected = false})
-                Text(
-                    text = "Delete for everyone",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
-                    color = Color.Black,
-                    modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
-                )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { selected = false }) {
+                    Spacer(modifier = Modifier.width(20.dp))
+                    RadioButton(selected = !selected, onClick = { selected = false })
+                    Text(
+                        text = "Delete for everyone",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp,
+                        color = Color.Black,
+                        modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
+                    )
 
+                }
             }
             Divider(
                 thickness = 0.3f.dp,
@@ -104,7 +116,11 @@ fun DeleteAllMessagesDialog(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onClose.invoke(if (selected) "me" else "everyone") }
+                    .clickable {
+                        onClose.invoke(
+                            if (isChatMateChat || !selected) "everyone" else "me"
+                        )
+                    }
             ) {
                 Text(
                     text = "Delete Messages",

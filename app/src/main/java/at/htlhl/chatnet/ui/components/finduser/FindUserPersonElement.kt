@@ -22,8 +22,6 @@ import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.htlhl.chatnet.data.FirebaseUser
+import at.htlhl.chatnet.data.tags
 import at.htlhl.chatnet.ui.components.mixed.TagElement
 import at.htlhl.chatnet.ui.components.mixed.buildAnnotatedStringWithColorHighlights
 import at.htlhl.chatnet.ui.theme.shimmerEffect
@@ -54,14 +53,18 @@ fun FindUserPersonElement(
     deleteAble: Boolean,
     sharedViewModel: SharedViewModel,
     searchedUser: String,
-    onClick: (FirebaseUser, Boolean) -> Unit
+    onUserClicked: (FirebaseUser) -> Unit,
+    onActionClicked: (FirebaseUser, Boolean) -> Unit
 ) {
+    val filteredTags = tags.filter { tag -> person.tags.contains(tag.name) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(100))
             .background(Color.White)
-            .clickable { }
+            .clickable {
+                onUserClicked.invoke(person)
+            }
             .padding(top = 10.dp, bottom = 10.dp, start = 15.dp, end = 10.dp)
     ) {
         val isOnline = person.online
@@ -162,24 +165,44 @@ fun FindUserPersonElement(
                     horizontalArrangement = Arrangement.spacedBy(5.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TagElement(
-                        element = "Programming",
-                        color = Color(0xFFE91E63),
-                        icon = Icons.Default.Code,
-                        smallSize = true
-                    )
-                    TagElement(
-                        element = "Sports",
-                        color = Color(0xFF00BCD4),
-                        icon = Icons.Default.SportsSoccer,
-                        smallSize = true
-                    )
+                    when{
+                        filteredTags.size>=2 -> {
+                            TagElement(
+                                element = filteredTags[0].name,
+                                color = filteredTags[0].color,
+                                icon = filteredTags[0].icon,
+                                smallSize = true
+                            )
+                            TagElement(
+                                element = filteredTags[1].name,
+                                color = filteredTags[1].color,
+                                icon = filteredTags[1].icon,
+                                smallSize = true
+                            )
+                        }
+                        filteredTags.size==1 -> {
+                            TagElement(
+                                element = filteredTags[0].name,
+                                color = filteredTags[0].color,
+                                icon = filteredTags[0].icon,
+                                smallSize = true
+                            )
+                        }
+                    }
+                    if (filteredTags.size > 2) {
+                        Text(
+                            text = "+${filteredTags.size - 2}",
+                            color = Color.Gray,
+                            fontSize = 12.sp,
+                            modifier = Modifier.align(Alignment.CenterVertically)
+                        )
+                    }
                 }
             }
         }
         Row {
             Button(
-                onClick = { onClick.invoke(person, searchedUser == "pending") },
+                onClick = { onActionClicked.invoke(person, searchedUser == "pending") },
                 enabled = if (searchedUser == "searchedUser") true else searchedUser == "pending",
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -196,7 +219,7 @@ fun FindUserPersonElement(
             }
             if (deleteAble) {
                 IconButton(onClick = {
-                    sharedViewModel.deleteFriendFromFriendList()
+                    sharedViewModel.deleteFriendFromFriendList(person)
                 }) {
                     Icon(
                         imageVector = Icons.Default.Close,

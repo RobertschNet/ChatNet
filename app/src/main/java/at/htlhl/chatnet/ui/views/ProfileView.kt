@@ -24,10 +24,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.Scaffold
 import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
@@ -42,10 +42,6 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material.Scaffold
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Flag
-import androidx.compose.material.icons.filled.Mouse
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -77,10 +73,12 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseUser
+import at.htlhl.chatnet.data.TagElement
+import at.htlhl.chatnet.data.tags
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.mixed.TagElement
 import at.htlhl.chatnet.ui.components.dialogs.DeleteAccountDialog
 import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
+import at.htlhl.chatnet.ui.components.mixed.TagElement
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -98,7 +96,8 @@ import java.util.Locale
 
 class ProfileView {
 
-    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter",
+    @SuppressLint(
+        "UnusedMaterial3ScaffoldPaddingParameter",
         "UnusedMaterialScaffoldPaddingParameter"
     )
     @OptIn(ExperimentalMaterial3Api::class)
@@ -107,8 +106,12 @@ class ProfileView {
         val userState = sharedViewModel.user.collectAsState()
         val userData: FirebaseUser = userState.value
         val context = LocalContext.current
+        val filteredTags = tags.filter { tag -> userData.tags.contains(tag.name) }
         val systemUiController = rememberSystemUiController()
-        systemUiController.setStatusBarColor(color =if (isSystemInDarkTheme()) Color.Black else Color.White, darkIcons = !isSystemInDarkTheme())
+        systemUiController.setStatusBarColor(
+            color = if (isSystemInDarkTheme()) Color.Black else Color.White,
+            darkIcons = !isSystemInDarkTheme()
+        )
         var usernameText by remember {
             mutableStateOf("")
         }
@@ -189,7 +192,11 @@ class ProfileView {
                 )
             },
             content = {
-                LazyColumn(modifier = Modifier.fillMaxSize().background(if (isSystemInDarkTheme()) Color.Black else Color.White)) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(if (isSystemInDarkTheme()) Color.Black else Color.White)
+                ) {
                     item {
                         Column(
                             modifier = Modifier.fillMaxSize(),
@@ -351,7 +358,7 @@ class ProfileView {
                                 modifier = Modifier
                                     .padding(start = 20.dp, top = 20.dp)
                                     .clickable {
-                                        //TODO: Open TagView
+                                        navController.navigate(Screens.TagSelectScreen.route)
                                     }
                                     .fillMaxWidth(),
                             ) {
@@ -378,40 +385,10 @@ class ProfileView {
                                             .padding(bottom = 3.dp)
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
-                                    Row(modifier=Modifier.fillMaxWidth()) {
-                                        TagElement(
-                                            element = "Programming",
-                                            color = Color(0xFF00A0E8),
-                                            icon = Icons.Default.Code,
-                                            smallSize = false
-                                        )
-                                        Spacer(modifier = Modifier.width(5.dp))
-                                        TagElement(
-                                            element = "Sports",
-                                            color = Color(0xFFE91E63),
-                                            icon = Icons.Default.Code,
-                                            smallSize = false
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(5.dp))
-                                    Row(modifier=Modifier.fillMaxWidth()) {
-                                        TagElement(
-                                            element = "LGBTQ+",
-                                            color = Color(0xFF4CAF50),
-                                            icon = Icons.Default.Flag,
-                                            smallSize = false
-                                        )
-                                        Spacer(modifier = Modifier.width(5.dp))
-                                        TagElement(
-                                            element = "Gaming",
-                                            color = Color(0xFFFFC107),
-                                            icon = Icons.Default.Mouse,
-                                            smallSize = false
-                                        )
-                                    }
+                                    ProfileTags(tags = filteredTags)
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "This are your tags. Other users will see this tags when they view your profile.",
+                                        text = "These are your tags. Other users will see these tags when they view your profile.",
                                         color = Color.DarkGray,
                                         overflow = TextOverflow.Clip,
                                         fontSize = 12.sp,
@@ -844,6 +821,86 @@ class ProfileView {
             }
     }
 
+    @Composable
+    fun ProfileTags(tags: List<TagElement>) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            when {
+                tags.size >= 2 -> {
+                    TagElement(
+                        element = tags[0].name,
+                        color = tags[0].color,
+                        icon = tags[0].icon,
+                        smallSize = false
+                    )
+                    TagElement(
+                        element = tags[1].name,
+                        color = tags[1].color,
+                        icon = tags[1].icon,
+                        smallSize = false
+                    )
+                }
+
+                tags.size == 1 -> {
+                    TagElement(
+                        element = tags[0].name,
+                        color = tags[0].color,
+                        icon = tags[0].icon,
+                        smallSize = false
+                    )
+                }
+            }
+        }
+        if (tags.size > 2) {
+            Spacer(modifier = Modifier.height(5.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                when {
+                    tags.size >= 4 -> {
+                        TagElement(
+                            element = tags[2].name,
+                            color = tags[2].color,
+                            icon = tags[2].icon,
+                            smallSize = false
+                        )
+                        TagElement(
+                            element = tags[3].name,
+                            color = tags[3].color,
+                            icon = tags[3].icon,
+                            smallSize = false
+                        )
+                    }
+
+                    tags.size == 3 -> {
+                        TagElement(
+                            element = tags[2].name,
+                            color = tags[2].color,
+                            icon = tags[2].icon,
+                            smallSize = false
+                        )
+                    }
+                }
+            }
+        }
+        if (tags.size > 4) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = "+${tags.size - 4} more",
+                    color = Color.DarkGray,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Light,
+                    fontFamily = FontFamily.SansSerif
+                )
+            }
+        }
+    }
+
     private fun uploadWebPImage(
         webpByteArray: ByteArray,
         onUploadSuccess: (String) -> Unit,
@@ -866,6 +923,7 @@ class ProfileView {
             }
     }
 
+    @Suppress("DEPRECATION")
     private fun convertBitmapToWebP(bitmap: Bitmap): ByteArray {
         val outputStream = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.WEBP, 50, outputStream)

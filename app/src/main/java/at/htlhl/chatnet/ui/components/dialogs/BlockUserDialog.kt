@@ -48,7 +48,7 @@ fun BlockUserDialog(
         ) {
             Spacer(modifier = Modifier.height(5.dp))
             Text(
-                text = if (chatUser.blocked.contains(chatPartner.personList.id)) "Unblock ${chatPartner.personList.username["mixedcase"]}?" else "Block ${chatPartner.personList.username["mixedcase"]}?",
+                text = if (chatUser.blocked.contains(chatPartner.personList.id)) "Unblock User?" else "Block User?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 overflow = TextOverflow.Ellipsis,

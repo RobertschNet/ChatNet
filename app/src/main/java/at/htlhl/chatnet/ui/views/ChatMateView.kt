@@ -2,6 +2,7 @@ package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
 import android.os.Build
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -18,20 +19,26 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItem
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.navigation.Screens
+import at.htlhl.chatnet.services.SaveImageTask
 import at.htlhl.chatnet.ui.components.dialogs.ClearChatDialog
+import at.htlhl.chatnet.ui.components.dialogs.ShowBigUserImageDialog
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
 import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.viewmodels.SharedViewModel
+import kotlinx.coroutines.launch
+import java.lang.ref.WeakReference
 
 class ChatMateView {
 
@@ -43,6 +50,9 @@ class ChatMateView {
     fun ChatMateScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val lazyListState = rememberLazyListState()
         val modelSheetState = remember { mutableStateOf(false) }
+        var showUserIconPrompt by remember { mutableStateOf(false) }
+        val context = LocalContext.current
+        val coroutineScope = rememberCoroutineScope()
         val messageChatRoomDataState = sharedViewModel.completeChatMateList.collectAsState()
         val messageChatRoomData: List<InternalChatInstance> = messageChatRoomDataState.value
         val friendState = sharedViewModel.friend.collectAsState()
@@ -50,11 +60,17 @@ class ChatMateView {
         val userState = sharedViewModel.user.collectAsState()
         val user: FirebaseUser = userState.value
         var showClearChatPrompt by remember { mutableStateOf(false) }
-        val completeMessageChatRoomData=
+        val completeMessageChatRoomData =
             if (sharedViewModel.searchValue.value != "") messageChatRoomData.filter {
-                it.personList.username["mixedcase"]?.contains(sharedViewModel.searchValue.value, ignoreCase = true) ?: false
+                it.personList.username["mixedcase"]?.contains(
+                    sharedViewModel.searchValue.value,
+                    ignoreCase = true
+                ) ?: false
                         ||
-                        it.lastMessage.text.contains(sharedViewModel.searchValue.value, ignoreCase = true)
+                        it.lastMessage.text.contains(
+                            sharedViewModel.searchValue.value,
+                            ignoreCase = true
+                        )
             } else messageChatRoomData
         val bottomSheetItems = listOf(
             BottomSheetItem(
@@ -83,7 +99,17 @@ class ChatMateView {
                     tab = "ChatMate",
                     sharedViewModel = sharedViewModel,
                     availableUsers = listOf(FirebaseUser()),
-                ) { sharedViewModel.createChatMateChat() }
+                ) {
+                    sharedViewModel.createChatMateChat(
+                        onError = {
+                            Toast.makeText(
+                                context,
+                                "Only one empty chat is allowed at a time.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    )
+                }
             },
             content = {
                 LazyColumn(
@@ -101,6 +127,7 @@ class ChatMateView {
                         ) { context ->
                             when (context) {
                                 "image" -> {
+                                    showUserIconPrompt = true
                                 }
 
                                 "message" -> {
@@ -117,6 +144,35 @@ class ChatMateView {
                 }
             },
         )
+        if (showUserIconPrompt) {
+            ShowBigUserImageDialog(
+                sharedViewModel = sharedViewModel,
+                userData = friend,
+                onDismiss = { action ->
+                    when (action) {
+                        "message" -> {
+                            navController.navigate(Screens.ChatViewScreen.route)
+                        }
+
+                        "delete" -> {
+                            sharedViewModel.deleteChatRoom()
+
+                        }
+
+                        "image" -> {
+                            coroutineScope.launch {
+                                SaveImageTask(WeakReference(context)).saveImage(sharedViewModel.friend.value.personList.image)
+                            }
+                        }
+
+                        "info" -> {
+                            navController.navigate(Screens.ProfileInfoScreen.route)
+                        }
+                    }
+                    showUserIconPrompt = false
+                }
+            )
+        }
         if (showClearChatPrompt) {
             ClearChatDialog(onDismiss = { clear ->
                 if (clear == "clear") {

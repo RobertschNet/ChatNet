@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
-import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.navigation.Screens
 import coil.compose.SubcomposeAsyncImage
 
@@ -42,12 +41,11 @@ import coil.compose.SubcomposeAsyncImage
 fun FindUserTopBar(
     navController: NavController,
     interactionSource: MutableInteractionSource,
-    persons: List<FirebaseUser>,
-    searchText: String,
     onClicked: () -> Unit,
     onTextChanged: (String) -> Unit
 ) {
     var search by rememberSaveable { mutableStateOf(true) }
+    var searchTexts by rememberSaveable { mutableStateOf("") }
     TopAppBar(backgroundColor = Color.White, modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -58,7 +56,12 @@ fun FindUserTopBar(
                 )
                 .fillMaxWidth()
         ) {
-            IconButton(onClick = { navController.navigate(Screens.ChatsViewScreen.route) }) {
+            IconButton(onClick = {
+                navController.navigate(Screens.ChatsViewScreen.route) {
+                    popUpTo(Screens.FindUserScreen.route) { inclusive = true }
+
+                }
+            }) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
                     contentDescription = null,
@@ -69,9 +72,10 @@ fun FindUserTopBar(
                 )
             }
             BasicTextField(
-                value = searchText,
+                value = searchTexts,
                 onValueChange = {
-                   onTextChanged.invoke(it)
+                    onTextChanged.invoke(it)
+                    searchTexts = it
                     search = it.isEmpty()
                 },
                 interactionSource = interactionSource,
@@ -113,7 +117,8 @@ fun FindUserTopBar(
                             innerTextField()
                         }
                     }
-                })
+                }
+            )
         }
     }
     if (interactionSource.collectIsPressedAsState().value) {

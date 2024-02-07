@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -109,13 +110,20 @@ fun ShowBigUserImageDialog(
                             modifier = Modifier.size(24.dp)
                         )
                     }
-                    IconButton(onClick = { onDismiss.invoke("block") }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Block,
-                            contentDescription = "Block",
-                            tint = Color(0xFF00A0E8),
-                            modifier = Modifier.size(24.dp)
-                        )
+                    IconButton(onClick = { onDismiss.invoke(if (userData.personList.id != "ChatMate") "block" else "delete") }) {
+                        if (userData.personList.id != "ChatMate"){
+                            Icon(
+                                imageVector = Icons.Outlined.Block,
+                                contentDescription = "Block",
+                                tint = Color(0xFF00A0E8),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }else{
+                            SubcomposeAsyncImage(model = R.drawable.garbage_bin_recycle_bin_svgrepo_com, contentDescription = null, modifier = Modifier.size(24.dp),
+                                contentScale = ContentScale.FillBounds, colorFilter = ColorFilter.tint(Color(0xFF00A0E8)))
+
+                        }
+
                     }
                     IconButton(onClick = { onDismiss.invoke("image") }) {
                         Icon(

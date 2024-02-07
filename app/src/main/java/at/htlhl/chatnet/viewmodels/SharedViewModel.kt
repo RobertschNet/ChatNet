@@ -40,9 +40,17 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import okhttp3.Call
@@ -80,8 +88,17 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
      */
 
     val auth: FirebaseAuth = Firebase.auth
+    var loadedData = mutableStateOf(false)
+    val searchText = MutableStateFlow("")
+    val searchTextFlow = searchText.asStateFlow()
     val chatMateResponseState = mutableStateOf(ChatMateResponseState.Success)
     var previousRandChatUser = mutableStateOf<List<FirebaseUser>>(emptyList())
+    private val publicUser = MutableStateFlow(FirebaseUser())
+    val publicUserFlow: StateFlow<FirebaseUser> get() = publicUser
+    val isSearching = MutableStateFlow(false)
+    val isSearchingFlow = isSearching.asStateFlow()
+
+    val searchedPersons = MutableStateFlow<List<FirebaseUser>>(emptyList())
     private val _friend = MutableStateFlow(InternalChatInstance())
     val friend: StateFlow<InternalChatInstance> get() = _friend
     var unfinishedGoogleRegistration = mutableStateOf("")
@@ -100,6 +117,36 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         onComplete.invoke()
     }
 
+    fun updatePublicUser(newFriend: FirebaseUser, onComplete: () -> Unit = {}) {
+        publicUser.value = newFriend
+        onComplete.invoke()
+    }
+
+    @OptIn(FlowPreview::class)
+    var person = searchTextFlow.debounce(1000L)
+        .combine(searchedPersons) { text, person ->
+            if (text.isBlank()) {
+                emptyList()
+            } else {
+                val initialMessages = retrieveMessages()
+                if (initialMessages.isEmpty()) {
+                    viewModelScope.launch {
+                        delay(500)
+                        isSearching.update { false }
+                    }
+                }
+                Log.println(Log.INFO, "SearchView", initialMessages.toString())
+                searchedPersons.value = initialMessages.toMutableList()
+                person.filter { it.doesMatchUsername(text) }
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), searchedPersons.value)
+        .onEach {
+            viewModelScope.launch {
+                delay(500)
+                isSearching.update { false }
+            }
+        }
+
     private fun getUserDocumentRef() = firebaseInstance.collection(USER_COLLECTION)
 
     private fun getChatDocumentRef() = firebaseInstance.collection(CHATS_COLLECTION)
@@ -112,6 +159,36 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         _bitmaps.value = bitmap
     }
 
+    private suspend fun retrieveMessages(): List<FirebaseUser> {
+        try {
+            val currentUserUid = FirebaseAuth.getInstance().currentUser?.uid
+                ?: return emptyList()
+
+            val snapshot = FirebaseFirestore.getInstance().collection("users")
+                .orderBy("username.lowercase")
+                .startAt(searchTextFlow.value.lowercase())
+                .endAt(searchTextFlow.value.lowercase() + '\uf8ff')
+                .get()
+                .await()
+            return snapshot.documents.mapNotNull { document ->
+                try {
+                    val userData = document.toObject(FirebaseUser::class.java)
+                    if (userData?.id == currentUserUid) {
+                        null
+                    } else {
+                        userData
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return emptyList()
+    }
 
     /**
      * This section contains the logic for the Firebase communication,
@@ -172,7 +249,8 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                         connected = it.connected,
                                         pinned = it.pinned,
                                         muted = it.muted,
-                                        statusFriend = friend.status
+                                        statusFriend = friend.status,
+                                        tags = it.tags
                                     )
                                     personListData.add(finalData)
                                     updateFriendsList(_friendListData, finalData)
@@ -211,13 +289,14 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         sortDataChats {}
     }
 
-    fun deleteFriendFromFriendList() {
+    fun deleteFriendFromFriendList(friend: FirebaseUser) {
         val friendSubCollectionRef =
             getUserDocumentRef().document(auth.currentUser!!.uid).collection(FRIENDS_COLLECTION)
-        friendSubCollectionRef.document(friend.value.personList.id).delete().addOnSuccessListener {
-            val userSubCollectionRef = getUserDocumentRef().document(friend.value.personList.id)
+        friendSubCollectionRef.document(friend.id).delete().addOnSuccessListener {
+            val userSubCollectionRef = getUserDocumentRef().document(friend.id)
                 .collection(FRIENDS_COLLECTION)
             userSubCollectionRef.document(auth.currentUser!!.uid).delete().addOnSuccessListener {
+                sortDataChats { }
             }.addOnFailureListener { exception ->
                 exception.printStackTrace()
             }
@@ -250,7 +329,8 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 color = "",
                 connected = false,
                 muted = emptyList(),
-                statusFriend = ""
+                statusFriend = "",
+                tags = listOf("No Tags")
             ),
             lastMessage = lastMessage,
             timestampMessage = lastMessage.timestamp,
@@ -303,7 +383,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun sortDataDropIn(onComplete: () -> Unit) {
-        val matchingChats = _chatData.value.filter { chat -> chat.tab == "dropIn" }
+        val matchingChats = _chatData.value.filter { chat -> chat.tab == "dropin" }
         matchingChats.forEach { chat ->
             val friend = chat.members.find { it != auth.currentUser?.uid.toString() } ?: ""
             if (_friendListData.value.any { it.id == friend && it.statusFriend == "accepted" }) {
@@ -393,7 +473,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 if (error != null) {
                     return@addSnapshotListener
                 }
-                // Step 2: For each change in the chats collection, fetch the messages subcollection
+                // Step 2: For each change in the chats collection, fetch the messages subCollection
                 querySnapshot?.documentChanges?.forEach { documentChange ->
                     // Step 3: Listen for changes in the messages subCollection
                     val removedDocumentId = documentChange.document.id
@@ -452,7 +532,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                 }
                                 chatDataSet.add(chat)
                                 _chatData.value = chatDataSet.toList()
-
+                                loadedData.value = true
                                 sortDataChats { }
                                 Log.println(Log.INFO, "ChatData", chatDataSet.toString())
                             }
@@ -500,13 +580,18 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     }
 
 
-    fun deleteChatRoom() {
+    fun deleteChatRoom(isPublic: Boolean = false) {
+        var chatRoomId = _friend.value.chatRoomID
+        if (isPublic) {
+            chatRoomId = chatData.value.find {
+                it.members.contains(publicUser.value.id) && it.members.contains(auth.currentUser?.uid)
+            }?.chatRoomID ?: ""
+        }
         for (chat in chatData.value) {
-            if (chat.chatRoomID == friend.value.chatRoomID) {
+            if (chat.chatRoomID == chatRoomId) {
                 val subCollectionRef =
                     getChatDocumentRef().document(chat.chatRoomID).collection(MESSAGES_COLLECTION)
 
-                // Delete messages
                 subCollectionRef.get().addOnCompleteListener { messagesTask ->
                     if (messagesTask.isSuccessful) {
                         for (document in messagesTask.result!!) {
@@ -516,18 +601,10 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                 }
                         }
 
-                        // After deleting messages, delete the chat
                         getChatDocumentRef().document(chat.chatRoomID).delete()
-                            .addOnCompleteListener { chatDeleteTask ->
-                                if (chatDeleteTask.isSuccessful) {
-                                    // Handle successful chat deletion
-                                } else {
-                                    // Handle chat deletion failure
-                                    chatDeleteTask.exception?.printStackTrace()
-                                }
+                            .addOnCompleteListener {
                             }
                     } else {
-                        // Handle messages fetch failure
                         messagesTask.exception?.printStackTrace()
                     }
                 }
@@ -699,6 +776,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         _user.value = FirebaseUser()
         previousRandChatUser.value = emptyList()
         randState.value = false
+        loadedData.value = false
     }
 
 
@@ -874,13 +952,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             }
 
             override fun onResponse(call: Call, response: Response) {
-                if (response.isSuccessful) {
-                    val responseBody = response.body?.string()
-                    Log.println(Log.INFO, "Response", responseBody ?: "")
-                    val jsonObject = JSONObject(responseBody ?: "")
-                    val resultText = jsonObject.optString("result", "")
-                    // Handle the response as needed
-                }
+
             }
         })
     }
@@ -911,13 +983,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             }
 
             override fun onResponse(call: Call, response: Response) {
-                if (response.isSuccessful) {
-                    val responseBody = response.body?.string()
-                    Log.println(Log.INFO, "Response", responseBody ?: "")
-                    val jsonObject = JSONObject(responseBody ?: "")
-                    val resultText = jsonObject.optString("result", "")
-                    // Handle the response as needed
-                }
+
             }
         })
     }
@@ -964,14 +1030,31 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         return auth.currentUser != null
     }
 
-    fun createChatMateChat() {
+    fun createChatMateChat(
+        onSuccess: () -> Unit = {},
+        onError: () -> Unit
+    ) {
+        if (chatData.value.any { chat ->
+                chat.tab == "chatmate"
+                        &&
+                        chat.members.contains(auth.currentUser?.uid.toString())
+                        &&
+                        chat.messages.isEmpty()
+            }
+        ) {
+            onError.invoke()
+            return
+        }
+
         val membersArray = arrayListOf(auth.currentUser!!.uid, "ChatMate")
         val fieldUpdates = hashMapOf(
             "members" to membersArray,
             "tab" to "chatmate",
             "unread" to emptyList<String>(),
         )
-        getChatDocumentRef().document().set(fieldUpdates).addOnSuccessListener {}
+        getChatDocumentRef().document().set(fieldUpdates).addOnSuccessListener {
+            onSuccess.invoke()
+        }
             .addOnFailureListener { exception -> exception.printStackTrace() }
     }
 
@@ -1014,6 +1097,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                                 pinned = data.pinned,
                                                 muted = data.muted,
                                                 statusFriend = friend.status,
+                                                tags = data.tags
                                             )
                                             personListData.add(finalData)
                                         }
@@ -1153,11 +1237,11 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun fetchFriendsFriends(
-        friend: InternalChatInstance,
+        friend: FirebaseUser,
         onSuccess: (List<FirebaseUser>) -> Unit
     ) = CoroutineScope(Dispatchers.IO).launch {
         try {
-            val randomFriend = friend.personList.id
+            val randomFriend = friend.id
             val friendQuerySnapshot = getUserDocumentRef().document(randomFriend)
                 .collection(FRIENDS_COLLECTION)
                 .get()
@@ -1184,6 +1268,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                             pinned = data.pinned,
                             muted = data.muted,
                             statusFriend = friend.status,
+                            tags = data.tags
                         )
                         personListData.add(finalData)
                     }
@@ -1201,31 +1286,24 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
 
     fun changeMediaVisibility(userContext: Boolean, isMedia: Boolean) {
-        for (chat in chatData.value) {
-            if (chat.members.contains(friend.value.personList.id) && chat.members.contains(auth.currentUser?.uid.toString())) {
-                val chatRef =
-                    getChatDocumentRef().document(chat.chatRoomID).collection(MESSAGES_COLLECTION)
-                chatRef.get().addOnSuccessListener { querySnapshot ->
-                    for (document in querySnapshot.documents) {
-                        if (isMedia) {
-                            // Handle media visibility
-                            val images = document.get("images") as List<*>?
-                            if (images != null && images.isNotEmpty()) {
-                                handleVisibility(userContext, chatRef, document)
-                            }
-                        } else {
-                            // Handle text visibility
-                            val text = document.getString("text")
-                            if (!text.isNullOrBlank()) {
-                                handleVisibility(userContext, chatRef, document)
-                            }
-                        }
+        val chatRef =
+            getChatDocumentRef().document(friend.value.chatRoomID).collection(MESSAGES_COLLECTION)
+        chatRef.get().addOnSuccessListener { querySnapshot ->
+            for (document in querySnapshot.documents) {
+                if (isMedia) {
+                    val images = document.get("images") as List<*>?
+                    if (images != null && images.isNotEmpty()) {
+                        handleVisibility(userContext, chatRef, document)
                     }
-                }.addOnFailureListener { exception ->
-                    exception.printStackTrace()
-                    // Handle the failure here
+                } else {
+                    val text = document.getString("text")
+                    if (!text.isNullOrBlank()) {
+                        handleVisibility(userContext, chatRef, document)
+                    }
                 }
             }
+        }.addOnFailureListener { exception ->
+            exception.printStackTrace()
         }
     }
 
@@ -1240,19 +1318,41 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
             if (userContext) {
                 updatedVisible.remove(auth.currentUser?.uid.toString())
             } else {
-                updatedVisible.clear()
+                chatRef.document(document.id)
+                    .delete()
+                    .addOnSuccessListener {
+                    }
+                    .addOnFailureListener { exception ->
+                        exception.printStackTrace()
+                    }
+                return
             }
             chatRef.document(document.id)
                 .update("visible", updatedVisible)
                 .addOnSuccessListener {
-                    // Successfully removed the entry from the "visible" array
                 }
                 .addOnFailureListener { exception ->
                     exception.printStackTrace()
-                    // Handle the failure here
                 }
         }
     }
 
 
+    fun cancelFriendRequest(person: FirebaseUser) {
+        val userRef = getUserDocumentRef().document(auth.currentUser?.uid.toString())
+        val friendRef = getUserDocumentRef().document(person.id)
+        userRef.collection(FRIENDS_COLLECTION).document(person.id).delete()
+            .addOnSuccessListener {
+                friendRef.collection(FRIENDS_COLLECTION).document(auth.currentUser?.uid.toString())
+                    .delete()
+                    .addOnSuccessListener {
+                    }
+                    .addOnFailureListener { exception ->
+                        exception.printStackTrace()
+                    }
+            }
+            .addOnFailureListener { exception ->
+                exception.printStackTrace()
+            }
+    }
 }

@@ -28,10 +28,12 @@ import at.htlhl.chatnet.ui.views.LoginView
 import at.htlhl.chatnet.ui.views.ProfileInfoView
 import at.htlhl.chatnet.ui.views.ProfilePictureView
 import at.htlhl.chatnet.ui.views.ProfileView
+import at.htlhl.chatnet.ui.views.PublicProfileView
 import at.htlhl.chatnet.ui.views.RandChatStartView
 import at.htlhl.chatnet.ui.views.RandChatView
 import at.htlhl.chatnet.ui.views.RegisterView
 import at.htlhl.chatnet.ui.views.RegisterWithGoggleView
+import at.htlhl.chatnet.ui.views.TagSelectView
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import kotlinx.coroutines.delay
 
@@ -178,7 +180,6 @@ fun Navigation(
                 }) {
                 LaunchedEffect(Unit){
                     onBottomBarDisabled.invoke(false)
-
                 }
                 FindUserView().FindUserScreen(navController, sharedViewModel)
             }
@@ -212,6 +213,18 @@ fun Navigation(
                 enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
                 exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
                 ImageView().ImageViewScreen(sharedViewModel, navController)
+            }
+            composable("TagSelectScreen",
+                enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+                exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
+                onBottomBarDisabled.invoke(false)
+                TagSelectView().TagSelectScreen(sharedViewModel,navController)
+            }
+            composable("PublicProfileScreen",
+                enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
+                exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
+                onBottomBarDisabled.invoke(false)
+                PublicProfileView().PublicProfileScreen(sharedViewModel, navController)
             }
         }
     }

@@ -25,11 +25,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import at.htlhl.chatnet.data.InternalChatInstance
 
 @Composable
 fun DeleteFriendDialog(
-    friend: InternalChatInstance,
     onClose: (String) -> Unit = {}
 ) {
     Dialog(
@@ -45,7 +43,7 @@ fun DeleteFriendDialog(
         ) {
             Spacer(modifier = Modifier.height(5.dp))
             Text(
-                text = "Remove Friend ${friend.personList.username["mixedcase"]}?",
+                text = "Remove Friend?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 overflow = TextOverflow.Ellipsis,

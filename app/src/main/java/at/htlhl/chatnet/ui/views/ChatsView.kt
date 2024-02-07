@@ -1,6 +1,7 @@
 package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +37,7 @@ import at.htlhl.chatnet.ui.components.dialogs.ClearChatDialog
 import at.htlhl.chatnet.ui.components.dialogs.ShowBigUserImageDialog
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
+import at.htlhl.chatnet.ui.components.mixed.LoadingUserChatsElement
 import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.imageLoader
@@ -48,9 +50,7 @@ class ChatsView {
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun ChatsScreen(
-        navController: NavController, sharedViewModel: SharedViewModel
-    ) {
+    fun ChatsScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val context = LocalContext.current
         val lazyListState = rememberLazyListState()
         val coroutineScope = rememberCoroutineScope()
@@ -76,9 +76,15 @@ class ChatsView {
         val availableUsers = friendListData.filter { friend -> friend.statusFriend == "pending" }
         val completePersonList =
             if (sharedViewModel.searchValue.value != "") userDataInstance.filter {
-                it.personList.username["mixedcase"]?.contains(sharedViewModel.searchValue.value, ignoreCase = true) ?: false
+                it.personList.username["mixedcase"]?.contains(
+                    sharedViewModel.searchValue.value,
+                    ignoreCase = true
+                ) ?: false
                         ||
-                        it.lastMessage.text.contains(sharedViewModel.searchValue.value, ignoreCase = true)
+                        it.lastMessage.text.contains(
+                            sharedViewModel.searchValue.value,
+                            ignoreCase = true
+                        )
             } else userDataInstance
         if (chatData.isNotEmpty()) {
             LaunchedEffect(chatData) {
@@ -139,38 +145,47 @@ class ChatsView {
                 }
             },
             content = {
-                if (userDataInstance.isEmpty()) {
+                Log.println(Log.INFO, "ChatsView", "Complete Person List: $completePersonList")
+                Log.println(Log.INFO, "ChatsView", "Is Loading Data: ${sharedViewModel.loadedData.value}")
+                if (completePersonList.isEmpty()&& sharedViewModel.loadedData.value) {
+                    Log.println(Log.INFO, "ChatsView", "Empty Chat Content")
                     EmptyChatContent(onClicked = {
                         navController.navigate(Screens.FindUserScreen.route)
                     })
-                }
-                LazyColumn(
-                    Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.tertiary),
-                    state = lazyListState
-                ) {
-                    items(completePersonList) { message ->
-                        ChatsViewChatItem(
-                            chatFriend = message,
-                            chatUser = userData,
-                            displayOnlineState = true,
-                            sharedViewModel = sharedViewModel,
-                        ) { context ->
-                            when (context) {
-                                "image" -> {
-                                    showUserIconPrompt = true
-                                }
+                }else {
+                    LazyColumn(
+                        Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.tertiary),
+                        state = lazyListState
+                    ) {
+                        items(completePersonList) { message ->
+                            ChatsViewChatItem(
+                                chatFriend = message,
+                                chatUser = userData,
+                                displayOnlineState = true,
+                                sharedViewModel = sharedViewModel,
+                            ) { context ->
+                                when (context) {
+                                    "image" -> {
+                                        showUserIconPrompt = true
+                                    }
 
-                                "message" -> {
-                                    modelSheetState.value = true
-                                }
+                                    "message" -> {
+                                        modelSheetState.value = true
+                                    }
 
-                                "navigate" -> {
-                                    navController.navigate(Screens.ChatViewScreen.route)
+                                    "navigate" -> {
+                                        navController.navigate(Screens.ChatViewScreen.route)
+                                    }
                                 }
+                                sharedViewModel.updateFriend(message)
                             }
-                            sharedViewModel.updateFriend(message)
+                        }
+                        if (completePersonList.isEmpty() && !sharedViewModel.loadedData.value) {
+                            items(5) {
+                                LoadingUserChatsElement()
+                            }
                         }
                     }
                 }
@@ -203,26 +218,29 @@ class ChatsView {
                                     it.chatRoomID ==
                                             friendData.chatRoomID
                                 }!!
-                            val messageListFromMatchingChat: List<InternalMessageInstance> = chat.let {
-                                it.messages.map { message ->
-                                    InternalMessageInstance(
-                                        isFromCache = message.isFromCache,
-                                        id = message.id,
-                                        sender = message.sender,
-                                        images = message.images,
-                                        read = message.read,
-                                        text = message.text,
-                                        timestamp = message.timestamp,
-                                        visible = message.visible,
-                                    )
+                            val messageListFromMatchingChat: List<InternalMessageInstance> =
+                                chat.let {
+                                    it.messages.map { message ->
+                                        InternalMessageInstance(
+                                            isFromCache = message.isFromCache,
+                                            id = message.id,
+                                            sender = message.sender,
+                                            images = message.images,
+                                            read = message.read,
+                                            text = message.text,
+                                            timestamp = message.timestamp,
+                                            visible = message.visible,
+                                        )
+                                    }
                                 }
-                            }
-                            sharedViewModel.imageList.value = createImageList(messageListFromMatchingChat, sharedViewModel)
+                            sharedViewModel.imageList.value =
+                                createImageList(messageListFromMatchingChat, sharedViewModel)
                             navController.navigate(Screens.ProfileInfoScreen.route)
                         }
                     }
                     showUserIconPrompt = false
-                })
+                }
+            )
         }
         if (showClearChatPrompt) {
             ClearChatDialog(onDismiss = { clear ->
@@ -292,6 +310,7 @@ class ChatsView {
             )
         }
     }
+
     private fun createImageList(
         messages: List<InternalMessageInstance>,
         sharedViewModel: SharedViewModel

@@ -149,7 +149,8 @@ class DropInView {
                     image = person.image,
                     username = person.username,
                     online = person.online,
-                    id = person.id
+                    id = person.id,
+                    tags = listOf()
                 ),
                 timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                     ?: Timestamp.now(),
@@ -230,7 +231,7 @@ class DropInView {
                                             if (it.chatRoomID.isEmpty()) {
                                                 sharedViewModel.saveChatRoom(
                                                     person = it.personList.id,
-                                                    tab = "dropIn"
+                                                    tab = "dropin"
                                                 ) { newChat ->
                                                     sharedViewModel.updateFriend(
                                                         InternalChatInstance(

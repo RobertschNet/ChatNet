@@ -18,9 +18,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Button
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Flag
-import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -36,6 +33,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
+import at.htlhl.chatnet.data.TagElement
+import at.htlhl.chatnet.data.tags
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.finduser.FindUserPersonElement
 import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
@@ -56,12 +55,16 @@ class RandChatStartView {
         val userData: FirebaseUser = userDataState.value
         val chatDataState = sharedViewModel.chatData.collectAsState()
         val chatData: List<FirebaseChat> = chatDataState.value
-        val previousRandChatUsers= sharedViewModel.previousRandChatUser.value
-        val completePreviousRandChatUsers=
+        val previousRandChatUsers = sharedViewModel.previousRandChatUser.value
+        val completePreviousRandChatUsers =
             if (sharedViewModel.searchValue.value != "") previousRandChatUsers.filter {
-                it.username["mixedcase"]?.contains(sharedViewModel.searchValue.value, ignoreCase = true) ?: false
-                      //TODO:  Add filtering for tags
+                it.username["mixedcase"]?.contains(
+                    sharedViewModel.searchValue.value,
+                    ignoreCase = true
+                ) ?: false
+                //TODO:  Add filtering for tags
             } else previousRandChatUsers
+        val filteredUserTags = tags.filter { tag -> userData.tags.contains(tag.name) }
 
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -73,7 +76,7 @@ class RandChatStartView {
                 )
             },
             content = {
-                Column{
+                Column {
                     Spacer(modifier = Modifier.height(20.dp))
                     SubcomposeAsyncImage(
                         model = userData.image,
@@ -95,26 +98,7 @@ class RandChatStartView {
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.height(10.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        TagElement(
-                            element = "Sports",
-                            color = Color(0xFF4CAF50),
-                            icon = Icons.Default.SportsSoccer,
-                            smallSize = false
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        TagElement(
-                            element = "LGBTQ",
-                            color = Color(0xFFE91E63),
-                            icon = Icons.Default.Flag,
-                            smallSize = false
-                        )
-
-                    }
+                    UserTags(tags = filteredUserTags)
                     Spacer(modifier = Modifier.height(10.dp))
                     Button(
                         shape = CircleShape,
@@ -134,7 +118,10 @@ class RandChatStartView {
                     }
                     Spacer(modifier = Modifier.height(20.dp))
                     if (completePreviousRandChatUsers.isNotEmpty()) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Start
+                        ) {
                             Spacer(modifier = Modifier.width(15.dp))
                             Text(
                                 text = "Recent RandChat Users",
@@ -156,7 +143,11 @@ class RandChatStartView {
                                 deleteAble = false,
                                 sharedViewModel = sharedViewModel,
                                 searchedUser = if (savedUser == null) "searchedUser" else if (savedUser.statusFriend == "pending") "pending" else "added",
-                                onClick = { clickedPerson, add ->
+                                onUserClicked = {
+                                    sharedViewModel.updatePublicUser(it)
+                                    navController.navigate(Screens.PublicProfileScreen.route)
+                                },
+                                onActionClicked = { clickedPerson, add ->
                                     if (add) {
                                         val filteredChats = chatData.filter { chat ->
                                             chat.members.contains(clickedPerson.id) && chat.members
@@ -200,5 +191,90 @@ class RandChatStartView {
                 }
             }
         )
+    }
+
+    @Composable
+    fun UserTags(tags: List<TagElement>) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            when {
+                tags.size >= 2 -> {
+                    TagElement(
+                        element = tags[0].name,
+                        color = tags[0].color,
+                        icon = tags[0].icon,
+                        smallSize = false
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    TagElement(
+                        element = tags[1].name,
+                        color = tags[1].color,
+                        icon = tags[1].icon,
+                        smallSize = false
+                    )
+                }
+
+                tags.size == 1 -> {
+                    TagElement(
+                        element = tags[0].name,
+                        color = tags[0].color,
+                        icon = tags[0].icon,
+                        smallSize = false
+                    )
+                }
+            }
+        }
+        if (tags.size > 2) {
+            Spacer(modifier = Modifier.height(5.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                when {
+                    tags.size >= 4 -> {
+                        TagElement(
+                            element = tags[2].name,
+                            color = tags[2].color,
+                            icon = tags[2].icon,
+                            smallSize = false
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        TagElement(
+                            element = tags[3].name,
+                            color = tags[3].color,
+                            icon = tags[3].icon,
+                            smallSize = false
+                        )
+                    }
+
+                    tags.size == 3 -> {
+                        TagElement(
+                            element = tags[2].name,
+                            color = tags[2].color,
+                            icon = tags[2].icon,
+                            smallSize = false
+                        )
+                    }
+                }
+            }
+        }
+        if (tags.size > 4) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                androidx.compose.material3.Text(
+                    text = "+${tags.size - 4} more",
+                    color = Color.DarkGray,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Light,
+                    fontFamily = FontFamily.SansSerif
+                )
+            }
+        }
     }
 }

@@ -30,31 +30,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
+import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.finduser.FindUserPersonElement
 import at.htlhl.chatnet.ui.components.finduser.FindUserSearchedContent
 import at.htlhl.chatnet.ui.components.finduser.FindUserTopBar
 import at.htlhl.chatnet.viewmodels.SharedViewModel
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
 class FindUserView : ViewModel() {
 
@@ -62,15 +52,17 @@ class FindUserView : ViewModel() {
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun FindUserScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+        val screenHeight = LocalConfiguration.current.screenHeightDp.dp
         val scaffoldState = rememberBackdropScaffoldState(BackdropValue.Concealed)
         val coroutineScope = rememberCoroutineScope()
         val interactionSource = remember { MutableInteractionSource() }
-        val searchedUsers by person.collectAsState(initial = emptyList())
-        val searchText by searchText.collectAsState()
-        val isSearching by isSearching.collectAsState()
+        val searchedUsers by sharedViewModel.person.collectAsState(initial = emptyList())
+        val searchText by sharedViewModel.searchTextFlow.collectAsState()
+        val isSearching by sharedViewModel.isSearchingFlow.collectAsState()
         val chatDataState = sharedViewModel.chatData.collectAsState()
         val chatData: List<FirebaseChat> = chatDataState.value
-        val friendListFriendsDataState = sharedViewModel.friendRandomFriendsListData.collectAsState()
+        val friendListFriendsDataState =
+            sharedViewModel.friendRandomFriendsListData.collectAsState()
         val friendListFriendsData: List<FirebaseUser> = friendListFriendsDataState.value
 
         val friendListDataState = sharedViewModel.friendListData.collectAsState()
@@ -87,18 +79,20 @@ class FindUserView : ViewModel() {
             stickyFrontLayer = false,
             backLayerBackgroundColor = Color.White,
             persistentAppBar = true,
+            peekHeight = screenHeight/3,
             frontLayerBackgroundColor = Color.White,
             frontLayerScrimColor = Color.Transparent,
             frontLayerElevation = 10.dp,
             modifier = Modifier.fillMaxSize(),
             appBar = {
-                FindUserTopBar(navController, interactionSource, searchedUsers, searchText, {
-                    coroutineScope.launch {
-                        scaffoldState.reveal()
-                    }
-                }, { text ->
-                    onSearchTextChanged(text)
-                })
+                FindUserTopBar(
+                    navController, interactionSource, {
+                        coroutineScope.launch {
+                            scaffoldState.reveal()
+                        }
+                    }, { text ->
+                        onSearchTextChanged(text, sharedViewModel)
+                    })
             },
             frontLayerContent = {
                 Column(
@@ -147,33 +141,38 @@ class FindUserView : ViewModel() {
                                 person = person,
                                 deleteAble = true,
                                 sharedViewModel = sharedViewModel,
-                                searchedUser = "pending"
-                            ) { clickedPerson, _ ->
-                                val filteredChats = chatData.filter { chat ->
-                                    chat.members.contains(clickedPerson.id) && chat.members
-                                        .contains(sharedViewModel.auth.currentUser?.uid)
-                                }
-                                if (filteredChats.isEmpty()) {
-                                    sharedViewModel.saveChatRoom(
-                                        person = clickedPerson.id,
-                                        tab = "chats"
+                                searchedUser = "pending",
+                                onUserClicked = {
+                                    sharedViewModel.updatePublicUser(it)
+                                    navController.navigate(Screens.PublicProfileScreen.route)
+                                },
+                                onActionClicked = { clickedPerson, _ ->
+                                    val filteredChats = chatData.filter { chat ->
+                                        chat.members.contains(clickedPerson.id) && chat.members
+                                            .contains(sharedViewModel.auth.currentUser?.uid)
+                                    }
+                                    if (filteredChats.isEmpty()) {
+                                        sharedViewModel.saveChatRoom(
+                                            person = clickedPerson.id,
+                                            tab = "chats"
+                                        )
+                                    } else {
+                                        sharedViewModel.updateChatRoom(
+                                            tab = "chats",
+                                            chatRoomId = filteredChats[0].chatRoomID
+                                        )
+                                    }
+                                    sharedViewModel.removeDropInUser(clickedPerson.id)
+                                    sharedViewModel.saveFriendForFriend(
+                                        person = clickedPerson,
+                                        status = "accepted"
                                     )
-                                } else {
-                                    sharedViewModel.updateChatRoom(
-                                        tab = "chats",
-                                        chatRoomId = filteredChats[0].chatRoomID
+                                    sharedViewModel.saveFriendForUser(
+                                        person = clickedPerson,
+                                        status = "accepted"
                                     )
                                 }
-                                sharedViewModel.removeDropInUser(clickedPerson.id)
-                                sharedViewModel.saveFriendForFriend(
-                                    person = clickedPerson,
-                                    status = "accepted"
-                                )
-                                sharedViewModel.saveFriendForUser(
-                                    person = clickedPerson,
-                                    status = "accepted"
-                                )
-                            }
+                            )
                         }
                         if (finalFriendListFriends.isNotEmpty()) {
                             item {
@@ -190,17 +189,22 @@ class FindUserView : ViewModel() {
                                 person = person,
                                 deleteAble = false,
                                 sharedViewModel = sharedViewModel,
-                                searchedUser = "searchedUser"
-                            ) { clickedPerson, _ ->
-                                sharedViewModel.saveFriendForFriend(
-                                    person = clickedPerson,
-                                    status = "pending"
-                                )
-                                sharedViewModel.saveFriendForUser(
-                                    person = clickedPerson,
-                                    status = "requested"
-                                )
-                            }
+                                searchedUser = "searchedUser",
+                                onUserClicked = {
+                                    sharedViewModel.updatePublicUser(it)
+                                    navController.navigate(Screens.PublicProfileScreen.route)
+                                },
+                                onActionClicked = { clickedPerson, _ ->
+                                    sharedViewModel.saveFriendForFriend(
+                                        person = clickedPerson,
+                                        status = "pending"
+                                    )
+                                    sharedViewModel.saveFriendForUser(
+                                        person = clickedPerson,
+                                        status = "requested"
+                                    )
+                                }
+                            )
                         }
                     }
                 }
@@ -211,96 +215,19 @@ class FindUserView : ViewModel() {
                     searchedUsers,
                     isSearching,
                     searchText,
-                    sharedViewModel
+                    sharedViewModel,
+                    navController
                 )
             }
         )
     }
-
-
-    private val _searchText = MutableStateFlow("")
-    private val searchText = _searchText.asStateFlow()
-
-    private val _isSearching = MutableStateFlow(false)
-    private val isSearching = _isSearching.asStateFlow()
-
-    private val _person = MutableStateFlow<List<FirebaseUser>>(emptyList())
-
-    private suspend fun retrieveMessages(): List<FirebaseUser> {
-        try {
-            val snapshot = FirebaseFirestore.getInstance().collection("users")
-                .orderBy("username.lowercase")
-                .startAt(searchText.value.lowercase())
-                .endAt(searchText.value.lowercase() + '\uf8ff')
-                .get()
-                .await()
-
-            return snapshot.documents.mapNotNull { document ->
-                try {
-                    val usernameMap = document["username"] as? Map<String, String>
-                    val image = document.getString("image")
-                    val id = document.getString("id")
-                    val online = document.getBoolean("online")
-                    val email = document.getString("email")
-                    val color = document.getString("color")
-                    val blocked = document.get("blocked") as? List<String>
-                    val pinned = document.get("pinned") as? List<String>
-                    val muted = document.get("muted") as? List<String>
-                    val connected = document.getBoolean("connected")
-
-                    if (usernameMap != null && image != null && id != null && online != null
-                        && email != null && color != null && blocked != null && pinned != null && connected != null && muted != null
-                    ) {
-                        return@mapNotNull FirebaseUser(
-                            image = image,
-                            username = usernameMap,
-                            id = id,
-                            online = online,
-                            email = email,
-                            color = color,
-                            blocked = blocked,
-                            connected = connected,
-                            pinned = pinned,
-                            muted = muted ,
-                            statusFriend = ""
-                        )
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-                null
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        return emptyList()
-    }
-
-
-    @OptIn(FlowPreview::class)
-    private var person = searchText.debounce(750L)
-        .combine(_person) { text, person ->
-            if (text.isBlank()) {
-                emptyList()
-            } else {
-                val initialMessages = retrieveMessages()
-                if (initialMessages.isEmpty()) {
-                    _isSearching.update { false }
-                }
-                Log.println(Log.INFO, "SearchView", initialMessages.toString())
-                _person.value = initialMessages.toMutableList()
-                person.filter { it.doesMatchUsername(text) }
-            }
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _person.value)
-            .onEach { _isSearching.update { false } }
-
-    private fun onSearchTextChanged(text: String) {
-        _person.value = emptyList()
-        _isSearching.value = true
-        _searchText.value = text
-        if (_searchText.value.isBlank()) {
-            _isSearching.value = false
+    private fun onSearchTextChanged(text: String, sharedViewModel: SharedViewModel) {
+        Log.println(Log.INFO, "SearchView", "Text: $text")
+        sharedViewModel.searchedPersons.value = emptyList()
+        sharedViewModel.isSearching.value = true
+        sharedViewModel.searchText.value = text
+        if (sharedViewModel.searchText.value.isBlank()) {
+            sharedViewModel.isSearching.value = false
         }
     }
 }

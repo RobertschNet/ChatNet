@@ -30,10 +30,8 @@ import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.AnnotatedString
@@ -407,11 +405,6 @@ fun ChatViewMessageComponent(
                 horizontalArrangement = alignment,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(
-                    modifier = Modifier
-                        .width(15.dp)
-                        .background(Color.Transparent)
-                )
                 Card(
                     backgroundColor = backgroundColor,
                     contentColor = backgroundColor,
@@ -420,8 +413,8 @@ fun ChatViewMessageComponent(
                     modifier = Modifier
                         .widthIn(min = 100.dp)
                         .padding(
-                            start = if (isUser) 80.dp else 0.dp,
-                            end = if (isUser) 0.dp else 80.dp,
+                            start = if (isUser) 80.dp else 10.dp,
+                            end = if (isUser) 10.dp else 80.dp,
                             top = if (isTopPaddingNeeded(message, previousMessage)) 20.dp else 5.dp,
                         )
                         .pointerInput(Unit) {
@@ -430,44 +423,6 @@ fun ChatViewMessageComponent(
                                     onLongPress.invoke()
                                 }
                             )
-                        }
-                        .drawWithContent {
-                            drawContent()
-                            drawPath(
-                                path = Path().apply {
-                                    if (isUser) {
-                                        moveTo(size.width, size.height)
-                                        lineTo(size.width, size.height - 50f)
-                                        lineTo(size.width - 50f, size.height)
-                                        close()
-                                    } else {
-                                        moveTo(0f, size.height)
-                                        lineTo(0f, size.height - 50f)
-                                        lineTo(50f, size.height)
-                                        close()
-                                    }
-                                },
-                                color = backgroundColor,
-                            )
-                            drawPath(
-                                path = Path().apply {
-                                    if (isUser) {
-                                        moveTo(size.width - 30f, size.height)
-                                        lineTo(size.width + 15f, size.height + 15f)
-                                        lineTo(size.width, size.height - 30f)
-                                        close()
-                                    } else {
-                                        moveTo(30f, size.height)
-                                        lineTo(-15f, size.height + 15f)
-                                        lineTo(0f, size.height - 30f)
-                                        close()
-                                    }
-
-                                },
-                                color = backgroundColor,
-
-
-                                )
                         }
                         .background(backgroundColor, shape = RoundedCornerShape(18.dp)),
                 ) {
@@ -521,11 +476,6 @@ fun ChatViewMessageComponent(
                         color = if (isUser) Color.White else Color.Black
                     )
                 }
-                Spacer(
-                    modifier = Modifier
-                        .width(15.dp)
-                        .background(Color.Transparent)
-                )
             }
         }
     }
@@ -548,7 +498,9 @@ private fun isDateSeparatorNeeded(
         timeInMillis = previousMessage.timestamp.toDate().time
     }
 
-    return currentCalendar.get(Calendar.YEAR) != previousCalendar.get(Calendar.YEAR) || currentCalendar.get(Calendar.DAY_OF_YEAR) != previousCalendar.get(Calendar.DAY_OF_YEAR)
+    return currentCalendar.get(Calendar.YEAR) != previousCalendar.get(Calendar.YEAR) || currentCalendar.get(
+        Calendar.DAY_OF_YEAR
+    ) != previousCalendar.get(Calendar.DAY_OF_YEAR)
 
 }
 

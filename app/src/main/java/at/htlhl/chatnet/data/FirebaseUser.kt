@@ -1,5 +1,6 @@
 package at.htlhl.chatnet.data
 
+
 data class FirebaseUser(
     val blocked: List<String>, // list of ids of users that have been blocked by the user
     val image: String, // url of the users profile picture
@@ -12,6 +13,7 @@ data class FirebaseUser(
     val connected: Boolean, // the current connection-status for the randchat feature (matched, pending, offline)
     val muted: List<String>, // if the friend has been muted by the user (from FirebaseFriends)
     val statusFriend: String, // the current status of the friend request (from FirebaseFriends)
+    val tags: List<String> // list of tags the user has selected
 ) {
     constructor() : this(
         listOf(),
@@ -24,7 +26,8 @@ data class FirebaseUser(
         "",
         false,
         listOf(),
-        ""
+        "",
+        listOf("No Tags")
     ) // default constructor for Firebase
 
     /**
