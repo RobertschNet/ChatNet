@@ -219,7 +219,17 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     )
                     return@addSnapshotListener
                 }
+
                 val personListData = mutableListOf<FirebaseUser>()
+                friendQuerySnapshot?.documentChanges?.forEach { docChange ->
+                    if (docChange.type == DocumentChange.Type.REMOVED) {
+                        val deleteList = mutableListOf<FirebaseUser>()
+                        deleteList.addAll(_friendListData.value)
+                        deleteList.find { it.id == docChange.document.id }
+                            ?.let { user -> deleteList.remove(user) }
+                        _friendListData.value = deleteList
+                    }
+                }
                 friendQuerySnapshot?.let { friendSnapshot ->
                     val subCollectionData = friendSnapshot.toObjects(FirebaseFriend::class.java)
                     var completedCount = 0
@@ -259,7 +269,6 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                                 if (completedCount == totalFriends) {
                                     onComplete.invoke()
                                     _friendListData.value = personListData
-                                    Log.println(Log.INFO, "FriendList", personListData.toString())
                                 }
                             }
                     }
@@ -346,6 +355,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun sortDataChats(onComplete: () -> Unit) {
+        Log.println(Log.INFO, "Was triggered", _friendListData.value.toString())
         val updatedPersonList: List<InternalChatInstance> = _friendListData.value.map { person ->
             val matchingChat = _chatData.value.find { chat ->
                 chat.members.contains(person.id) && chat.tab == "chats"
@@ -384,31 +394,38 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun sortDataDropIn(onComplete: () -> Unit) {
         val matchingChats = _chatData.value.filter { chat -> chat.tab == "dropin" }
-        matchingChats.forEach { chat ->
-            val friend = chat.members.find { it != auth.currentUser?.uid.toString() } ?: ""
-            if (_friendListData.value.any { it.id == friend && it.statusFriend == "accepted" }) {
-                _completeDropInList.value =
-                    _completeDropInList.value.filter { it.chatRoomID != chat.chatRoomID }
-            } else {
-                fetchUser(friend) { instance ->
-                    instance?.let { user ->
-                        _completeDropInList.value =
-                            _completeDropInList.value.filter { it.chatRoomID != chat.chatRoomID }
-                        _completeDropInList.value += InternalChatInstance(
-                            personList = user,
-                            lastMessage = chat.messages.firstOrNull { it.visible.contains(auth.currentUser?.uid) }
-                                ?: InternalMessageInstance(),
-                            timestampMessage = chat.messages.firstOrNull { it.visible.contains(auth.currentUser?.uid) }?.timestamp
-                                ?: Timestamp.now(),
-                            markedAsUnread = chat.unread.contains(auth.currentUser?.uid.toString()),
-                            pinChat = _user.value.pinned.contains(chat.chatRoomID),
-                            read = if (chat.messages.firstOrNull() != InternalMessageInstance()) {
-                                chat.messages.count { it.sender != auth.currentUser?.uid.toString() && !it.read }
-                            } else {
-                                0
-                            },
-                            chatRoomID = chat.chatRoomID
-                        )
+        if (matchingChats.isEmpty()) {
+            _completeDropInList.value = emptyList()
+        } else {
+            matchingChats.forEach { chat ->
+                _completeDropInList.value = _completeDropInList.value.filter { it.chatRoomID != chat.chatRoomID }
+                val friend = chat.members.find { it != auth.currentUser?.uid.toString() } ?: ""
+                if (_friendListData.value.any { it.id == friend && it.statusFriend == "accepted" }) {
+                    _completeDropInList.value = _completeDropInList.value.filter { it.chatRoomID != chat.chatRoomID }
+                } else {
+                    fetchUser(friend) { instance ->
+                        instance?.let { user ->
+                            _completeDropInList.value = _completeDropInList.value.filter { it.chatRoomID != chat.chatRoomID }
+                            _completeDropInList.value += InternalChatInstance(
+                                personList = user,
+                                lastMessage = chat.messages.firstOrNull { it.visible.contains(auth.currentUser?.uid) }
+                                    ?: InternalMessageInstance(),
+                                timestampMessage = chat.messages.firstOrNull {
+                                    it.visible.contains(
+                                        auth.currentUser?.uid
+                                    )
+                                }?.timestamp
+                                    ?: Timestamp.now(),
+                                markedAsUnread = chat.unread.contains(auth.currentUser?.uid.toString()),
+                                pinChat = _user.value.pinned.contains(chat.chatRoomID),
+                                read = if (chat.messages.firstOrNull() != InternalMessageInstance()) {
+                                    chat.messages.count { it.sender != auth.currentUser?.uid.toString() && !it.read }
+                                } else {
+                                    0
+                                },
+                                chatRoomID = chat.chatRoomID
+                            )
+                        }
                     }
                 }
             }
@@ -451,10 +468,6 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         return chatInstance.personList.id.isNotBlank() && chatInstance.chatRoomID.isNotBlank()
     }
 
-    fun removeDropInUser(uID: String) {
-        _completeDropInList.value = _completeDropInList.value.filter { it.personList.id != uID }
-    }
-
     /**
      * This section contains the logic for the Firebase communication, used for exchanging messages,
      * in the ChatsView.
@@ -473,8 +486,12 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 if (error != null) {
                     return@addSnapshotListener
                 }
+                if (querySnapshot == null || querySnapshot.isEmpty) {
+                    loadedData.value = true
+                    return@addSnapshotListener
+                }
                 // Step 2: For each change in the chats collection, fetch the messages subCollection
-                querySnapshot?.documentChanges?.forEach { documentChange ->
+                querySnapshot.documentChanges.forEach { documentChange ->
                     // Step 3: Listen for changes in the messages subCollection
                     val removedDocumentId = documentChange.document.id
                     val removedChat = chatDataSet.find { it.chatRoomID == removedDocumentId }
@@ -1350,6 +1367,18 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     .addOnFailureListener { exception ->
                         exception.printStackTrace()
                     }
+            }
+            .addOnFailureListener { exception ->
+                exception.printStackTrace()
+            }
+    }
+
+
+    fun updateUserTags(tags: List<String>) {
+        val userRef = getUserDocumentRef().document(auth.currentUser?.uid.toString())
+        val updateData = mapOf("tags" to tags)
+        userRef.update(updateData)
+            .addOnSuccessListener {
             }
             .addOnFailureListener { exception ->
                 exception.printStackTrace()

@@ -51,7 +51,7 @@ fun ChatsViewChatItem(
     chatUser: FirebaseUser,
     displayOnlineState: Boolean,
     sharedViewModel: SharedViewModel,
-    onClick: (String) -> Unit
+    onClick: (String,InternalChatInstance) -> Unit
 ) {
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
     val formattedTime: String = formatter.format(chatFriend.timestampMessage.toDate())
@@ -63,10 +63,10 @@ fun ChatsViewChatItem(
         Modifier
             .combinedClickable(
                 onClick = {
-                    onClick.invoke("navigate")
+                    onClick.invoke("navigate",chatFriend)
                 },
                 onLongClick = {
-                    onClick.invoke("message")
+                    onClick.invoke("message",chatFriend)
                 },
             )
             .fillMaxWidth()
@@ -86,7 +86,7 @@ fun ChatsViewChatItem(
                         .size(50.dp)
                         .shimmerEffect()
                         .clickable {
-                            onClick.invoke("image")
+                            onClick.invoke("image",chatFriend)
                         },
                     contentScale = ContentScale.Crop,
                     alignment = Alignment.Center,
@@ -99,7 +99,7 @@ fun ChatsViewChatItem(
                         .clip(CircleShape)
                         .size(50.dp)
                         .clickable {
-                            onClick.invoke("image")
+                            onClick.invoke("image",chatFriend)
                         },
                     contentScale = ContentScale.Crop,
                     alignment = Alignment.Center,

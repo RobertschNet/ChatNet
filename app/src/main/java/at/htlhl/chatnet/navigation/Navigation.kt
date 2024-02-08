@@ -1,5 +1,6 @@
 package at.htlhl.chatnet.navigation
 
+import at.htlhl.chatnet.ui.views.TagSelectView
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -33,7 +34,6 @@ import at.htlhl.chatnet.ui.views.RandChatStartView
 import at.htlhl.chatnet.ui.views.RandChatView
 import at.htlhl.chatnet.ui.views.RegisterView
 import at.htlhl.chatnet.ui.views.RegisterWithGoggleView
-import at.htlhl.chatnet.ui.views.TagSelectView
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import kotlinx.coroutines.delay
 

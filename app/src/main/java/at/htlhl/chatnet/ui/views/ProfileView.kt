@@ -106,7 +106,7 @@ class ProfileView {
         val userState = sharedViewModel.user.collectAsState()
         val userData: FirebaseUser = userState.value
         val context = LocalContext.current
-        val filteredTags = tags.filter { tag -> userData.tags.contains(tag.name) }
+        val filteredTags = if (userData.tags.isEmpty()) tags.filter { tag-> tag.category=="Empty" } else tags.filter { tag -> userData.tags.contains(tag.name) }
         val systemUiController = rememberSystemUiController()
         systemUiController.setStatusBarColor(
             color = if (isSystemInDarkTheme()) Color.Black else Color.White,

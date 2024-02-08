@@ -178,7 +178,11 @@ class ProfileInfoView {
                     if (currentChat?.tab != "chatmate") {
                         sharedViewModel.deleteFriendFromFriendList(friend.personList)
                     }
-                    navController.navigateUp()
+                    if (navController.previousBackStackEntry?.destination?.route != Screens.ChatViewScreen.route) {
+                        navController.navigateUp()
+                    }else {
+                        navController.navigate(Screens.ChatsViewScreen.route)
+                    }
                 }
                 removeFriendDialog = false
             }

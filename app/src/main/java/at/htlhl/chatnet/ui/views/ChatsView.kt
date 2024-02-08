@@ -146,40 +146,52 @@ class ChatsView {
             },
             content = {
                 Log.println(Log.INFO, "ChatsView", "Complete Person List: $completePersonList")
-                Log.println(Log.INFO, "ChatsView", "Is Loading Data: ${sharedViewModel.loadedData.value}")
-                if (completePersonList.isEmpty()&& sharedViewModel.loadedData.value) {
+                Log.println(
+                    Log.INFO,
+                    "ChatsView",
+                    "Is Loading Data: ${sharedViewModel.loadedData.value}"
+                )
+                if (completePersonList.isEmpty() && sharedViewModel.loadedData.value) {
                     Log.println(Log.INFO, "ChatsView", "Empty Chat Content")
                     EmptyChatContent(onClicked = {
                         navController.navigate(Screens.FindUserScreen.route)
-                    })
-                }else {
+                    }
+                    )
+                } else {
                     LazyColumn(
                         Modifier
                             .fillMaxSize()
                             .background(MaterialTheme.colorScheme.tertiary),
                         state = lazyListState
                     ) {
+                        Log.println(
+                            Log.INFO,
+                            "ChatssView",
+                            "Complete Person List: $completePersonList"
+                        )
                         items(completePersonList) { message ->
                             ChatsViewChatItem(
                                 chatFriend = message,
                                 chatUser = userData,
                                 displayOnlineState = true,
                                 sharedViewModel = sharedViewModel,
-                            ) { context ->
-                                when (context) {
-                                    "image" -> {
-                                        showUserIconPrompt = true
-                                    }
+                            ) { context, selectedChat ->
+                                sharedViewModel.updateFriend(selectedChat) {
+                                    when (context) {
+                                        "image" -> {
+                                            showUserIconPrompt = true
+                                        }
 
-                                    "message" -> {
-                                        modelSheetState.value = true
-                                    }
+                                        "message" -> {
+                                            modelSheetState.value = true
+                                        }
 
-                                    "navigate" -> {
-                                        navController.navigate(Screens.ChatViewScreen.route)
+                                        "navigate" -> {
+                                            navController.navigate(Screens.ChatViewScreen.route)
+                                        }
                                     }
                                 }
-                                sharedViewModel.updateFriend(message)
+
                             }
                         }
                         if (completePersonList.isEmpty() && !sharedViewModel.loadedData.value) {

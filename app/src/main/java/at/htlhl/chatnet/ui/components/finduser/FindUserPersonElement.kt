@@ -56,7 +56,7 @@ fun FindUserPersonElement(
     onUserClicked: (FirebaseUser) -> Unit,
     onActionClicked: (FirebaseUser, Boolean) -> Unit
 ) {
-    val filteredTags = tags.filter { tag -> person.tags.contains(tag.name) }
+    val filteredTags = if (person.tags.isEmpty()) tags.filter { tag-> tag.category=="Empty" } else tags.filter { tag -> person.tags.contains(tag.name) }
     Row(
         modifier = Modifier
             .fillMaxWidth()

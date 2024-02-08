@@ -466,6 +466,7 @@ fun uploadImage(
     }
 }
 
+@Suppress("DEPRECATION")
 private fun convertBitmapToWebP(bitmap: Bitmap): ByteArray {
     val outputStream = ByteArrayOutputStream()
     bitmap.compress(Bitmap.CompressFormat.WEBP, 50, outputStream)
@@ -570,10 +571,8 @@ fun onSentPressed(
 ) {
     if (!sharedViewModel.user.value.blocked.contains(chatPartner.personList.id)) {
         if (text.isNotEmpty() || getImageUploadList(chatPartner.chatRoomID).isNotEmpty()) {
-            isLoading.invoke(true)
             if (getImageUploadList(chatPartner.chatRoomID).isEmpty()) {
                 uploadMessage(chatMateChat, sharedViewModel, text) {
-                    isLoading.invoke(false)
                     if (it) {
                         onSuccess.invoke()
                     } else {

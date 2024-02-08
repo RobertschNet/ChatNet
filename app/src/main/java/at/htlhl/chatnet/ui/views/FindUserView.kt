@@ -162,7 +162,6 @@ class FindUserView : ViewModel() {
                                             chatRoomId = filteredChats[0].chatRoomID
                                         )
                                     }
-                                    sharedViewModel.removeDropInUser(clickedPerson.id)
                                     sharedViewModel.saveFriendForFriend(
                                         person = clickedPerson,
                                         status = "accepted"

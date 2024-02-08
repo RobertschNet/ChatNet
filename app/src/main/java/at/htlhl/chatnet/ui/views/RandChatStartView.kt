@@ -64,8 +64,7 @@ class RandChatStartView {
                 ) ?: false
                 //TODO:  Add filtering for tags
             } else previousRandChatUsers
-        val filteredUserTags = tags.filter { tag -> userData.tags.contains(tag.name) }
-
+        val filteredUserTags = if (userData.tags.isEmpty()) tags.filter { tag-> tag.category=="Empty" } else tags.filter { tag -> userData.tags.contains(tag.name) }
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {

@@ -70,7 +70,7 @@ fun ProfileFriendsFromFriendsSection(
                         }
                     }
                     friendsFromFriendsList.forEach {
-                        val filteredTags = tags.filter { tag -> it.tags.contains(tag.name) }
+                        val filteredTags = if (it.tags.isEmpty()) tags.filter { tag-> tag.category=="Empty" } else tags.filter { tag -> it.tags.contains(tag.name) }
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onUserClicked.invoke(it) }) {
                             Spacer(modifier = Modifier.width(10.dp))
                             SubcomposeAsyncImage(

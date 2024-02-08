@@ -18,7 +18,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
-import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
@@ -60,7 +59,7 @@ fun TabsTopBar(
     tab: String,
     availableUsers: List<FirebaseUser>,
     sharedViewModel: SharedViewModel,
-    onClick: () -> Unit= {},
+    onClick: () -> Unit = {},
 ) {
     val isSearchMode = remember { mutableStateOf(false) }
     TopAppBar(
@@ -145,7 +144,7 @@ fun TabsTopBar(
                     }
                 }
             }
-            if (tab=="RandChat"){
+            if (tab == "RandChat") {
                 IconButton(
                     onClick = { isSearchMode.value = true },
                     modifier = Modifier.padding(top = 5.dp, end = 10.dp)
@@ -167,7 +166,8 @@ fun TabsTopBar(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Start,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
                     .padding(start = 10.dp, end = 10.dp)
             ) {
                 BasicTextField(
@@ -202,7 +202,9 @@ fun TabsTopBar(
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     decorationBox = { innerTextField: @Composable () -> Unit ->
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(end=10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(end = 10.dp),
                             horizontalArrangement = Arrangement.Start,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -219,7 +221,7 @@ fun TabsTopBar(
                                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                                 )
                             }
-                                innerTextField()
+                            innerTextField()
                         }
                     }
                 )
@@ -229,7 +231,7 @@ fun TabsTopBar(
                     keyboardController?.show()
                     focusRequester.requestFocus()
                 }
-                onDispose {sharedViewModel.searchValue.value = ""}
+                onDispose { sharedViewModel.searchValue.value = "" }
             }
         }
     }

@@ -33,7 +33,7 @@ fun ProfileInfoUserHeader(
     navController: NavController,
     friend: FirebaseUser
 ) {
-    val friendUserTags = tags.filter { tag -> friend.tags.contains(tag.name) }
+    val friendUserTags = if (friend.tags.isEmpty()) tags.filter { tag-> tag.category=="Empty" } else tags.filter { tag -> friend.tags.contains(tag.name) }
     Card(modifier = Modifier.fillMaxWidth(), elevation = 10.dp) {
         Box(modifier = Modifier.fillMaxWidth()) {
             SubcomposeAsyncImage(model = R.drawable.back_svgrepo_com_1_,

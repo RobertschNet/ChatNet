@@ -92,7 +92,6 @@ fun ProfileUserFriendStateSection(
                                                 chatRoomId = filteredChats[0].chatRoomID
                                             )
                                         }
-                                        sharedViewModel.removeDropInUser(publicUser.id)
                                         sharedViewModel.saveFriendForFriend(
                                             person = publicUser,
                                             status = "accepted"

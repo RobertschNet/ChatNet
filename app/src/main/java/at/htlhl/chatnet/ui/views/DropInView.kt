@@ -282,21 +282,22 @@ class DropInView {
                                 chatUser = userData,
                                 displayOnlineState = true,
                                 sharedViewModel = sharedViewModel,
-                            ) { context ->
-                                when (context) {
-                                    "image" -> {
-                                        showUserIconPrompt = true
-                                    }
+                            ) { context,selectedChat ->
+                                sharedViewModel.updateFriend(selectedChat){
+                                    when (context) {
+                                        "image" -> {
+                                            showUserIconPrompt = true
+                                        }
 
-                                    "message" -> {
-                                        modelSheetState.value = true
-                                    }
+                                        "message" -> {
+                                            modelSheetState.value = true
+                                        }
 
-                                    "navigate" -> {
-                                        navController.navigate(Screens.ChatViewScreen.route)
+                                        "navigate" -> {
+                                            navController.navigate(Screens.ChatViewScreen.route)
+                                        }
                                     }
                                 }
-                                sharedViewModel.updateFriend(chat)
                             }
                         }
                     }
