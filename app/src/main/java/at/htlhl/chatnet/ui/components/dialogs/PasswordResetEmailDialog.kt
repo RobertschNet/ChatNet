@@ -65,7 +65,7 @@ fun PasswordResetEmailDialog(onDismiss: () -> Unit= {}) {
             )
             Divider(
                 thickness = 0.3f.dp,
-                color = Color.LightGray,
+                color = MaterialTheme.colorScheme.outline,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,

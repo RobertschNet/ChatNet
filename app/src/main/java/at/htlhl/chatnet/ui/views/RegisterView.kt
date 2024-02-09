@@ -83,7 +83,7 @@ class RegisterView {
         }
         val googleSignInClient = GoogleSignIn.getClient(context, googleSignInOptions)
         Scaffold(
-            containerColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
+            containerColor =MaterialTheme.colorScheme.background,
             content = {
                 ContentView(
                     navController,
@@ -100,7 +100,7 @@ class RegisterView {
     fun BottomScreen(navController: NavController) {
         Divider(
             thickness = 0.3f.dp,
-            color = Color.DarkGray,
+            color = MaterialTheme.colorScheme.outline,
             modifier = Modifier.padding(bottom = 50.dp)
         )
         Row(
@@ -115,7 +115,7 @@ class RegisterView {
                 fontWeight = FontWeight.Light,
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 14.sp,
-                color = if (isSystemInDarkTheme()) Color.LightGray else Color.DarkGray,
+                color = MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center
             )
             Text(
@@ -123,7 +123,7 @@ class RegisterView {
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 14.sp,
-                color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.clickable {
                     navController.navigate(Screens.LoginScreen.route) {
@@ -234,7 +234,7 @@ class RegisterView {
                         fontWeight = FontWeight.SemiBold,
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 34.sp,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                        color = MaterialTheme.colorScheme.primary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -472,7 +472,7 @@ class RegisterView {
                 ) {
                     Divider(
                         thickness = 0.3f.dp,
-                        color = Color.DarkGray,
+                        color = MaterialTheme.colorScheme.outline,
                         modifier = Modifier
                             .padding(start = 15.dp)
                             .weight(1f)
@@ -482,13 +482,13 @@ class RegisterView {
                         fontWeight = FontWeight.Medium,
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 14.sp,
-                        color = if (isSystemInDarkTheme()) Color.LightGray else Color.DarkGray,
+                        color = MaterialTheme.colorScheme.secondary,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(start = 10.dp, end = 10.dp)
                     )
                     Divider(
                         thickness = 0.3f.dp,
-                        color = Color.DarkGray,
+                        color = MaterialTheme.colorScheme.outline,
                         modifier = Modifier
                             .padding(end = 15.dp)
                             .weight(1f)

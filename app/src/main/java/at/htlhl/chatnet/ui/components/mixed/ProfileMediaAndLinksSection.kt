@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
 import androidx.compose.material.IconButton
 import androidx.compose.material.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,13 +51,13 @@ fun ProfileMediaAndLinksSection(
             .fillMaxWidth()
             .padding(start = 15.dp, end = 15.dp),
         shape = RoundedCornerShape(25.dp),
-        elevation = 10.dp
+        elevation = 10.dp,
+        backgroundColor = MaterialTheme.colorScheme.background
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(130.dp)
-                .background(Color.White),
+                .height(130.dp),
             verticalAlignment = Alignment.Top
         ) {
             Column {
@@ -70,7 +71,7 @@ fun ProfileMediaAndLinksSection(
                         fontSize = 12.sp,
                         fontFamily = FontFamily.SansSerif,
                         fontWeight = FontWeight.Normal,
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.secondary,
                     )
                     Spacer(
                         modifier = Modifier
@@ -93,7 +94,7 @@ fun ProfileMediaAndLinksSection(
                                     fontSize = 12.sp,
                                     fontFamily = FontFamily.SansSerif,
                                     fontWeight = FontWeight.Normal,
-                                    color = Color.Gray
+                                    color = MaterialTheme.colorScheme.secondary
                                 )
                             ) {
                                 append(imageList.size.toString())
@@ -101,7 +102,7 @@ fun ProfileMediaAndLinksSection(
                             withStyle(
                                 style = SpanStyle(
                                     fontWeight = FontWeight.Medium,
-                                    color = Color.Gray,
+                                    color = MaterialTheme.colorScheme.secondary,
                                     fontFamily = FontFamily.SansSerif,
                                     fontSize = 14.sp
                                 )
@@ -148,7 +149,7 @@ fun ProfileMediaAndLinksSection(
                                     SubcomposeAsyncImage(
                                         model = R.drawable.arrow_right_svgrepo_com,
                                         contentDescription = null,
-                                        colorFilter = ColorFilter.tint(Color.Gray),
+                                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.secondary),
                                         modifier = Modifier.size(30.dp)
                                     )
                                 }

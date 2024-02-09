@@ -28,6 +28,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Scaffold
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -404,6 +406,7 @@ class RandChatView {
     @Composable
     fun LoadingScreen(navController: NavController) {
         Scaffold(
+            backgroundColor = MaterialTheme.colorScheme.background,
             topBar = {
                 Row(
                     modifier = Modifier
@@ -419,6 +422,7 @@ class RandChatView {
                         SubcomposeAsyncImage(
                             model = R.drawable.back_svgrepo_com_1_,
                             contentDescription = null,
+                            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -427,7 +431,7 @@ class RandChatView {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.White),
+                        .background(MaterialTheme.colorScheme.background),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -435,7 +439,7 @@ class RandChatView {
                     Spacer(modifier = Modifier.height(5.dp))
                     Text(
                         text = "Searching for User...",
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.primary,
                         fontFamily = FontFamily.SansSerif
                     )
                 }

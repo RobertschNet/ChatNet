@@ -87,7 +87,7 @@ class LoginView {
 
         val googleSignInClient = GoogleSignIn.getClient(context, googleSignInOptions)
         Scaffold(
-            containerColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
+            containerColor = MaterialTheme.colorScheme.background,
             content = {
                 ContentView(
                     navController,
@@ -104,7 +104,7 @@ class LoginView {
     fun BottomScreen(navController: NavController) {
         Divider(
             thickness = 0.3f.dp,
-            color = Color.DarkGray,
+            color = MaterialTheme.colorScheme.outline,
             modifier = Modifier.padding(bottom = 50.dp)
         )
         Row(
@@ -119,7 +119,7 @@ class LoginView {
                 fontWeight = Light,
                 fontFamily = SansSerif,
                 fontSize = 14.sp,
-                color = if (isSystemInDarkTheme()) Color.LightGray else Color.DarkGray,
+                color = MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center
             )
             Text(
@@ -127,7 +127,7 @@ class LoginView {
                 fontWeight = Bold,
                 fontFamily = SansSerif,
                 fontSize = 14.sp,
-                color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.clickable {
                     navController.navigate(Screens.RegisterScreen.route)
@@ -239,7 +239,7 @@ class LoginView {
                         fontWeight = Medium,
                         fontFamily = SansSerif,
                         fontSize = 45.sp,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                        color = MaterialTheme.colorScheme.primary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -473,7 +473,7 @@ class LoginView {
                         fontWeight = Light,
                         fontFamily = SansSerif,
                         fontSize = 14.sp,
-                        color = if (isSystemInDarkTheme()) Color.LightGray else Color.DarkGray,
+                        color = MaterialTheme.colorScheme.secondary,
                         textAlign = TextAlign.Center
                     )
                     Text(
@@ -481,7 +481,7 @@ class LoginView {
                         fontWeight = Bold,
                         fontFamily = SansSerif,
                         fontSize = 14.sp,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                        color = MaterialTheme.colorScheme.primary,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.clickable {
                             navController.navigate(Screens.ForgotPasswordScreen.route)
@@ -497,7 +497,7 @@ class LoginView {
                 ) {
                     Divider(
                         thickness = 0.3f.dp,
-                        color = Color.DarkGray,
+                        color = MaterialTheme.colorScheme.outline,
                         modifier = Modifier
                             .padding(start = 15.dp)
                             .weight(1f)
@@ -507,13 +507,13 @@ class LoginView {
                         fontWeight = Medium,
                         fontFamily = SansSerif,
                         fontSize = 14.sp,
-                        color = if (isSystemInDarkTheme()) Color.LightGray else Color.DarkGray,
+                        color = MaterialTheme.colorScheme.secondary,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(start = 10.dp, end = 10.dp)
                     )
                     Divider(
                         thickness = 0.3f.dp,
-                        color = Color.DarkGray,
+                        color = MaterialTheme.colorScheme.outline,
                         modifier = Modifier
                             .padding(end = 15.dp)
                             .weight(1f)

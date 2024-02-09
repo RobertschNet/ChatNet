@@ -10,9 +10,6 @@ import coil.request.CachePolicy
 import coil.util.DebugLogger
 
 class MyApplication : Application(), ImageLoaderFactory {
-    val sharedViewModel: SharedViewModel by lazy {
-        SharedViewModel(this)
-    }
 
     override fun newImageLoader(): ImageLoader {
         return ImageLoader(this).newBuilder()

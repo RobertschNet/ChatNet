@@ -5,7 +5,6 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -183,6 +182,7 @@ class DropInView {
             ),
         )
         Scaffold(
+            backgroundColor = MaterialTheme.colorScheme.background,
             modifier = Modifier
                 .fillMaxSize(),
             topBar = {
@@ -208,8 +208,6 @@ class DropInView {
                         )
                     }
                     Spacer(modifier = Modifier.height(10.dp))
-
-
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
                         modifier = Modifier.fillMaxWidth(),
@@ -272,8 +270,7 @@ class DropInView {
                     }
                     LazyColumn(
                         Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.tertiary),
+                            .fillMaxSize(),
                         state = lazyListState
                     ) {
                         items(completeDropInList) { chat ->
@@ -282,8 +279,8 @@ class DropInView {
                                 chatUser = userData,
                                 displayOnlineState = true,
                                 sharedViewModel = sharedViewModel,
-                            ) { context,selectedChat ->
-                                sharedViewModel.updateFriend(selectedChat){
+                            ) { context, selectedChat ->
+                                sharedViewModel.updateFriend(selectedChat) {
                                     when (context) {
                                         "image" -> {
                                             showUserIconPrompt = true
@@ -438,9 +435,10 @@ class DropInView {
                         .clip(CircleShape)
                         .background(
                             Brush.linearGradient(
-                                colors = if (!isSystemInDarkTheme()) listOf(
-                                    Color.White, Color.White
-                                ) else listOf(Color(0xF1161616), Color(0xF1161616)),
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.background,
+                                    MaterialTheme.colorScheme.background
+                                ),
                                 start = Offset(0f, 0f),
                                 end = Offset(14.dp.value, 14.dp.value)
                             )
@@ -489,7 +487,8 @@ class DropInView {
             }
             Text(
                 text = buildAnnotatedStringWithColorHighlights(
-                    chat.username["mixedcase"].toString(), sharedViewModel.searchValue.value
+                    chat.username["mixedcase"].toString(),
+                    sharedViewModel.searchValue.value
                 ),
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -498,128 +497,129 @@ class DropInView {
                 maxLines = 1,
                 fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Normal,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.primary
             )
             Text(
                 text = buildAnnotatedStringWithColorHighlights(
                     chat.location,
                     sharedViewModel.searchValue.value
                 ),
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.secondary,
                 fontSize = 12.sp,
                 fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Light
             )
         }
     }
-}
 
-@Composable
-fun UserListItem(
-    user: FirebaseUser,
-    localChatUser: LocationUserInstance?,
-    sharedViewModel: SharedViewModel,
-    onClick: () -> Unit
-) {
-    val isOnline = user.online
-    Spacer(modifier = Modifier.width(10.dp))
-    Column(
-        modifier = Modifier.width(100.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+    @Composable
+    fun UserListItem(
+        user: FirebaseUser,
+        localChatUser: LocationUserInstance?,
+        sharedViewModel: SharedViewModel,
+        onClick: () -> Unit
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .width(80.dp)
+        val isOnline = user.online
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(
+            modifier = Modifier.width(100.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            SubcomposeAsyncImage(
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .clickable { onClick.invoke() },
-                model = user.image,
-                contentDescription = null
-            )
             Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(16.5f.dp)
-                    .offset((-5).dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            colors = if (!isSystemInDarkTheme()) listOf(
-                                Color.White, Color.White
-                            ) else listOf(Color(0xF1161616), Color(0xF1161616)),
-                            start = Offset(0f, 0f),
-                            end = Offset(14.dp.value, 14.dp.value)
-                        )
-                    )
-                    .align(Alignment.BottomEnd)
+                    .width(80.dp)
             ) {
-                if (isOnline) {
-                    Box(
-                        modifier = Modifier
-                            .size(14.dp)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.linearGradient(
-                                    colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
-                                    start = Offset(0f, 0f),
-                                    end = Offset(14.dp.value, 14.dp.value)
-                                )
+                SubcomposeAsyncImage(
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .clickable { onClick.invoke() },
+                    model = user.image,
+                    contentDescription = null
+                )
+                Box(
+                    modifier = Modifier
+                        .size(16.5f.dp)
+                        .offset((-5).dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.background,
+                                    MaterialTheme.colorScheme.background
+                                ),
+                                start = Offset(0f, 0f),
+                                end = Offset(14.dp.value, 14.dp.value)
                             )
-                            .align(Alignment.Center)
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(14.dp)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.linearGradient(
-                                    colors = listOf(Color.Gray, Color(0xFF808080)),
-                                    start = Offset(0f, 0f),
-                                    end = Offset(14.dp.value, 14.dp.value)
-                                )
-                            )
-                            .align(Alignment.Center)
-                    ) {
+                        )
+                        .align(Alignment.BottomEnd)
+                ) {
+                    if (isOnline) {
                         Box(
                             modifier = Modifier
-                                .size(8.dp)
+                                .size(14.dp)
                                 .clip(CircleShape)
-                                .background(Color.DarkGray)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Color(0xFF08C008), Color(0xFF08C008)),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(14.dp.value, 14.dp.value)
+                                    )
+                                )
                                 .align(Alignment.Center)
                         )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Color.Gray, Color(0xFF808080)),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(14.dp.value, 14.dp.value)
+                                    )
+                                )
+                                .align(Alignment.Center)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.DarkGray)
+                                    .align(Alignment.Center)
+                            )
+                        }
                     }
                 }
             }
+            Text(
+                text = buildAnnotatedStringWithColorHighlights(
+                    "You", sharedViewModel.searchValue.value
+                ),
+                overflow = TextOverflow.Clip,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 5.dp),
+                fontSize = 12.sp,
+                maxLines = 1,
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Normal,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = buildAnnotatedStringWithColorHighlights(
+                    localChatUser?.location ?: "Unknown",
+                    sharedViewModel.searchValue.value
+                ),
+                color = MaterialTheme.colorScheme.secondary,
+                fontSize = 12.sp,
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Light
+            )
         }
-        Text(
-            text = buildAnnotatedStringWithColorHighlights(
-                "You", sharedViewModel.searchValue.value
-            ),
-            overflow = TextOverflow.Clip,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 5.dp),
-            fontSize = 12.sp,
-            maxLines = 1,
-            fontFamily = FontFamily.SansSerif,
-            fontWeight = FontWeight.Normal,
-            color = Color.Black
-        )
-        Text(
-            text = buildAnnotatedStringWithColorHighlights(
-                localChatUser?.location ?: "Unknown",
-                sharedViewModel.searchValue.value
-            ),
-            color = Color.Gray,
-            fontSize = 12.sp,
-            fontFamily = FontFamily.SansSerif,
-            fontWeight = FontWeight.Light
-        )
     }
 }

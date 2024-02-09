@@ -2,7 +2,6 @@ package at.htlhl.chatnet.ui.components.mixed
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -23,10 +23,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.chatnet.R
@@ -76,21 +79,22 @@ fun ChatsViewBottomSheetContent(
                         .padding(start = 16.dp)
                         .align(Alignment.CenterVertically)
                         .weight(1f),
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = FontFamily.SansSerif,
                     fontSize = 20.sp,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
             Spacer(modifier = Modifier.padding(6.dp))
             Divider(
                 thickness = 0.25f.dp,
-                color = Color.LightGray,
+                color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(bottom = 2.dp)
             )
             LazyColumn(userScrollEnabled = false) {
                 items(bottomSheetItems.size, itemContent = {
                     Row(
-                        horizontalArrangement = Arrangement.Start,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -107,29 +111,29 @@ fun ChatsViewBottomSheetContent(
                                     }).build()
                             ),
                             bottomSheetItems[it].title,
-                            modifier = Modifier.padding(top = 14.dp, bottom = 14.dp)
+                            modifier = Modifier.padding(top = 14.dp, bottom = 14.dp),
+                            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                         )
                         Text(
                             text = bottomSheetItems[it].title,
-                            color = Color.Black,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontFamily = FontFamily.SansSerif,
+                            textAlign = TextAlign.Start,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Normal,
                             modifier = Modifier.padding(
-                                start = 12.dp,
-                                top = 14.dp,
-                                bottom = 14.dp
+                                start = 10.dp,
                             ),
                         )
                     }
 
                 })
             }
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(10.dp))
         },
         modifier = Modifier
             .fillMaxWidth()
             .height(320.dp)
-            .background(
-                color = Color.White,
-            )
             .padding(start = 16.dp, end = 16.dp, top = 16.dp),
     )
 }

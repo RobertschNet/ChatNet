@@ -45,6 +45,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -136,7 +138,10 @@ fun TabsTopBar(
                                 Text(
                                     text = availableUsers.size.toString(),
                                     fontSize = 8.sp,
-                                    color = MaterialTheme.colorScheme.background,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Medium,
+                                    fontFamily = FontFamily.SansSerif,
+                                    textAlign = TextAlign.Center,
                                     modifier = Modifier.align(Alignment.Center)
                                 )
                             }
@@ -184,7 +189,7 @@ fun TabsTopBar(
                         .fillMaxWidth()
                         .height(40.dp)
                         .border(
-                            0.3f.dp,
+                           Dp.Hairline,
                             MaterialTheme.colorScheme.secondary,
                             RoundedCornerShape(36.dp)
                         )

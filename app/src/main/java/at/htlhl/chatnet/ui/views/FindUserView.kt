@@ -4,8 +4,8 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +20,7 @@ import androidx.compose.material.BackdropValue
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Text
 import androidx.compose.material.rememberBackdropScaffoldState
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,6 +32,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -77,10 +79,10 @@ class FindUserView : ViewModel() {
             frontLayerShape = RoundedCornerShape(topStart = 35.dp, topEnd = 35.dp),
             headerHeight = 100.dp,
             stickyFrontLayer = false,
-            backLayerBackgroundColor = Color.White,
+            backLayerBackgroundColor = MaterialTheme.colorScheme.background,
             persistentAppBar = true,
-            peekHeight = screenHeight/3,
-            frontLayerBackgroundColor = Color.White,
+            peekHeight = screenHeight / 3,
+            frontLayerBackgroundColor = MaterialTheme.colorScheme.onBackground,
             frontLayerScrimColor = Color.Transparent,
             frontLayerElevation = 10.dp,
             modifier = Modifier.fillMaxSize(),
@@ -98,7 +100,6 @@ class FindUserView : ViewModel() {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color(0xFFFFFFFF))
                 ) {
                     Spacer(modifier = Modifier.height(15.dp))
                     Canvas(
@@ -118,19 +119,22 @@ class FindUserView : ViewModel() {
                         text = "Users who follow you:",
                         fontSize = 17.sp,
                         fontWeight = FontWeight.SemiBold,
+                        fontFamily = FontFamily.SansSerif,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 15.dp, top = 8.dp)
                     )
                     LazyColumn(
                         Modifier
                             .fillMaxSize()
                     ) {
-
                         if (finalFriendList.isEmpty()) {
                             item {
                                 Text(
                                     text = "There are currently no users who follow you.",
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Light,
+                                    fontFamily = FontFamily.SansSerif,
+                                    color = MaterialTheme.colorScheme.secondary,
                                     modifier = Modifier.padding(start = 15.dp, top = 20.dp),
                                     textAlign = TextAlign.Center
                                 )
@@ -138,6 +142,7 @@ class FindUserView : ViewModel() {
                         }
                         items(finalFriendList) { person ->
                             FindUserPersonElement(
+                                isFrontLayer = true,
                                 person = person,
                                 deleteAble = true,
                                 sharedViewModel = sharedViewModel,
@@ -179,12 +184,15 @@ class FindUserView : ViewModel() {
                                     text = "Suggestions for you:",
                                     fontSize = 17.sp,
                                     fontWeight = FontWeight.SemiBold,
+                                    fontFamily = FontFamily.SansSerif,
+                                    color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.padding(start = 15.dp, top = 20.dp)
                                 )
                             }
                         }
                         items(finalFriendListFriends) { person ->
                             FindUserPersonElement(
+                                isFrontLayer = true,
                                 person = person,
                                 deleteAble = false,
                                 sharedViewModel = sharedViewModel,
@@ -220,6 +228,7 @@ class FindUserView : ViewModel() {
             }
         )
     }
+
     private fun onSearchTextChanged(text: String, sharedViewModel: SharedViewModel) {
         Log.println(Log.INFO, "SearchView", "Text: $text")
         sharedViewModel.searchedPersons.value = emptyList()

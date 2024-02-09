@@ -25,8 +25,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import at.htlhl.chatnet.data.FirebaseUser
-import at.htlhl.chatnet.data.InternalChatInstance
 
 @Composable
 fun DeleteAccountDialog(
@@ -67,7 +65,7 @@ fun DeleteAccountDialog(
             )
             Divider(
                 thickness = 0.3f.dp,
-                color = Color.LightGray,
+                color = MaterialTheme.colorScheme.outline,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -86,7 +84,7 @@ fun DeleteAccountDialog(
             }
             Divider(
                 thickness = 0.3f.dp,
-                color = Color.LightGray,
+                color = MaterialTheme.colorScheme.outline,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,

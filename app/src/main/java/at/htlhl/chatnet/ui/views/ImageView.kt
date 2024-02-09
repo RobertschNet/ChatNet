@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,7 +53,7 @@ class ImageView {
     @Composable
     fun ImageViewScreen(sharedViewModel: SharedViewModel, navController: NavController) {
         val systemUiController = rememberSystemUiController()
-        systemUiController.setStatusBarColor(color = Color.Black, darkIcons = false)
+        systemUiController.setStatusBarColor(color = Color.Black, darkIcons =false)
         val chatPartnerState = sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
         val chatPartner: InternalChatInstance = chatPartnerState.value
         HorizontalPager(sharedViewModel, navController, chatPartner)

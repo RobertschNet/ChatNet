@@ -14,33 +14,26 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val darkColorScheme = darkColorScheme(
-    background= Color.Black,
+    background = Color(0xFF101016),
     primary = Color.White,
     secondary = Color.LightGray,
-    tertiary = Color(0xFC111111),
+    tertiary = Color(0xFFD0D0D3),
+    outline = Color(0xFFDAD7D7),
+    onBackground = Color(0xFF141419)
 )
 
 private val lightColorScheme = lightColorScheme(
     background = Color.White,
     primary = Color.Black,
-    secondary = Color.DarkGray,
-    tertiary = Color.White,
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    secondary = Color.Gray,
+    tertiary = Color.Gray,
+    outline = Color(0xFFB6B6B6),
+    onBackground = Color.White
 )
 
 @Composable
-fun TestingTheme(
+fun ChatNetTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
@@ -56,9 +49,8 @@ fun TestingTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = if (!darkTheme) Color.White.toArgb() else Color.Black.toArgb()
-            window.navigationBarColor =
-                if (!darkTheme) Color.White.toArgb() else Color.Black.toArgb()
+            window.statusBarColor = if (!darkTheme) Color.White.toArgb() else Color(0xFF101016).toArgb()
+            window.navigationBarColor = if (!darkTheme) Color.White.toArgb() else Color(0xFF101016).toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }

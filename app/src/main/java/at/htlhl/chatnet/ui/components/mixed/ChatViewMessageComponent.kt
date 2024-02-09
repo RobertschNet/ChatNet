@@ -78,7 +78,7 @@ fun ChatViewMessageComponent(
     val backgroundColor = if (isUser) {
         if (isSystemInDarkTheme()) Color(0xFF00A0E8) else Color(0xFF00A0E8)
     } else {
-        if (isSystemInDarkTheme()) Color.DarkGray else Color(0xFFFFFDFD)
+        if (isSystemInDarkTheme()) Color(0xFF141419) else Color(0xFFFFFDFD)
     }
     val alignment = if (isUser) Arrangement.End else Arrangement.Start
     if (isDateNeeded(message, nextMessage)) {
@@ -93,7 +93,7 @@ fun ChatViewMessageComponent(
                         model =
                         if (message.isFromCache) R.drawable.clock_svgrepo_com else if (message.read) R.drawable.eye_1_svgrepo_com else R.drawable.eye_hide_1_svgrepo_com,
                         contentDescription = null,
-                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
+                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.secondary),
                         modifier = Modifier
                             .size(20.dp)
                             .padding(end = 5.dp),
@@ -103,7 +103,7 @@ fun ChatViewMessageComponent(
                     text = formattedTime,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.SansSerif,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.secondary,
                     textAlign = TextAlign.Start,
                     modifier =
                     Modifier.padding(end = 15.dp)
@@ -113,7 +113,7 @@ fun ChatViewMessageComponent(
                     text = formattedTime,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.SansSerif,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.secondary,
                     textAlign = TextAlign.Start,
                     modifier =
                     Modifier.padding(start = 15.dp, top = 2.dp)
@@ -125,11 +125,9 @@ fun ChatViewMessageComponent(
         if (isDateSeparatorNeeded(message, previousMessage)) {
             Card(
                 elevation = 10.dp,
+                backgroundColor = if (isSystemInDarkTheme()) Color(0xFF141419) else Color(0xFFF5F5F5),
+                shape = RoundedCornerShape(30),
                 modifier = Modifier
-                    .background(
-                        if (isSystemInDarkTheme()) Color.DarkGray else Color(0xFFF5F5F5),
-                        RoundedCornerShape(30)
-                    )
                     .align(CenterHorizontally)
             ) {
                 Text(
@@ -151,6 +149,7 @@ fun ChatViewMessageComponent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Card(
+                    backgroundColor = backgroundColor,
                     elevation = 10.dp,
                     shape = RoundedCornerShape(18.dp),
                     modifier = Modifier
@@ -330,7 +329,7 @@ fun ChatViewMessageComponent(
                                     Text(
                                         text = message.text,
                                         fontFamily = FontFamily.SansSerif,
-                                        color = if (isUser) Color.White else Color.Black,
+                                        color = if (isUser) Color.White else MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.padding(
                                             bottom = 9.dp,
                                             start = 14.dp,
@@ -383,7 +382,7 @@ fun ChatViewMessageComponent(
                                 if (message.text.isNotEmpty()) {
                                     Text(
                                         text = message.text,
-                                        color = if (isUser) Color.White else Color.Black,
+                                        color = if (isUser) Color.White else MaterialTheme.colorScheme.primary,
                                         fontFamily = FontFamily.SansSerif,
                                         modifier = Modifier.padding(
                                             top = 4.dp,
@@ -473,7 +472,7 @@ fun ChatViewMessageComponent(
                             .padding(12.dp)
                             .background(backgroundColor, shape = RoundedCornerShape(18.dp)),
                         textAlign = TextAlign.Start,
-                        color = if (isUser) Color.White else Color.Black
+                        color = if (isUser) Color.White else MaterialTheme.colorScheme.primary
                     )
                 }
             }

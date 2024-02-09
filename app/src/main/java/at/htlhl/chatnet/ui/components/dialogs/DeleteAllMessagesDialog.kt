@@ -84,7 +84,7 @@ fun DeleteAllMessagesDialog(
                         text = "Delete for me",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 15.sp,
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
                     )
 
@@ -101,7 +101,7 @@ fun DeleteAllMessagesDialog(
                         text = "Delete for everyone",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 15.sp,
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
                     )
 
@@ -109,7 +109,7 @@ fun DeleteAllMessagesDialog(
             }
             Divider(
                 thickness = 0.3f.dp,
-                color = Color.LightGray,
+                color = MaterialTheme.colorScheme.outline,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -132,7 +132,7 @@ fun DeleteAllMessagesDialog(
             }
             Divider(
                 thickness = 0.3f.dp,
-                color = Color.LightGray,
+                color = MaterialTheme.colorScheme.outline,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,

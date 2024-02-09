@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -40,12 +41,12 @@ fun ProfileUserFriendStateSection(
             .fillMaxWidth()
             .padding(start = 15.dp, end = 15.dp),
         elevation = 10.dp,
-        shape = RoundedCornerShape(25.dp)
+        shape = RoundedCornerShape(25.dp),
+        backgroundColor = MaterialTheme.colorScheme.background
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White),
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
@@ -58,7 +59,7 @@ fun ProfileUserFriendStateSection(
                     modifier = Modifier.padding(start = 15.dp),
                     fontFamily = FontFamily.SansSerif,
                     fontWeight = FontWeight.Normal,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.secondary,
                 )
                 Spacer(modifier = Modifier.height(2.5f.dp))
                 Column(content = {
@@ -144,7 +145,7 @@ fun ProfileUserFriendStateSection(
                             fontSize = 12.sp,
                             fontFamily = FontFamily.SansSerif,
                             fontWeight = FontWeight.Normal,
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.secondary,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(start = 15.dp, end = 15.dp)
                         )

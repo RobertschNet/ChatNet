@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.ChatNet" parent="Theme.AppCompat.DayNight.NoActionBar">
-    </style>
+
     <style name="Theme.ChatNet.Starting" parent="Theme.SplashScreen">
         <item name="postSplashScreenTheme">@style/Theme.ChatNet</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/animated_logo</item>
 
     </style>
 </resources>

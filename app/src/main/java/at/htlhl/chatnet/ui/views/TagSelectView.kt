@@ -41,18 +41,16 @@ class TagSelectView {
     fun TagSelectScreen(sharedViewModel: SharedViewModel, navController: NavController) {
         val userDataState = sharedViewModel.user.collectAsState()
         val userData: FirebaseUser = userDataState.value
-        val filteredTags =
-            tags.filter { tag -> userData.tags.contains(tag.name) && tag.category != "Empty" }
+        val filteredTags = tags.filter { tag -> userData.tags.contains(tag.name) && tag.category != "Empty" }
         val screenWidth = LocalConfiguration.current.screenWidthDp.dp
         val context = LocalContext.current
-
         var selectedTags by remember { mutableStateOf(filteredTags) }
-
         Scaffold(
+            backgroundColor = MaterialTheme.colorScheme.background,
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TopAppBar(
-                    backgroundColor = Color.White,
+                    backgroundColor = MaterialTheme.colorScheme.background,
                     elevation = 2.dp,
                 ) {
                     Row(
@@ -91,7 +89,7 @@ class TagSelectView {
                             ) {
                                 Text(
                                     text = "Selected Tags: ${selectedTags.size}",
-                                    color = Color.Black,
+                                    color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.SemiBold,
                                     fontFamily = FontFamily.SansSerif,
                                     fontSize = 16.sp,
@@ -184,7 +182,7 @@ class TagSelectView {
                                 }
                                 Text(
                                     text = "Choose up to 5 tags that represent you and help others get to know you better.",
-                                    color = Color.Gray,
+                                    color = MaterialTheme.colorScheme.secondary,
                                     fontFamily = FontFamily.SansSerif,
                                     fontWeight = FontWeight.Normal,
                                     fontSize = 12.sp,
@@ -267,7 +265,7 @@ class TagSelectView {
             Spacer(modifier = Modifier.padding(10.dp))
             Text(
                 text = tags.firstOrNull()?.category ?: "",
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold,
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 16.sp,

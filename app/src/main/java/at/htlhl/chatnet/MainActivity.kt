@@ -13,17 +13,16 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.navigation.compose.rememberNavController
 import at.htlhl.chatnet.navigation.NavigationBarLayout
-import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.LocationUpdateService
-import at.htlhl.chatnet.ui.theme.TestingTheme
+import at.htlhl.chatnet.ui.theme.ChatNetTheme
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.imageLoader
 import coil.request.ImageRequest
@@ -33,18 +32,21 @@ import com.google.firebase.messaging.FirebaseMessaging
 class MainActivity : ComponentActivity() {
     private var serviceConnection: ServiceConnection? = null
     private var locationUpdateService: LocationUpdateService? = null
+    private val viewModel by viewModels<SharedViewModel>()
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
+        installSplashScreen().apply {
+            setKeepOnScreenCondition {
+                viewModel.chatData.value.isEmpty() && viewModel.auth.currentUser != null
+            }
+        }
         val serviceIntent = Intent(this, LocationUpdateService::class.java)
         setContent {
-            val viewModel = (application as MyApplication).sharedViewModel
             val navController = rememberNavController()
-            val start = rememberSaveable { mutableStateOf(true) }
-            TestingTheme {
-
+            ChatNetTheme {
                 NavigationBarLayout(
                     navController = navController,
                     viewModel = viewModel,
@@ -61,7 +63,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 LaunchedEffect(Unit) {
-                    if (viewModel.checkIfUserIsLoggedIn()) {
+                    if (viewModel.auth.currentUser != null) {
                         Log.println(Log.INFO, "User", "User is logged in!!!!!!!!!")
                         viewModel.updateOnlineStatus(true)
                         viewModel.getUserData {
@@ -83,13 +85,9 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         viewModel.fetchRandomFriendsFromFriend()
-
-                        if (navController.currentDestination?.route == Screens.LoadingScreen.route && start.value) {
-                            start.value = false
-                            navController.navigate("MainFlow") {
-                                popUpTo("LoadingScreen") {
-                                    inclusive = true
-                                }
+                        navController.navigate("MainFlow") {
+                            popUpTo("LoadingScreen") {
+                                inclusive = true
                             }
                         }
                     } else {
@@ -126,12 +124,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        (application as MyApplication).sharedViewModel.resetRandChat()
-        (application as MyApplication).sharedViewModel.updateOnlineStatus(false)
+        viewModel.resetRandChat()
+        viewModel.updateOnlineStatus(false)
     }
+
     override fun onResume() {
         super.onResume()
-        (application as MyApplication).sharedViewModel.updateOnlineStatus(true)
+        viewModel.updateOnlineStatus(true)
     }
 
     private fun manageLocationServiceStatus(viewModel: SharedViewModel, serviceIntent: Intent) {
@@ -173,7 +172,7 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
                 manageLocationServiceStatus(
-                    (application as MyApplication).sharedViewModel,
+                    viewModel,
                     Intent(this, LocationUpdateService::class.java)
                 )
             } else {

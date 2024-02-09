@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -70,33 +69,43 @@ fun DeleteAllMediaDialog(
                     end = 10.dp
                 )
             )
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start, modifier = Modifier.fillMaxWidth().clickable { selected=true }) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { selected = true }) {
                 Spacer(modifier = Modifier.width(20.dp))
-                RadioButton(selected = selected, onClick = { selected=true })
+                RadioButton(selected = selected, onClick = { selected = true })
                 Text(
                     text = "Delete for me",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
                 )
 
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start, modifier = Modifier.fillMaxWidth().clickable { selected=false }) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { selected = false }) {
                 Spacer(modifier = Modifier.width(20.dp))
-                RadioButton(selected = !selected, onClick = { selected = false})
+                RadioButton(selected = !selected, onClick = { selected = false })
                 Text(
                     text = "Delete for everyone",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
                 )
 
             }
             Divider(
                 thickness = 0.3f.dp,
-                color = Color.LightGray,
+                color = MaterialTheme.colorScheme.outline,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -115,7 +124,7 @@ fun DeleteAllMediaDialog(
             }
             Divider(
                 thickness = 0.3f.dp,
-                color = Color.LightGray,
+                color = MaterialTheme.colorScheme.outline,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,

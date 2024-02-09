@@ -70,7 +70,7 @@ fun BlockUserDialog(
             )
             Divider(
                 thickness = 0.3f.dp,
-                color = Color.LightGray,
+                color = MaterialTheme.colorScheme.outline,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -89,7 +89,7 @@ fun BlockUserDialog(
             }
             Divider(
                 thickness = 0.3f.dp,
-                color = Color.LightGray,
+                color = MaterialTheme.colorScheme.outline,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,

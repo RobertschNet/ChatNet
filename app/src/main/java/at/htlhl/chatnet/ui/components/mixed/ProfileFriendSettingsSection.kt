@@ -1,6 +1,5 @@
 package at.htlhl.chatnet.ui.components.mixed
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
 import androidx.compose.material.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,9 +43,10 @@ fun ProfileFriendSettingsSection(
             .fillMaxWidth()
             .padding(start = 15.dp, end = 15.dp),
         elevation = 10.dp,
-        shape = RoundedCornerShape(25.dp)
+        shape = RoundedCornerShape(25.dp),
+        backgroundColor = MaterialTheme.colorScheme.background
     ) {
-        Column(modifier = Modifier.background(Color.White)) {
+        Column {
             Spacer(modifier = Modifier.height(7.5f.dp))
             Text(
                 textAlign = TextAlign.Center,
@@ -55,7 +56,7 @@ fun ProfileFriendSettingsSection(
                 fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Normal,
                 fontSize = 12.sp,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.secondary,
             )
             if (!isChatMateChat) {
                 Row(
@@ -70,7 +71,7 @@ fun ProfileFriendSettingsSection(
                     Spacer(modifier = Modifier.width(25.dp))
                     SubcomposeAsyncImage(
                         contentScale = ContentScale.Crop,
-                        colorFilter = ColorFilter.tint(if (user.blocked.contains(friend.personList.id)) Color.Black else Color.Red),
+                        colorFilter = ColorFilter.tint(if (user.blocked.contains(friend.personList.id)) MaterialTheme.colorScheme.primary else Color.Red),
                         model = R.drawable.person_block_svgrepo_com,
                         modifier = Modifier.size(30.dp),
                         contentDescription = null
@@ -81,7 +82,8 @@ fun ProfileFriendSettingsSection(
                         overflow = TextOverflow.Ellipsis,
                         text = if (user.blocked.contains(friend.personList.id)) "Unblock ${friend.personList.username["mixedcase"]}" else "Block ${friend.personList.username["mixedcase"]}",
                         fontSize = 16.sp,
-                        color = if (user.blocked.contains(friend.personList.id)) Color.Black else Color.Red,
+                        fontFamily = FontFamily.SansSerif,
+                        color = if (user.blocked.contains(friend.personList.id)) MaterialTheme.colorScheme.primary else Color.Red,
                     )
                     Spacer(modifier = Modifier.width(25.dp))
                 }
@@ -109,6 +111,7 @@ fun ProfileFriendSettingsSection(
                     overflow = TextOverflow.Ellipsis,
                     text = "Remove ${friend.personList.username["mixedcase"]}",
                     fontSize = 16.sp,
+                    fontFamily = FontFamily.SansSerif,
                     color = Color.Red,
                 )
                 Spacer(modifier = Modifier.width(25.dp))

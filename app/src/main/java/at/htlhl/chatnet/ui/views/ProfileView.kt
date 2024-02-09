@@ -6,82 +6,45 @@ import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Scaffold
-import androidx.compose.material.TextField
-import androidx.compose.material.TextFieldDefaults
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.SwitchAccount
-import androidx.compose.material.icons.outlined.Cached
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseUser
-import at.htlhl.chatnet.data.TagElement
 import at.htlhl.chatnet.data.tags
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.components.dialogs.DeleteAccountDialog
 import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
-import at.htlhl.chatnet.ui.components.mixed.TagElement
-import at.htlhl.chatnet.ui.theme.shimmerEffect
+import at.htlhl.chatnet.ui.components.profile.ProfileChangeUsernameElement
+import at.htlhl.chatnet.ui.components.profile.ProfileDeleteAccountElement
+import at.htlhl.chatnet.ui.components.profile.ProfileEmailElement
+import at.htlhl.chatnet.ui.components.profile.ProfileProfilePictureElement
+import at.htlhl.chatnet.ui.components.profile.ProfileSwitchAccountElement
+import at.htlhl.chatnet.ui.components.profile.ProfileTagInfoElement
+import at.htlhl.chatnet.ui.components.profile.ProfileUsernameElement
+import at.htlhl.chatnet.ui.components.profile.profileCheckIfUsernameIsValid
 import at.htlhl.chatnet.viewmodels.SharedViewModel
-import coil.compose.SubcomposeAsyncImage
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -96,22 +59,18 @@ import java.util.Locale
 
 class ProfileView {
 
-    @SuppressLint(
-        "UnusedMaterial3ScaffoldPaddingParameter",
-        "UnusedMaterialScaffoldPaddingParameter"
-    )
-    @OptIn(ExperimentalMaterial3Api::class)
+    @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @Composable
     fun ProfileScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+        val systemUiController = rememberSystemUiController()
+        systemUiController.setStatusBarColor(color = MaterialTheme.colorScheme.background, darkIcons = !isSystemInDarkTheme())
         val userState = sharedViewModel.user.collectAsState()
         val userData: FirebaseUser = userState.value
         val context = LocalContext.current
-        val filteredTags = if (userData.tags.isEmpty()) tags.filter { tag-> tag.category=="Empty" } else tags.filter { tag -> userData.tags.contains(tag.name) }
-        val systemUiController = rememberSystemUiController()
-        systemUiController.setStatusBarColor(
-            color = if (isSystemInDarkTheme()) Color.Black else Color.White,
-            darkIcons = !isSystemInDarkTheme()
-        )
+        val filteredTags =
+            if (userData.tags.isEmpty()) tags.filter { tag -> tag.category == "Empty" } else tags.filter { tag ->
+                userData.tags.contains(tag.name)
+            }
         var usernameText by remember {
             mutableStateOf("")
         }
@@ -180,8 +139,8 @@ class ProfileView {
                 }
             )
         Scaffold(
+            backgroundColor = MaterialTheme.colorScheme.background,
             modifier = Modifier
-                .background(if (isSystemInDarkTheme()) Color.Black else Color.White)
                 .fillMaxSize()
                 .imePadding(),
             topBar = {
@@ -195,7 +154,6 @@ class ProfileView {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(if (isSystemInDarkTheme()) Color.Black else Color.White)
                 ) {
                     item {
                         Column(
@@ -203,382 +161,52 @@ class ProfileView {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .padding(top = 10.dp)
-                                    .size(180.dp)
-                            ) {
-                                SubcomposeAsyncImage(
-                                    model = userData.image,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(CircleShape)
-                                        .clickable {
-                                            navController.navigate(Screens.ProfilePictureView.route)
-                                        }
-                                        .shimmerEffect()
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .size(50f.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            Brush.linearGradient(
-                                                colors = listOf(
-                                                    Color(0xFF00A0E8),
-                                                    Color(0xFF00A0E8)
-                                                )
-                                            )
+                            ProfileProfilePictureElement(
+                                userData = userData,
+                                updateProfilePictureLoading = updateProfilePictureLoading,
+                                updateProfilePictureException = updateProfilePictureException,
+                                onImageClicked = {
+                                    navController.navigate(Screens.ProfilePictureView.route)
+                                },
+                                onProfileChangeClicked = {
+                                    updateProfilePictureException = false
+                                    updateProfilePictureLoading = true
+                                    multiplePhotoPickerLauncher.launch(
+                                        PickVisualMediaRequest(
+                                            ActivityResultContracts.PickVisualMedia.ImageOnly
                                         )
-                                        .align(Alignment.BottomEnd)
-                                ) {
-                                    var rotationState by remember { mutableFloatStateOf(0f) }
-
-                                    val rotation by animateFloatAsState(
-                                        targetValue = rotationState,
-                                        animationSpec = tween(
-                                            durationMillis = 1000,
-                                            easing = FastOutSlowInEasing
-                                        ), label = ""
                                     )
-                                    LaunchedEffect(updateProfilePictureLoading) {
-                                        while (true) {
-                                            if (updateProfilePictureLoading) {
-                                                rotationState += -360f
-                                                delay(1000)
-                                            } else {
-                                                break
-                                            }
-                                        }
-                                    }
-                                    Icon(
-                                        imageVector = Icons.Outlined.Cached,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clickable(enabled = !updateProfilePictureLoading) {
-                                                updateProfilePictureException = false
-                                                updateProfilePictureLoading = true
-                                                multiplePhotoPickerLauncher.launch(
-                                                    PickVisualMediaRequest(
-                                                        ActivityResultContracts.PickVisualMedia.ImageOnly
-                                                    )
-                                                )
-                                            }
-                                            .align(Alignment.Center)
-                                            .clip(CircleShape)
-                                            .graphicsLayer(
-                                                rotationZ = rotation,
-                                            )
-                                    )
-
-
+                                }
+                            )
+                            ProfileUsernameElement(userData = userData) {
+                                modelBottomSheetState = true
+                                coroutineScope.launch {
+                                    delay(500)
+                                    focusRequester.requestFocus()
                                 }
                             }
 
-                            if (updateProfilePictureException) {
-                                Text(
-                                    text = "An error occurred while updating your profile picture.",
-                                    color = Color.Red,
-                                    textAlign = TextAlign.Center,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Normal,
-                                    fontFamily = FontFamily.SansSerif,
-                                )
+                            ProfileTagInfoElement(filteredTags = filteredTags) {
+                                navController.navigate(Screens.TagSelectScreen.route)
                             }
-                            Row(
-                                modifier = Modifier
-                                    .padding(start = 20.dp, top = 20.dp)
-                                    .clickable {
-                                        modelBottomSheetState = true
-                                        coroutineScope.launch {
-                                            delay(500)
-                                            focusRequester.requestFocus()
-                                        }
-                                    }
-                                    .fillMaxWidth(),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Person,
-                                    tint = if (isSystemInDarkTheme()) Color.White else Color.Gray,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .align(Alignment.Top)
-                                        .padding(top = 5.dp)
-                                        .size(30.dp)
-                                )
-                                Column(
-                                    horizontalAlignment = Alignment.Start,
-                                    modifier = Modifier.padding(start = 15.dp)
-                                ) {
-                                    Text(
-                                        text = "UserName",
-                                        color = Color.DarkGray,
-                                        fontSize = 14.sp,
-                                        fontFamily = FontFamily.SansSerif,
-                                        fontWeight = FontWeight.Light,
-                                        modifier = Modifier
-                                            .padding(bottom = 3.dp)
-                                    )
-                                    Text(
-                                        text = userData.username["mixedcase"].toString(),
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = Color.Black,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        fontFamily = FontFamily.SansSerif,
-                                        modifier = Modifier
-                                            .padding(bottom = 5.dp)
-                                    )
-                                    Text(
-                                        text = "This is your public username. Other users will see this name when they view your profile.",
-                                        color = Color.DarkGray,
-                                        overflow = TextOverflow.Clip,
-                                        fontSize = 12.sp,
-                                        fontFamily = FontFamily.Default,
-                                        fontWeight = FontWeight.Light,
-                                        lineHeight = 16.sp,
-                                        modifier = Modifier
-                                            .padding(bottom = 10.dp, end = 20.dp)
-                                    )
 
-                                    Divider(
-                                        color = Color.DarkGray,
-                                        thickness = 0.3.dp,
-                                        modifier = Modifier
-                                            .padding(end = 20.dp)
-                                            .align(Alignment.CenterHorizontally)
-                                    )
+                            ProfileEmailElement(userData = userData) {
+                                sharedViewModel.copyToClipboard(context, userData.email)
+                            }
+                            ProfileSwitchAccountElement {
+                                sharedViewModel.updateOnlineStatus(false)
+                                logout()
+                                sharedViewModel.reset()
+                                sharedViewModel.auth.signOut()
+                                sharedViewModel.gpsState.value = true
+                                navController.navigate("LoginFlow") {
+                                    popUpTo("MainFlow") {
+                                        inclusive = true
+                                    }
                                 }
                             }
-                            Row(
-                                modifier = Modifier
-                                    .padding(start = 20.dp, top = 20.dp)
-                                    .clickable {
-                                        navController.navigate(Screens.TagSelectScreen.route)
-                                    }
-                                    .fillMaxWidth(),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Info,
-                                    tint = if (isSystemInDarkTheme()) Color.White else Color.Gray,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .align(Alignment.Top)
-                                        .padding(top = 5.dp)
-                                        .size(30.dp)
-                                )
-                                Column(
-                                    horizontalAlignment = Alignment.Start,
-                                    modifier = Modifier.padding(start = 15.dp)
-                                ) {
-                                    Text(
-                                        text = "Tags",
-                                        color = Color.DarkGray,
-                                        fontSize = 14.sp,
-                                        fontFamily = FontFamily.SansSerif,
-                                        fontWeight = FontWeight.Light,
-                                        modifier = Modifier
-                                            .padding(bottom = 3.dp)
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    ProfileTags(tags = filteredTags)
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "These are your tags. Other users will see these tags when they view your profile.",
-                                        color = Color.DarkGray,
-                                        overflow = TextOverflow.Clip,
-                                        fontSize = 12.sp,
-                                        fontFamily = FontFamily.Default,
-                                        fontWeight = FontWeight.Light,
-                                        lineHeight = 16.sp,
-                                        modifier = Modifier
-                                            .padding(bottom = 10.dp, end = 20.dp)
-                                    )
-
-                                    Divider(
-                                        color = Color.DarkGray,
-                                        thickness = 0.3.dp,
-                                        modifier = Modifier
-                                            .padding(end = 20.dp)
-                                            .align(Alignment.CenterHorizontally)
-                                    )
-                                }
-                            }
-                            Row(
-                                modifier = Modifier
-                                    .padding(start = 20.dp, top = 20.dp)
-                                    .clickable {
-                                        sharedViewModel.copyToClipboard(context, userData.email)
-                                    }
-                                    .fillMaxWidth(),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Email,
-                                    tint = if (isSystemInDarkTheme()) Color.White else Color.Gray,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .align(Alignment.Top)
-                                        .padding(top = 5.dp)
-                                        .size(30.dp)
-                                )
-                                Column(
-                                    horizontalAlignment = Alignment.Start,
-                                    modifier = Modifier.padding(start = 15.dp)
-                                ) {
-                                    Text(
-                                        text = "Email",
-                                        color = Color.DarkGray,
-                                        fontSize = 14.sp,
-                                        fontFamily = FontFamily.SansSerif,
-                                        fontWeight = FontWeight.Light,
-                                        modifier = Modifier
-                                            .padding(bottom = 3.dp)
-                                    )
-                                    Text(
-                                        text = userData.email,
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = Color.Black,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Normal,
-                                        fontFamily = FontFamily.SansSerif,
-                                        modifier = Modifier
-                                            .padding(bottom = 5.dp)
-                                    )
-                                    Text(
-                                        text = "This is your email. Other users will not see this email when they view your profile.",
-                                        color = Color.DarkGray,
-                                        overflow = TextOverflow.Clip,
-                                        fontSize = 12.sp,
-                                        fontFamily = FontFamily.Default,
-                                        fontWeight = FontWeight.Light,
-                                        lineHeight = 16.sp,
-                                        modifier = Modifier
-                                            .padding(bottom = 10.dp, end = 20.dp)
-                                    )
-
-                                    Divider(
-                                        color = Color.DarkGray,
-                                        thickness = 0.3.dp,
-                                        modifier = Modifier
-                                            .padding(end = 20.dp)
-                                            .align(Alignment.CenterHorizontally)
-                                    )
-                                }
-                            }
-                            Row(
-                                modifier = Modifier
-                                    .padding(start = 20.dp, top = 20.dp)
-                                    .clickable {
-                                        sharedViewModel.updateOnlineStatus(true)
-                                        logout()
-                                        sharedViewModel.reset()
-                                        sharedViewModel.auth.signOut()
-                                        sharedViewModel.gpsState.value = true
-                                        navController.navigate("LoginFlow") {
-                                            popUpTo("MainFlow") {
-                                                inclusive = true
-                                            }
-                                        }
-                                    }
-                                    .fillMaxWidth(),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.SwitchAccount,
-                                    tint = if (isSystemInDarkTheme()) Color.White else Color.Gray,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .align(Alignment.Top)
-                                        .padding(top = 5.dp)
-                                        .size(30.dp)
-                                )
-                                Column(
-                                    horizontalAlignment = Alignment.Start,
-                                    modifier = Modifier.padding(start = 15.dp)
-                                ) {
-                                    Text(
-                                        text = "Switch Account",
-                                        color = Color.DarkGray,
-                                        fontSize = 14.sp,
-                                        fontFamily = FontFamily.SansSerif,
-                                        fontWeight = FontWeight.Light,
-                                        modifier = Modifier
-                                            .padding(bottom = 3.dp)
-                                    )
-                                    Text(
-                                        text = "Signs you out of this account and let's you sign in with another.",
-                                        color = Color.DarkGray,
-                                        overflow = TextOverflow.Clip,
-                                        fontSize = 12.sp,
-                                        fontFamily = FontFamily.Default,
-                                        fontWeight = FontWeight.Light,
-                                        lineHeight = 16.sp,
-                                        modifier = Modifier
-                                            .padding(bottom = 10.dp, end = 20.dp)
-                                    )
-
-                                    Divider(
-                                        color = Color.DarkGray,
-                                        thickness = 0.3.dp,
-                                        modifier = Modifier
-                                            .padding(end = 20.dp)
-                                            .align(Alignment.CenterHorizontally)
-                                    )
-                                }
-                            }
-                            Row(
-                                modifier = Modifier
-                                    .padding(start = 20.dp, top = 20.dp)
-                                    .clickable {
-                                        deleteAccountDialog = true
-                                    }
-                                    .fillMaxWidth(),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    tint = if (isSystemInDarkTheme()) Color.White else Color.Gray,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .align(Alignment.Top)
-                                        .padding(top = 5.dp)
-                                        .size(30.dp)
-                                )
-                                Column(
-                                    horizontalAlignment = Alignment.Start,
-                                    modifier = Modifier.padding(start = 15.dp)
-                                ) {
-                                    Text(
-                                        text = "Delete Account",
-                                        color = Color.DarkGray,
-                                        fontSize = 14.sp,
-                                        fontFamily = FontFamily.SansSerif,
-                                        fontWeight = FontWeight.Light,
-                                        modifier = Modifier
-                                            .padding(bottom = 3.dp)
-                                    )
-                                    Text(
-                                        text = "Delete your account and all your data. This action is irreversible!",
-                                        color = Color.DarkGray,
-                                        overflow = TextOverflow.Clip,
-                                        fontSize = 12.sp,
-                                        fontFamily = FontFamily.Default,
-                                        fontWeight = FontWeight.Light,
-                                        lineHeight = 16.sp,
-                                        modifier = Modifier
-                                            .padding(bottom = 10.dp, end = 20.dp)
-                                    )
-
-                                    Divider(
-                                        color = Color.DarkGray,
-                                        thickness = 0.3.dp,
-                                        modifier = Modifier
-                                            .padding(end = 20.dp)
-                                            .align(Alignment.CenterHorizontally)
-                                    )
-                                }
+                            ProfileDeleteAccountElement {
+                                deleteAccountDialog = true
                             }
                         }
                     }
@@ -596,200 +224,64 @@ class ProfileView {
                     }
                 }
                 if (modelBottomSheetState) {
-                    ModalBottomSheet(
-                        dragHandle = {},
-                        shape = RectangleShape,
-                        windowInsets = WindowInsets(0, 0, 0, 0),
-                        onDismissRequest = { modelBottomSheetState = false }) {
-                        Column {
-                            Text(
-                                text = "Enter your new username",
-                                color = Color.Black,
-                                fontFamily = FontFamily.SansSerif,
-                                fontSize = 18.sp,
-                                modifier = Modifier.padding(top = 20.dp, start = 20.dp)
-                            )
-                            TextField(
-                                value = usernameText,
-                                singleLine = true,
-                                trailingIcon = {
-                                    Text(
-                                        text = usernameText.length.toString(),
-                                        color = Color.Gray,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Light,
-                                        textAlign = TextAlign.Start,
-                                        fontFamily = FontFamily.SansSerif,
-                                    )
-                                },
-                                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Text),
-                                onValueChange = {
-                                    usernameText = it
-                                    checkIfUsernameExists(usernameText) { exists ->
-                                        usernameAlreadyExists = exists
-                                        usernameTextFieldColor =
-                                            if (exists || !checkIfValueIsValid(usernameText)) {
-                                                Color.Red
-                                            } else {
-                                                Color(0xFF00A0E8)
-                                            }
-                                        if (usernameText.isEmpty()) {
-                                            usernameTextFieldColor = Color.Red
-                                        }
+                    ProfileChangeUsernameElement(
+                        userData = userData,
+                        usernameText = usernameText,
+                        usernameTextFieldColor = usernameTextFieldColor,
+                        isLoading = isLoading,
+                        focusRequester = focusRequester,
+                        usernameAlreadyExists = usernameAlreadyExists,
+                        changeUsernameException = changeUsernameException,
+                        onDismissModelBottomSheet = {
+                            modelBottomSheetState = false
+                        },
+                        onValueChange = {
+                            usernameText = it
+                            checkIfUsernameExists(usernameText) { exists ->
+                                usernameAlreadyExists = exists
+                                usernameTextFieldColor =
+                                    if (exists || !profileCheckIfUsernameIsValid(usernameText)) {
+                                        Color.Red
+                                    } else {
+                                        Color(0xFF00A0E8)
                                     }
-                                    if (usernameText.isEmpty()) {
-                                        usernameTextFieldColor = Color.Red
-                                    }
-                                    changeUsernameException = false
-                                },
-                                textStyle = androidx.compose.ui.text.TextStyle(
-                                    color = Color.Black,
-                                    lineHeight = 18.sp,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Light,
-                                    fontFamily = FontFamily.SansSerif
-                                ),
-                                placeholder = {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Start
+                                if (usernameText.isEmpty()) {
+                                    usernameTextFieldColor = Color.Red
+                                }
+                            }
+                            if (usernameText.isEmpty()) {
+                                usernameTextFieldColor = Color.Red
+                            }
+                            changeUsernameException = false
+                        },
+                        onSavePressed = {
+                            isLoading = true
+                            checkIfUsernameExists(usernameText) { exists ->
+                                if (!exists && profileCheckIfUsernameIsValid(usernameText)) {
+                                    sharedViewModel.updateUsername(
+                                        usernameText,
                                     ) {
-                                        Text(
-                                            text = userData.username["mixedcase"].toString(),
-                                            color = Color.Gray,
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Light,
-                                            textAlign = TextAlign.Start,
-                                            fontFamily = FontFamily.SansSerif,
-                                        )
-                                    }
-                                },
-                                colors = TextFieldDefaults.textFieldColors(
-                                    textColor = Color.Black,
-                                    backgroundColor = Color.Transparent,
-                                    placeholderColor = Color.Black,
-                                    focusedIndicatorColor = usernameTextFieldColor,
-                                    unfocusedIndicatorColor = Color.Transparent,
-                                    disabledIndicatorColor = Color.Transparent,
-                                    errorIndicatorColor = Color.Transparent
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(focusRequester = focusRequester)
-                                    .padding(start = 20.dp, end = 40.dp)
-                            )
-                            if (!checkIfValueIsValid(usernameText)) {
-                                Text(
-                                    text = "Username is invalid.",
-                                    color = Color.Red,
-                                    fontFamily = FontFamily.SansSerif,
-                                    fontSize = 12.sp,
-                                    modifier = Modifier.padding(
-                                        start = 20.dp,
-                                        end = 40.dp,
-                                        top = 5.dp
-                                    )
-                                )
-                            }
-                            if (usernameAlreadyExists) {
-                                Text(
-                                    text = "Username already exists.",
-                                    color = Color.Red,
-                                    fontFamily = FontFamily.SansSerif,
-                                    fontSize = 12.sp,
-                                    modifier = Modifier.padding(
-                                        start = 20.dp,
-                                        end = 40.dp,
-                                        top = 5.dp
-                                    )
-                                )
-                            }
-                            if (changeUsernameException) {
-                                Text(
-                                    text = "An error occurred while changing your username.",
-                                    color = Color.Red,
-                                    fontFamily = FontFamily.SansSerif,
-                                    fontSize = 12.sp,
-                                    modifier = Modifier.padding(
-                                        start = 20.dp,
-                                        end = 40.dp,
-                                        top = 5.dp
-                                    )
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(20.dp))
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 20.dp),
-                                horizontalArrangement = Arrangement.End
-                            ) {
-                                Text(
-                                    text = "Cancel",
-                                    textAlign = TextAlign.End,
-                                    fontFamily = FontFamily.SansSerif,
-                                    color = Color(0xFF00A0E8),
-                                    modifier = Modifier
-                                        .clickable {
-                                            coroutineScope.launch {
-                                                modelBottomSheetState = false
-                                            }
+                                        isLoading = false
+                                        if (it) {
+                                            usernameText = ""
+                                            usernameTextFieldColor = Color.Red
+                                            modelBottomSheetState = false
+                                        } else {
+                                            changeUsernameException = true
                                         }
-                                        .padding(end = 40.dp)
-                                )
-                                if (isLoading) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier
-                                            .padding(end = 20.dp)
-                                            .size(25.dp),
-                                        color = Color(0xFF00A0E8)
-                                    )
+                                    }
                                 } else {
-                                    Text(
-                                        text = "Save",
-                                        fontFamily = FontFamily.SansSerif,
-                                        textAlign = TextAlign.End,
-                                        color = if (usernameTextFieldColor != Color.Red) Color(
-                                            0xFF00A0E8
-                                        ) else Color.Gray,
-                                        modifier = Modifier
-                                            .clickable(enabled = !isLoading && usernameTextFieldColor != Color.Red) {
-                                                isLoading = true
-                                                checkIfUsernameExists(usernameText) { exists ->
-                                                    if (!exists && checkIfValueIsValid(usernameText)) {
-                                                        sharedViewModel.updateUsername(
-                                                            usernameText,
-                                                        ) {
-                                                            isLoading = false
-                                                            if (it) {
-                                                                usernameText = ""
-                                                                usernameTextFieldColor = Color.Red
-                                                                modelBottomSheetState = false
-                                                            } else {
-                                                                changeUsernameException = true
-                                                            }
-                                                        }
-                                                    } else {
-                                                        isLoading = false
-                                                        changeUsernameException = true
-                                                    }
-                                                }
-                                            }
-                                            .padding(end = 20.dp)
-                                    )
+                                    isLoading = false
+                                    changeUsernameException = true
                                 }
                             }
                         }
-                    }
+                    )
                 }
             },
         )
     }
 
-    private fun checkIfValueIsValid(value: String): Boolean {
-        return value.matches("^(?!.*[._-]{2})(?![._-])[a-zA-Z0-9._-]{1,30}(?<![._-])$".toRegex())
-    }
 
     private fun checkIfUsernameExists(
         name: String,
@@ -819,86 +311,6 @@ class ProfileView {
                 println("Error retrieving document: ${exception.message}")
                 callback(false)
             }
-    }
-
-    @Composable
-    fun ProfileTags(tags: List<TagElement>) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
-        ) {
-            when {
-                tags.size >= 2 -> {
-                    TagElement(
-                        element = tags[0].name,
-                        color = tags[0].color,
-                        icon = tags[0].icon,
-                        smallSize = false
-                    )
-                    TagElement(
-                        element = tags[1].name,
-                        color = tags[1].color,
-                        icon = tags[1].icon,
-                        smallSize = false
-                    )
-                }
-
-                tags.size == 1 -> {
-                    TagElement(
-                        element = tags[0].name,
-                        color = tags[0].color,
-                        icon = tags[0].icon,
-                        smallSize = false
-                    )
-                }
-            }
-        }
-        if (tags.size > 2) {
-            Spacer(modifier = Modifier.height(5.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(5.dp)
-            ) {
-                when {
-                    tags.size >= 4 -> {
-                        TagElement(
-                            element = tags[2].name,
-                            color = tags[2].color,
-                            icon = tags[2].icon,
-                            smallSize = false
-                        )
-                        TagElement(
-                            element = tags[3].name,
-                            color = tags[3].color,
-                            icon = tags[3].icon,
-                            smallSize = false
-                        )
-                    }
-
-                    tags.size == 3 -> {
-                        TagElement(
-                            element = tags[2].name,
-                            color = tags[2].color,
-                            icon = tags[2].icon,
-                            smallSize = false
-                        )
-                    }
-                }
-            }
-        }
-        if (tags.size > 4) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = "+${tags.size - 4} more",
-                    color = Color.DarkGray,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Light,
-                    fontFamily = FontFamily.SansSerif
-                )
-            }
-        }
     }
 
     private fun uploadWebPImage(

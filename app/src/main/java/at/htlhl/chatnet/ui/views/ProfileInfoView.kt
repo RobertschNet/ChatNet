@@ -2,13 +2,14 @@ package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Scaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -16,9 +17,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.FirebaseChat
@@ -38,11 +37,14 @@ import at.htlhl.chatnet.ui.components.mixed.ProfileInfoUserHeader
 import at.htlhl.chatnet.ui.components.mixed.ProfileMediaAndLinksSection
 import at.htlhl.chatnet.ui.components.mixed.ProfileUserFriendStateSection
 import at.htlhl.chatnet.viewmodels.SharedViewModel
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 class ProfileInfoView {
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @Composable
     fun ProfileInfoScreen(sharedViewModel: SharedViewModel, navController: NavController) {
+        val systemUiController = rememberSystemUiController()
+        systemUiController.setStatusBarColor(color = MaterialTheme.colorScheme.background, darkIcons = !isSystemInDarkTheme())
         var friendsFromFriendsListLoading by remember { mutableStateOf(true) }
         val lazyListState = rememberLazyListState()
         val friendState = sharedViewModel.friend.collectAsState()
@@ -61,40 +63,37 @@ class ProfileInfoView {
             friendsFromFriendsList = it
         }
         Scaffold(
+            backgroundColor = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.fillMaxSize(),
             content = {
-                Box(
+                LazyColumn(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.White)
-                ) {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .align(Alignment.BottomCenter),
-                        state = lazyListState,
-                        content = {
-                            item {
-                                ProfileInfoUserHeader(
-                                    navController = navController,
-                                    friend = friend.personList
-                                )
-                            }
-                            item {
-                                ProfileInfoContent(
-                                    friendsFriendState,
-                                    chatData,
-                                    sharedViewModel,
-                                    navController,
-                                    friendsFromFriendsList,
-                                    imageList,
-                                    friend,
-                                    user,
-                                    friendsFromFriendsListLoading
-                                )
-                            }
+                        .background(MaterialTheme.colorScheme.onBackground)
+                        .fillMaxSize(),
+                    state = lazyListState,
+                    content = {
+                        item {
+                            ProfileInfoUserHeader(
+                                navController = navController,
+                                friend = friend.personList
+                            )
                         }
-                    )
-                }
+                        item {
+                            ProfileInfoContent(
+                                friendsFriendState,
+                                chatData,
+                                sharedViewModel,
+                                navController,
+                                friendsFromFriendsList,
+                                imageList,
+                                friend,
+                                user,
+                                friendsFromFriendsListLoading
+                            )
+                        }
+                    }
+                )
+
             }
         )
     }
@@ -139,7 +138,7 @@ class ProfileInfoView {
         )
         Spacer(modifier = Modifier.height(10.dp))
         ProfileFriendSettingsSection(
-            isChatMateChat= currentChat?.tab == "chatmate",
+            isChatMateChat = currentChat?.tab == "chatmate",
             user = user,
             friend = friend,
             onBlockAction = { blockDialog = true },
@@ -172,7 +171,7 @@ class ProfileInfoView {
         Spacer(modifier = Modifier.height(20.dp))
         ProfileChatNetIconSection()
         if (removeFriendDialog) {
-            DeleteFriendDialog{ value ->
+            DeleteFriendDialog { value ->
                 if (value == "deleted") {
                     sharedViewModel.deleteChatRoom()
                     if (currentChat?.tab != "chatmate") {
@@ -180,7 +179,7 @@ class ProfileInfoView {
                     }
                     if (navController.previousBackStackEntry?.destination?.route != Screens.ChatViewScreen.route) {
                         navController.navigateUp()
-                    }else {
+                    } else {
                         navController.navigate(Screens.ChatsViewScreen.route)
                     }
                 }
@@ -213,7 +212,7 @@ class ProfileInfoView {
             }
         }
         if (deleteAllMessagesDialog) {
-            DeleteAllMessagesDialog(isChatMateChat=currentChat?.tab=="chatmate") { value ->
+            DeleteAllMessagesDialog(isChatMateChat = currentChat?.tab == "chatmate") { value ->
                 if (value == "me") {
                     sharedViewModel.changeMediaVisibility(userContext = true, isMedia = false)
                 } else if (value == "everyone") {

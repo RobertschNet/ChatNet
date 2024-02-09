@@ -14,21 +14,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 
+@Preview
 @Composable
 fun LoadingUserChatsElement() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(100))
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.background)
             .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
     ) {
         Box(

@@ -79,7 +79,7 @@ class ForgotPasswordView {
         }
         val googleSignInClient = GoogleSignIn.getClient(LocalContext.current, googleSignInOptions)
         Scaffold(
-            containerColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
+            containerColor = MaterialTheme.colorScheme.background,
             content = {
                 ContentView(
                     navController,
@@ -96,7 +96,7 @@ class ForgotPasswordView {
     fun BottomScreen(navController: NavController) {
         Divider(
             thickness = 0.3f.dp,
-            color = Color.DarkGray,
+            color = MaterialTheme.colorScheme.outline,
             modifier = Modifier.padding(bottom = 50.dp)
         )
         Row(
@@ -111,7 +111,7 @@ class ForgotPasswordView {
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 14.sp,
-                color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.clickable {
                     navController.navigate(Screens.LoginScreen.route) {
@@ -213,7 +213,7 @@ class ForgotPasswordView {
                         fontWeight = FontWeight.SemiBold,
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 30.sp,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                        color = MaterialTheme.colorScheme.primary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -228,7 +228,7 @@ class ForgotPasswordView {
                         fontWeight = FontWeight.ExtraLight,
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 16.sp,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                        color = MaterialTheme.colorScheme.primary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -356,7 +356,7 @@ class ForgotPasswordView {
                 ) {
                     Divider(
                         thickness = 0.3f.dp,
-                        color = Color.DarkGray,
+                        color = MaterialTheme.colorScheme.outline,
                         modifier = Modifier
                             .padding(start = 15.dp)
                             .weight(1f)
@@ -366,13 +366,13 @@ class ForgotPasswordView {
                         fontWeight = FontWeight.Medium,
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 14.sp,
-                        color = if (isSystemInDarkTheme()) Color.LightGray else Color.DarkGray,
+                        color =MaterialTheme.colorScheme.secondary,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(start = 10.dp, end = 10.dp)
                     )
                     Divider(
                         thickness = 0.3f.dp,
-                        color = Color.DarkGray,
+                        color = MaterialTheme.colorScheme.outline,
                         modifier = Modifier
                             .padding(end = 15.dp)
                             .weight(1f)

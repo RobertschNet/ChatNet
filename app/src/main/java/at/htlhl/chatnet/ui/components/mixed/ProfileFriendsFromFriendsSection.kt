@@ -1,6 +1,5 @@
 package at.htlhl.chatnet.ui.components.mixed
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -41,12 +41,12 @@ fun ProfileFriendsFromFriendsSection(
             .fillMaxWidth()
             .padding(start = 15.dp, end = 15.dp),
         elevation = 10.dp,
-        shape = RoundedCornerShape(25.dp)
+        shape = RoundedCornerShape(25.dp),
+        backgroundColor = MaterialTheme.colorScheme.background
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White),
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
@@ -59,19 +59,24 @@ fun ProfileFriendsFromFriendsSection(
                     modifier = Modifier.padding(start = 15.dp),
                     fontFamily = FontFamily.SansSerif,
                     fontWeight = FontWeight.Normal,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.secondary,
                 )
                 Spacer(modifier = Modifier.height(2.5f.dp))
                 Column(content = {
                     Spacer(modifier = Modifier.height(5.dp))
-                    if (friendsFromFriendsListIsLoading&&friendsFromFriendsList.isEmpty()) {
+                    if (friendsFromFriendsListIsLoading && friendsFromFriendsList.isEmpty()) {
                         for (i in 0..3) {
                             LoadingUserElement(false)
                         }
                     }
                     friendsFromFriendsList.forEach {
-                        val filteredTags = if (it.tags.isEmpty()) tags.filter { tag-> tag.category=="Empty" } else tags.filter { tag -> it.tags.contains(tag.name) }
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onUserClicked.invoke(it) }) {
+                        val filteredTags =
+                            if (it.tags.isEmpty()) tags.filter { tag -> tag.category == "Empty" } else tags.filter { tag ->
+                                it.tags.contains(tag.name)
+                            }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { onUserClicked.invoke(it) }) {
                             Spacer(modifier = Modifier.width(10.dp))
                             SubcomposeAsyncImage(
                                 modifier = Modifier
@@ -93,7 +98,7 @@ fun ProfileFriendsFromFriendsSection(
                                     overflow = TextOverflow.Ellipsis,
                                     text = it.username["mixedcase"].toString(),
                                     fontSize = 16.sp,
-                                    color = Color.Black,
+                                    color = MaterialTheme.colorScheme.primary,
                                 )
                                 Row(
                                     modifier = Modifier

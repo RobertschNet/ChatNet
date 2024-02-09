@@ -23,6 +23,7 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -32,6 +33,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -49,6 +51,7 @@ import coil.compose.SubcomposeAsyncImage
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun FindUserPersonElement(
+    isFrontLayer: Boolean,
     person: FirebaseUser,
     deleteAble: Boolean,
     sharedViewModel: SharedViewModel,
@@ -56,12 +59,21 @@ fun FindUserPersonElement(
     onUserClicked: (FirebaseUser) -> Unit,
     onActionClicked: (FirebaseUser, Boolean) -> Unit
 ) {
-    val filteredTags = if (person.tags.isEmpty()) tags.filter { tag-> tag.category=="Empty" } else tags.filter { tag -> person.tags.contains(tag.name) }
+    val filteredTags =
+        if (person.tags.isEmpty()) tags.filter { tag -> tag.category == "Empty" } else tags.filter { tag ->
+            person.tags.contains(tag.name)
+        }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(100))
-            .background(Color.White)
+            .background(
+                if (isFrontLayer) {
+                    MaterialTheme.colorScheme.onBackground
+                } else {
+                    MaterialTheme.colorScheme.background
+                }
+            )
             .clickable {
                 onUserClicked.invoke(person)
             }
@@ -88,10 +100,10 @@ fun FindUserPersonElement(
                         .clip(CircleShape)
                         .background(
                             Brush.linearGradient(
-                                colors = if (!isSystemInDarkTheme()) listOf(
-                                    Color.White,
-                                    Color.White
-                                ) else listOf(Color(0xF1161616), Color(0xF1161616)),
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.background,
+                                    MaterialTheme.colorScheme.background
+                                ),
                                 start = Offset(0f, 0f),
                                 end = Offset(14.dp.value, 14.dp.value)
                             )
@@ -150,10 +162,11 @@ fun FindUserPersonElement(
                         sharedViewModel.searchValue.value
                     ),
                     fontWeight = FontWeight.SemiBold,
+                    fontFamily = FontFamily.SansSerif,
                     fontSize = 17.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .padding(start = 5.dp)
                 )
@@ -165,8 +178,8 @@ fun FindUserPersonElement(
                     horizontalArrangement = Arrangement.spacedBy(5.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    when{
-                        filteredTags.size>=2 -> {
+                    when {
+                        filteredTags.size >= 2 -> {
                             TagElement(
                                 element = filteredTags[0].name,
                                 color = filteredTags[0].color,
@@ -180,7 +193,8 @@ fun FindUserPersonElement(
                                 smallSize = true
                             )
                         }
-                        filteredTags.size==1 -> {
+
+                        filteredTags.size == 1 -> {
                             TagElement(
                                 element = filteredTags[0].name,
                                 color = filteredTags[0].color,
@@ -206,12 +220,14 @@ fun FindUserPersonElement(
                 enabled = if (searchedUser == "searchedUser") true else searchedUser == "pending",
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
+                    disabledBackgroundColor =if (isSystemInDarkTheme()) Color.DarkGray else Color.LightGray,
                     backgroundColor = Color(0xFF00A0E8),
                 )
             ) {
                 Text(
                     text = if (searchedUser == "searchedUser") "Follow" else if (searchedUser == "pending") "Add" else "Followed",
                     color = Color.White,
+                    fontFamily = FontFamily.SansSerif,
                     textAlign = TextAlign.Center,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,

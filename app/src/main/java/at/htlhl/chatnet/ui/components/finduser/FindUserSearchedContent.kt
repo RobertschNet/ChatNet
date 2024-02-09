@@ -12,9 +12,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Divider
 import androidx.compose.material.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -38,7 +40,7 @@ fun FindUserSearchedContent(
     sharedViewModel: SharedViewModel,
     navController: NavController
 ) {
-    Divider(thickness = 0.25f.dp, color = Color.LightGray)
+    Divider(thickness = 0.25f.dp, color =MaterialTheme.colorScheme.outline)
     if (isSearching) {
         LazyColumn(content = {
             item {
@@ -55,8 +57,9 @@ fun FindUserSearchedContent(
             fontSize = 16.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            fontFamily = FontFamily.SansSerif,
             fontWeight = FontWeight.Bold,
-            color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+            color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
                 .padding(start = 20.dp, top = 10.dp)
                 .fillMaxWidth()
@@ -65,11 +68,13 @@ fun FindUserSearchedContent(
     }
     persons.forEach { person ->
         if (person.doesMatchUsername(searchText) && searchText.isNotEmpty()) {
-            LazyColumn(modifier = Modifier.fillMaxSize())
+            LazyColumn(
+                modifier = Modifier.fillMaxSize())
             {
                 items(persons) { person ->
                     val specificUser = friendList.find { it.id == person.id }
                     FindUserPersonElement(
+                        isFrontLayer = false,
                         person = person,
                         deleteAble = false,
                         sharedViewModel = sharedViewModel,

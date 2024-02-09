@@ -73,8 +73,6 @@ import java.util.concurrent.TimeUnit
  */
 class SharedViewModel(application: Application) : AndroidViewModel(application) {
     private val firebaseInstance = FirebaseFirestore.getInstance()
-
-
     private companion object {
         const val USER_COLLECTION = "users"
         const val CHATS_COLLECTION = "chats"
@@ -477,7 +475,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     val chatData: StateFlow<List<FirebaseChat>> get() = _chatData
 
     @Suppress("UNCHECKED_CAST", "LABEL_NAME_CLASH")
-    fun fetchChatsWithMessages() {
+    fun fetchChatsWithMessages():Boolean {
         val chatDataSet = mutableSetOf<FirebaseChat>()
         // Step 1: Listen for changes in the chats collection
         Log.println(Log.INFO, "ChatData!!!", auth.currentUser!!.uid)
@@ -559,6 +557,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     }
                 }
             }
+        return true
     }
 
 
@@ -1017,7 +1016,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         val url = "https://randchat-ie4mphraqq-uc.a.run.app/randChat"
         val client = OkHttpClient()
         val requestData =
-            "{\"user\":\"${auth.currentUser?.uid.toString()}\", \"newUser\":${false},\"action\":\"disconnect\"}"
+            "{\"user\":\"${auth.currentUser?.uid.toString()}\",\"newUser\":${false},\"action\":\"disconnect\"}"
         val mediaType = "application/json; charset=utf-8".toMediaType()
         val requestBody = requestData.toRequestBody(mediaType)
 

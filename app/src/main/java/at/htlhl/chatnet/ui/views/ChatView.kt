@@ -64,7 +64,7 @@ class ChatView : ViewModel() {
     @Composable
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val systemUiController = rememberSystemUiController()
-        systemUiController.setStatusBarColor(color = Color.Transparent, darkIcons = true)
+        systemUiController.setStatusBarColor(color = MaterialTheme.colorScheme.background, darkIcons = !isSystemInDarkTheme())
         val chatDataState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val chatData: List<FirebaseChat> = chatDataState.value
         val friendDataState =
@@ -119,15 +119,14 @@ class ChatView : ViewModel() {
         var blockDialog by remember { mutableStateOf(false) }
         var unblockDialog by remember { mutableStateOf(false) }
         val coroutineScope = rememberCoroutineScope()
-        val filteredMessages =
-            messagesForChat.filter { message -> message.visible.contains(sharedViewModel.auth.currentUser?.uid.toString()) }
-                .toMutableList()
+        val filteredMessages = messagesForChat.filter { message -> message.visible.contains(sharedViewModel.auth.currentUser?.uid.toString()) }.toMutableList()
         val lazyListState = rememberLazyListState()
         val context = LocalContext.current
         var currentIndex = 0
-
         Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
             modifier = Modifier
+                .fillMaxSize()
                 .imePadding(),
             topBar = {
                 ChatViewTopBar(
@@ -295,7 +294,7 @@ class ChatView : ViewModel() {
                             Box(
                                 contentAlignment = Alignment.Center, modifier = Modifier
                                     .background(
-                                        if (isSystemInDarkTheme()) Color.DarkGray else Color(
+                                        if (isSystemInDarkTheme()) Color(0xFF141419) else Color(
                                             0xFFF5F5F5
                                         ),
                                         RoundedCornerShape(30)

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,14 +32,14 @@ fun ProfileChatNetIconSection() {
             model = R.drawable.logo__1_,
             contentDescription = null,
             modifier = Modifier.size(60.dp),
-            colorFilter = ColorFilter.tint(Color.LightGray),
+            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.secondary),
             contentScale = ContentScale.Crop
         )
         Spacer(modifier = Modifier.height(5.dp))
         Text(
             text = "ChatNet",
             fontSize = 24.sp,
-            color = Color.LightGray,
+            color = MaterialTheme.colorScheme.secondary,
             fontFamily = FontFamily.SansSerif,
             fontWeight = FontWeight.Medium
         )

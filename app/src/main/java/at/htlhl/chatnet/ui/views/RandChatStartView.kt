@@ -66,6 +66,7 @@ class RandChatStartView {
             } else previousRandChatUsers
         val filteredUserTags = if (userData.tags.isEmpty()) tags.filter { tag-> tag.category=="Empty" } else tags.filter { tag -> userData.tags.contains(tag.name) }
         Scaffold(
+            backgroundColor = MaterialTheme.colorScheme.background,
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TabsTopBar(
@@ -138,6 +139,7 @@ class RandChatStartView {
                         items(completePreviousRandChatUsers) { previousUser ->
                             val savedUser = friendListData.find { previousUser.id == it.id }
                             FindUserPersonElement(
+                                isFrontLayer = false,
                                 person = previousUser,
                                 deleteAble = false,
                                 sharedViewModel = sharedViewModel,

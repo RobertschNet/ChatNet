@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,7 +30,7 @@ fun LoadingUserElement(friendActionOn: Boolean) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(100))
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.background)
             .padding(top = 10.dp, bottom = 10.dp, start = 15.dp, end = 10.dp)
     ) {
         Box(

@@ -13,6 +13,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -97,7 +98,6 @@ fun InputField(
     var chatMateResponseText by remember { mutableStateOf("ChatMate is thinking") }
     val chatMatePadding =
         if (sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) 10.dp else 0.dp
-
     val multiplePhotoPickerLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.PickMultipleVisualMedia(),
             onResult = { uris ->
@@ -210,7 +210,7 @@ fun InputField(
                     text = chatMateResponseText,
                     fontSize = 14.sp,
                     textAlign = TextAlign.Start,
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.secondary,
                     fontWeight = FontWeight.Light,
                     modifier = Modifier.padding(start = 30.dp)
                 )
@@ -221,7 +221,7 @@ fun InputField(
                 elevation = 2.dp,
                 modifier = Modifier.padding(start = 10.dp, end = 10.dp),
                 shape = RoundedCornerShape(26.dp),
-                contentColor = Color(0xFFF3F4FA)
+                backgroundColor = if (isSystemInDarkTheme()) Color(0xFF141419) else Color(0xFFF3F4FA)
             ) {
                 BasicTextField(
                     keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
@@ -267,13 +267,14 @@ fun InputField(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Normal,
                         fontFamily = FontFamily.SansSerif,
-                        color = MaterialTheme.colorScheme.secondary,
+                        color = MaterialTheme.colorScheme.primary,
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp + badgeCount.dp)
                         .background(
-                            Color(0xFFF3F4FA), RoundedCornerShape(26.dp)
+                            if (isSystemInDarkTheme()) Color(0xFF141419) else Color(0xFFF3F4FA),
+                            RoundedCornerShape(26.dp)
                         ),
                     decorationBox = { innerTextField ->
                         Row(

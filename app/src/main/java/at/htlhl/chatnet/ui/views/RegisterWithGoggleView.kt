@@ -71,7 +71,7 @@ class RegisterWithGoggleView {
 
         val googleSignInClient = GoogleSignIn.getClient(LocalContext.current, googleSignInOptions)
         Scaffold(
-            containerColor = if (isSystemInDarkTheme()) Color.Black else Color.White,
+            containerColor = MaterialTheme.colorScheme.background,
             content = {
                 ContentView(
                     navController,
@@ -87,7 +87,7 @@ class RegisterWithGoggleView {
     fun BottomScreen(navController: NavController) {
         Divider(
             thickness = 0.3f.dp,
-            color = Color.DarkGray,
+            color = MaterialTheme.colorScheme.outline,
             modifier = Modifier.padding(bottom = 50.dp)
         )
         Row(
@@ -102,7 +102,7 @@ class RegisterWithGoggleView {
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 14.sp,
-                color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.clickable {
                     navController.navigate("LoginFlow") {
@@ -149,7 +149,7 @@ class RegisterWithGoggleView {
                         fontWeight = FontWeight.SemiBold,
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 30.sp,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                        color = MaterialTheme.colorScheme.primary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -164,7 +164,7 @@ class RegisterWithGoggleView {
                         fontWeight = FontWeight.ExtraLight,
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 16.sp,
-                        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+                        color =MaterialTheme.colorScheme.primary,
                         textAlign = TextAlign.Center
                     )
                 }

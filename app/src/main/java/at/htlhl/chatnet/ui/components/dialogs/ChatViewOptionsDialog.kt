@@ -38,7 +38,7 @@ fun OptionsDialog(offset: Offset?, onClose: (String) -> Unit) {
             expanded = true,
             properties = PopupProperties(focusable = false),
             modifier = Modifier
-                .background(MaterialTheme.colorScheme.background)
+                .background(MaterialTheme.colorScheme.onBackground)
                 .height(130.dp)
                 .width(120.dp),
             onDismissRequest = {

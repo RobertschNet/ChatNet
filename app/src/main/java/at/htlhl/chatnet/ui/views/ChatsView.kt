@@ -1,8 +1,8 @@
 package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,6 +42,7 @@ import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.imageLoader
 import coil.request.ImageRequest
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 
@@ -133,6 +134,7 @@ class ChatsView {
             ),
         )
         Scaffold(
+            backgroundColor = MaterialTheme.colorScheme.background,
             modifier = Modifier
                 .fillMaxSize(),
             topBar = {
@@ -145,14 +147,7 @@ class ChatsView {
                 }
             },
             content = {
-                Log.println(Log.INFO, "ChatsView", "Complete Person List: $completePersonList")
-                Log.println(
-                    Log.INFO,
-                    "ChatsView",
-                    "Is Loading Data: ${sharedViewModel.loadedData.value}"
-                )
                 if (completePersonList.isEmpty() && sharedViewModel.loadedData.value) {
-                    Log.println(Log.INFO, "ChatsView", "Empty Chat Content")
                     EmptyChatContent(onClicked = {
                         navController.navigate(Screens.FindUserScreen.route)
                     }
@@ -160,15 +155,9 @@ class ChatsView {
                 } else {
                     LazyColumn(
                         Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.tertiary),
+                            .fillMaxSize(),
                         state = lazyListState
                     ) {
-                        Log.println(
-                            Log.INFO,
-                            "ChatssView",
-                            "Complete Person List: $completePersonList"
-                        )
                         items(completePersonList) { message ->
                             ChatsViewChatItem(
                                 chatFriend = message,
@@ -276,10 +265,11 @@ class ChatsView {
         }
         if (modelSheetState.value) {
             ModalBottomSheet(
+                containerColor = MaterialTheme.colorScheme.background,
                 windowInsets = WindowInsets(0, 0, 0, 0),
-                onDismissRequest = {
-                    modelSheetState.value = false
-                }, dragHandle = null, content = {
+                onDismissRequest = { modelSheetState.value = false },
+                dragHandle = null,
+                content = {
                     ChatsViewBottomSheetContent(
                         bottomSheetItems,
                         onItemClicked = { item ->

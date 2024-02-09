@@ -1,6 +1,5 @@
 package at.htlhl.chatnet.ui.components.mixed
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,10 +12,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
 import androidx.compose.material.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
@@ -45,9 +44,10 @@ fun ProfileChatSettingsSection(
             .fillMaxWidth()
             .padding(start = 15.dp, end = 15.dp),
         elevation = 10.dp,
-        shape = RoundedCornerShape(25.dp)
+        shape = RoundedCornerShape(25.dp),
+        backgroundColor = MaterialTheme.colorScheme.background
     ) {
-        Column(modifier = Modifier.background(Color.White)) {
+        Column {
             Spacer(modifier = Modifier.height(7.5f.dp))
             Text(
                 textAlign = TextAlign.Center,
@@ -57,7 +57,7 @@ fun ProfileChatSettingsSection(
                 fontSize = 12.sp,
                 fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Normal,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.secondary,
             )
             if (!isChatMateChat) {
                 Row(
@@ -78,7 +78,7 @@ fun ProfileChatSettingsSection(
                     Spacer(modifier = Modifier.width(25.dp))
                     SubcomposeAsyncImage(
                         contentScale = ContentScale.Crop,
-                        colorFilter = ColorFilter.tint(Color.Black),
+                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
                         model = if (user.muted.contains(friend.personList.id)) R.drawable.speaker_svgrepo_com else R.drawable.speaker_none_svgrepo_com,
                         modifier = Modifier.size(30.dp),
                         contentDescription = null
@@ -87,9 +87,10 @@ fun ProfileChatSettingsSection(
                     Text(
                         textAlign = TextAlign.Center,
                         overflow = TextOverflow.Ellipsis,
+                        fontFamily = FontFamily.SansSerif,
                         text = if (user.muted.contains(friend.personList.id)) "Unmute ${friend.personList.username["mixedcase"]}" else "Mute ${friend.personList.username["mixedcase"]}",
                         fontSize = 16.sp,
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.width(25.dp))
                 }
@@ -132,7 +133,7 @@ fun ProfileChatSettingsSection(
                 Spacer(modifier = Modifier.width(25.dp))
                 SubcomposeAsyncImage(
                     contentScale = ContentScale.Crop,
-                    colorFilter = ColorFilter.tint(Color.Black),
+                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
                     model = if (friend.pinChat) R.drawable.pin_off_svgrepo_com else R.drawable.pin_svgrepo_com,
                     modifier = Modifier.size(30.dp),
                     contentDescription = null
@@ -143,7 +144,8 @@ fun ProfileChatSettingsSection(
                     overflow = TextOverflow.Ellipsis,
                     text = if (friend.pinChat) "Unpin Chat" else "Pin Chat",
                     fontSize = 16.sp,
-                    color = Color.Black,
+                    fontFamily = FontFamily.SansSerif,
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.width(25.dp))
             }
@@ -157,7 +159,7 @@ fun ProfileChatSettingsSection(
                 Spacer(modifier = Modifier.width(25.dp))
                 SubcomposeAsyncImage(
                     contentScale = ContentScale.Crop,
-                    colorFilter = ColorFilter.tint(Color.Black),
+                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
                     model = R.drawable.comment_delete_svgrepo_com,
                     modifier = Modifier.size(30.dp),
                     contentDescription = null
@@ -168,7 +170,8 @@ fun ProfileChatSettingsSection(
                     overflow = TextOverflow.Ellipsis,
                     text = "Delete Chat Messages",
                     fontSize = 16.sp,
-                    color = Color.Black,
+                    fontFamily = FontFamily.SansSerif,
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.width(25.dp))
             }
@@ -183,7 +186,7 @@ fun ProfileChatSettingsSection(
                     Spacer(modifier = Modifier.width(25.dp))
                     SubcomposeAsyncImage(
                         contentScale = ContentScale.Crop,
-                        colorFilter = ColorFilter.tint(Color.Black),
+                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
                         model = R.drawable.gallery_svgrepo_com,
                         modifier = Modifier.size(30.dp),
                         contentDescription = null
@@ -194,7 +197,8 @@ fun ProfileChatSettingsSection(
                         overflow = TextOverflow.Ellipsis,
                         text = "Delete Shared Media",
                         fontSize = 16.sp,
-                        color = Color.Black,
+                        fontFamily = FontFamily.SansSerif,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.width(25.dp))
                 }

@@ -1,6 +1,7 @@
 package at.htlhl.chatnet.ui.components.finduser
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -14,11 +15,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,7 +30,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -46,7 +49,10 @@ fun FindUserTopBar(
 ) {
     var search by rememberSaveable { mutableStateOf(true) }
     var searchTexts by rememberSaveable { mutableStateOf("") }
-    TopAppBar(backgroundColor = Color.White, modifier = Modifier.fillMaxWidth()) {
+    TopAppBar(
+        backgroundColor = MaterialTheme.colorScheme.background,
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Row(
             modifier = Modifier
                 .padding(
@@ -65,7 +71,7 @@ fun FindUserTopBar(
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
                     contentDescription = null,
-                    tint = Color.DarkGray,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .size(30.dp)
                         .align(Alignment.CenterVertically)
@@ -81,17 +87,25 @@ fun FindUserTopBar(
                 interactionSource = interactionSource,
                 singleLine = true,
                 modifier = Modifier
+                    .border(
+                        width = Dp.Hairline,
+                        color = MaterialTheme.colorScheme.outline,
+                        shape = RoundedCornerShape(12.dp))
                     .fillMaxWidth()
-                    .background(Color(0xFFE9E9E9), RoundedCornerShape(12.dp)),
-                textStyle = MaterialTheme.typography.body1.copy(color = Color.Black),
-                cursorBrush = SolidColor(Color.Black),
+                    .background(MaterialTheme.colorScheme.background, RoundedCornerShape(12.dp)),
+                textStyle = TextStyle.Default.copy(
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 16.sp
+                ),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 decorationBox = { innerTextField: @Composable () -> Unit ->
                     Text(
                         text = if (search) "Search" else "",
                         modifier = Modifier.padding(top = 8.4.dp, start = 48.dp),
                         fontWeight = FontWeight.Normal,
                         fontSize = 16.sp,
-                        color = Color(0xFFBDBDBD)
+                        color = MaterialTheme.colorScheme.secondary
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -105,7 +119,7 @@ fun FindUserTopBar(
                                 .padding(start = 10.dp)
                                 .size(26.dp),
                             colorFilter = ColorFilter.tint(
-                                Color(0xFFBDBDBD)
+                                MaterialTheme.colorScheme.secondary
                             )
                         )
                         Box(

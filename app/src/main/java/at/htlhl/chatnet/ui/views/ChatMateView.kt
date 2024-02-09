@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Scaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -93,6 +94,7 @@ class ChatMateView {
             ),
         )
         Scaffold(
+            backgroundColor = MaterialTheme.colorScheme.background,
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TabsTopBar(
@@ -114,8 +116,7 @@ class ChatMateView {
             content = {
                 LazyColumn(
                     Modifier
-                        .fillMaxSize()
-                        .background(if (isSystemInDarkTheme()) Color.Black else Color.White),
+                        .fillMaxSize(),
                     state = lazyListState
                 ) {
                     items(completeMessageChatRoomData) { message ->
@@ -184,10 +185,11 @@ class ChatMateView {
         }
         if (modelSheetState.value) {
             ModalBottomSheet(
+                containerColor = MaterialTheme.colorScheme.background,
                 windowInsets = WindowInsets(0, 0, 0, 0),
-                onDismissRequest = {
-                    modelSheetState.value = false
-                }, dragHandle = null, content = {
+                onDismissRequest = { modelSheetState.value = false },
+                dragHandle = null,
+                content = {
                     ChatsViewBottomSheetContent(
                         bottomSheetItems,
                         onItemClicked = { item ->
