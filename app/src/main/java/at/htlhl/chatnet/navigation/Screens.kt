@@ -1,7 +1,6 @@
 package at.htlhl.chatnet.navigation
 
 sealed class Screens(val route: String) {
-    object LoadingScreen : Screens("LoadingScreen")
     object ChatsViewScreen : Screens("ChatsViewScreen")
     object CameraViewScreen : Screens("CameraViewScreen")
     object CameraPhotoScreen : Screens("CameraPhotoScreen")
@@ -21,4 +20,6 @@ sealed class Screens(val route: String) {
     object ProfilePictureView : Screens("ProfilePictureScreen")
     object TagSelectScreen : Screens("TagSelectScreen")
     object PublicProfileScreen : Screens("PublicProfileScreen")
+    object LoginFlow: Screens("LoginFlow")
+    object MainFlow: Screens("MainFlow")
 }

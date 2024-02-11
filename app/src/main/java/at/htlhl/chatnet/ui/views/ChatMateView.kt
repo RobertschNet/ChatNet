@@ -4,8 +4,6 @@ import android.annotation.SuppressLint
 import android.os.Build
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,20 +21,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItem
+import at.htlhl.chatnet.data.CurrentTab
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.SaveImageTask
-import at.htlhl.chatnet.ui.components.dialogs.ClearChatDialog
-import at.htlhl.chatnet.ui.components.dialogs.ShowBigUserImageDialog
-import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
-import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
-import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
+import at.htlhl.chatnet.ui.features.dialogs.ClearChatDialog
+import at.htlhl.chatnet.ui.features.dialogs.ShowBigUserImageDialog
+import at.htlhl.chatnet.ui.features.mixed.ChatsViewBottomSheetContent
+import at.htlhl.chatnet.ui.features.mixed.ChatsViewChatItem
+import at.htlhl.chatnet.ui.features.mixed.TabsTopBar
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
@@ -98,7 +96,7 @@ class ChatMateView {
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TabsTopBar(
-                    tab = "ChatMate",
+                    tab = CurrentTab.CHATMATE,
                     sharedViewModel = sharedViewModel,
                     availableUsers = listOf(FirebaseUser()),
                 ) {

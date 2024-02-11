@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItem
+import at.htlhl.chatnet.data.CurrentTab
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
@@ -59,14 +60,14 @@ import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.data.LocationUserInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.SaveImageTask
-import at.htlhl.chatnet.ui.components.dialogs.ClearChatDialog
-import at.htlhl.chatnet.ui.components.dialogs.DisableDropInDialog
-import at.htlhl.chatnet.ui.components.dialogs.ShowBigUserImageDialog
-import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
-import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
-import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
-import at.htlhl.chatnet.ui.components.mixed.buildAnnotatedStringWithColorHighlights
+import at.htlhl.chatnet.ui.features.dialogs.ClearChatDialog
+import at.htlhl.chatnet.ui.features.dialogs.DisableDropInDialog
+import at.htlhl.chatnet.ui.features.dialogs.ShowBigUserImageDialog
+import at.htlhl.chatnet.ui.features.mixed.ChatsViewBottomSheetContent
+import at.htlhl.chatnet.ui.features.mixed.ChatsViewChatItem
+import at.htlhl.chatnet.ui.features.mixed.TabsTopBar
 import at.htlhl.chatnet.ui.theme.shimmerEffect
+import at.htlhl.chatnet.util.highlightSearchedText
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
@@ -187,7 +188,7 @@ class DropInView {
                 .fillMaxSize(),
             topBar = {
                 TabsTopBar(
-                    tab = "DropIn",
+                    tab = CurrentTab.DROPIN,
                     availableUsers = listOf(FirebaseUser()),
                     sharedViewModel = sharedViewModel,
                 ) {
@@ -486,7 +487,7 @@ class DropInView {
                 }
             }
             Text(
-                text = buildAnnotatedStringWithColorHighlights(
+                text = highlightSearchedText(
                     chat.username["mixedcase"].toString(),
                     sharedViewModel.searchValue.value
                 ),
@@ -500,7 +501,7 @@ class DropInView {
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = buildAnnotatedStringWithColorHighlights(
+                text = highlightSearchedText(
                     chat.location,
                     sharedViewModel.searchValue.value
                 ),
@@ -598,7 +599,7 @@ class DropInView {
                 }
             }
             Text(
-                text = buildAnnotatedStringWithColorHighlights(
+                text = highlightSearchedText(
                     "You", sharedViewModel.searchValue.value
                 ),
                 overflow = TextOverflow.Clip,
@@ -611,7 +612,7 @@ class DropInView {
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = buildAnnotatedStringWithColorHighlights(
+                text = highlightSearchedText(
                     localChatUser?.location ?: "Unknown",
                     sharedViewModel.searchValue.value
                 ),

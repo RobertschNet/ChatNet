@@ -45,6 +45,7 @@ import coil.compose.rememberAsyncImagePainter
 @Composable
 fun NavigationBarLayout(
     navController: NavHostController,
+    startView: String,
     viewModel: SharedViewModel,
     context: Context
 ) {
@@ -55,7 +56,7 @@ fun NavigationBarLayout(
         bottomBar = {
             BottomNavigationBar(
                 isEnabled = isBottomBarEnabled.value,
-                isBottomBarEnabled = viewModel.bottomBarState, items = listOf(
+                items = listOf(
                 BottomNavItem(
                     name = "Chats",
                     route = Screens.ChatsViewScreen.route,
@@ -96,6 +97,7 @@ fun NavigationBarLayout(
             Navigation(
                 navController = navController,
                 sharedViewModel = viewModel,
+                startView = startView,
                 context = context,
                 onBottomBarDisabled = {
                     isBottomBarEnabled.value= it
@@ -108,7 +110,6 @@ fun NavigationBarLayout(
 @Composable
 fun BottomNavigationBar(
     isEnabled:Boolean,
-    isBottomBarEnabled: MutableState<Boolean>,
     items: List<BottomNavItem>,
     navController: NavController,
     onItemClick: (BottomNavItem) -> Unit

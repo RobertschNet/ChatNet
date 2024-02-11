@@ -31,14 +31,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import at.htlhl.chatnet.data.CurrentTab
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
+import at.htlhl.chatnet.data.PersonType
 import at.htlhl.chatnet.data.TagElement
 import at.htlhl.chatnet.data.tags
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.finduser.FindUserPersonElement
-import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
-import at.htlhl.chatnet.ui.components.mixed.TagElement
+import at.htlhl.chatnet.ui.features.finduser.components.FindUserPersonComponent
+import at.htlhl.chatnet.ui.features.mixed.TabsTopBar
+import at.htlhl.chatnet.ui.features.mixed.TagElement
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -70,7 +72,7 @@ class RandChatStartView {
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TabsTopBar(
-                    tab = "RandChat",
+                    tab = CurrentTab.RANDCHAT,
                     availableUsers = listOf(),
                     sharedViewModel = sharedViewModel
                 )
@@ -138,17 +140,17 @@ class RandChatStartView {
                     ) {
                         items(completePreviousRandChatUsers) { previousUser ->
                             val savedUser = friendListData.find { previousUser.id == it.id }
-                            FindUserPersonElement(
+                            FindUserPersonComponent(
                                 isFrontLayer = false,
                                 person = previousUser,
                                 deleteAble = false,
-                                sharedViewModel = sharedViewModel,
-                                searchedUser = if (savedUser == null) "searchedUser" else if (savedUser.statusFriend == "pending") "pending" else "added",
-                                onUserClicked = {
+                                searchedText = sharedViewModel.searchValue.value,
+                                personType = if (savedUser == null) PersonType.SEARCHED_PERSON else if (savedUser.statusFriend == "pending") PersonType.PENDING_PERSON else PersonType.ACCEPTED_PERSON,
+                                onPersonClicked = {
                                     sharedViewModel.updatePublicUser(it)
                                     navController.navigate(Screens.PublicProfileScreen.route)
                                 },
-                                onActionClicked = { clickedPerson, add ->
+                                onFriendActionClicked = { clickedPerson, add ->
                                     if (add) {
                                         val filteredChats = chatData.filter { chat ->
                                             chat.members.contains(clickedPerson.id) && chat.members
@@ -184,6 +186,9 @@ class RandChatStartView {
                                         )
                                     }
 
+                                },
+                                onDenyFriendRequestClicked = { clickedPerson ->
+                                    sharedViewModel.deleteFriendFromFriendList(clickedPerson)
                                 }
                             )
                         }

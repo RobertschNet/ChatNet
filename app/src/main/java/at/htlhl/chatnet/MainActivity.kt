@@ -21,6 +21,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.navigation.compose.rememberNavController
 import at.htlhl.chatnet.navigation.NavigationBarLayout
+import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.LocationUpdateService
 import at.htlhl.chatnet.ui.theme.ChatNetTheme
 import at.htlhl.chatnet.viewmodels.SharedViewModel
@@ -40,18 +41,28 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         installSplashScreen().apply {
             setKeepOnScreenCondition {
-                viewModel.chatData.value.isEmpty() && viewModel.auth.currentUser != null
+                viewModel.completeChatList.value.isEmpty() && viewModel.auth.currentUser != null
             }
         }
         val serviceIntent = Intent(this, LocationUpdateService::class.java)
         setContent {
             val navController = rememberNavController()
             ChatNetTheme {
-                NavigationBarLayout(
-                    navController = navController,
-                    viewModel = viewModel,
-                    context = applicationContext
-                )
+                if (viewModel.auth.currentUser != null) {
+                    NavigationBarLayout(
+                        navController = navController,
+                        startView = Screens.MainFlow.route,
+                        viewModel = viewModel,
+                        context = applicationContext
+                    )
+                } else {
+                    NavigationBarLayout(
+                        navController = navController,
+                        startView = Screens.LoginFlow.route,
+                        viewModel = viewModel,
+                        context = applicationContext
+                    )
+                }
                 FirebaseMessaging.getInstance().token
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
@@ -85,17 +96,6 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         viewModel.fetchRandomFriendsFromFriend()
-                        navController.navigate("MainFlow") {
-                            popUpTo("LoadingScreen") {
-                                inclusive = true
-                            }
-                        }
-                    } else {
-                        navController.navigate("LoginFlow") {
-                            popUpTo("LoadingScreen") {
-                                inclusive = true
-                            }
-                        }
                     }
                 }
             }

@@ -32,7 +32,7 @@ import androidx.navigation.NavController
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.TagElement
 import at.htlhl.chatnet.data.tags
-import at.htlhl.chatnet.ui.components.mixed.TagElement
+import at.htlhl.chatnet.ui.features.mixed.TagElement
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 
 class TagSelectView {

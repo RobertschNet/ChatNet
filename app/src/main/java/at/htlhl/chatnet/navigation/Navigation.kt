@@ -18,22 +18,21 @@ import androidx.navigation.navigation
 import at.htlhl.chatnet.ui.views.CameraPhotoView
 import at.htlhl.chatnet.ui.views.CameraView
 import at.htlhl.chatnet.ui.views.ChatMateView
-import at.htlhl.chatnet.ui.views.ChatView
+import at.htlhl.chatnet.ui.features.chat.ChatView
 import at.htlhl.chatnet.ui.views.ChatsView
 import at.htlhl.chatnet.ui.views.DropInView
-import at.htlhl.chatnet.ui.views.FindUserView
-import at.htlhl.chatnet.ui.views.ForgotPasswordView
+import at.htlhl.chatnet.ui.features.finduser.screens.FindUserView
+import at.htlhl.chatnet.ui.features.login_register.screens.ForgotPasswordView
 import at.htlhl.chatnet.ui.views.ImageView
-import at.htlhl.chatnet.ui.views.LoadingView
-import at.htlhl.chatnet.ui.views.LoginView
+import at.htlhl.chatnet.ui.features.login_register.screens.LoginView
 import at.htlhl.chatnet.ui.views.ProfileInfoView
 import at.htlhl.chatnet.ui.views.ProfilePictureView
-import at.htlhl.chatnet.ui.views.ProfileView
+import at.htlhl.chatnet.ui.features.profile.screens.ProfileView
 import at.htlhl.chatnet.ui.views.PublicProfileView
 import at.htlhl.chatnet.ui.views.RandChatStartView
 import at.htlhl.chatnet.ui.views.RandChatView
-import at.htlhl.chatnet.ui.views.RegisterView
-import at.htlhl.chatnet.ui.views.RegisterWithGoggleView
+import at.htlhl.chatnet.ui.features.login_register.screens.RegisterView
+import at.htlhl.chatnet.ui.features.login_register.screens.RegisterWithGoggleView
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import kotlinx.coroutines.delay
 
@@ -42,15 +41,11 @@ import kotlinx.coroutines.delay
 fun Navigation(
     navController: NavHostController,
     sharedViewModel: SharedViewModel,
+    startView: String,
     context: Context,
     onBottomBarDisabled: (Boolean) -> Unit
 ) {
-    NavHost(navController = navController, startDestination = "LoadingScreen") {
-        composable("LoadingScreen",
-            enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
-            exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-            LoadingView().LoadingScreen()
-        }
+    NavHost(navController = navController, startDestination = startView) {
         composable("RegisterWithGoogleScreen",
             enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
             exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {

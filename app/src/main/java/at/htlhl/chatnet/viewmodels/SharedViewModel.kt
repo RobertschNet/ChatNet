@@ -14,6 +14,7 @@ import android.util.Log
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.ChatMateResponseState
@@ -71,7 +72,7 @@ import java.util.concurrent.TimeUnit
  * This class represents the shared view model, which is used to share data between different Views.
  * It also contains the logic for the communication with Firebase.
  */
-class SharedViewModel(application: Application) : AndroidViewModel(application) {
+class SharedViewModel : ViewModel() {
     private val firebaseInstance = FirebaseFirestore.getInstance()
     private companion object {
         const val USER_COLLECTION = "users"
@@ -87,20 +88,16 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     val auth: FirebaseAuth = Firebase.auth
     var loadedData = mutableStateOf(false)
-    val searchText = MutableStateFlow("")
-    val searchTextFlow = searchText.asStateFlow()
+
     val chatMateResponseState = mutableStateOf(ChatMateResponseState.Success)
     var previousRandChatUser = mutableStateOf<List<FirebaseUser>>(emptyList())
     private val publicUser = MutableStateFlow(FirebaseUser())
     val publicUserFlow: StateFlow<FirebaseUser> get() = publicUser
-    val isSearching = MutableStateFlow(false)
-    val isSearchingFlow = isSearching.asStateFlow()
 
-    val searchedPersons = MutableStateFlow<List<FirebaseUser>>(emptyList())
+
     private val _friend = MutableStateFlow(InternalChatInstance())
     val friend: StateFlow<InternalChatInstance> get() = _friend
     var unfinishedGoogleRegistration = mutableStateOf("")
-    val bottomBarState = mutableStateOf(false)
     val gpsState = mutableStateOf(false)
     val localChatUserList = mutableStateOf<List<LocationUserInstance>>(emptyList())
     val searchValue = mutableStateOf("")
@@ -120,31 +117,6 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         onComplete.invoke()
     }
 
-    @OptIn(FlowPreview::class)
-    var person = searchTextFlow.debounce(1000L)
-        .combine(searchedPersons) { text, person ->
-            if (text.isBlank()) {
-                emptyList()
-            } else {
-                val initialMessages = retrieveMessages()
-                if (initialMessages.isEmpty()) {
-                    viewModelScope.launch {
-                        delay(500)
-                        isSearching.update { false }
-                    }
-                }
-                Log.println(Log.INFO, "SearchView", initialMessages.toString())
-                searchedPersons.value = initialMessages.toMutableList()
-                person.filter { it.doesMatchUsername(text) }
-            }
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), searchedPersons.value)
-        .onEach {
-            viewModelScope.launch {
-                delay(500)
-                isSearching.update { false }
-            }
-        }
-
     private fun getUserDocumentRef() = firebaseInstance.collection(USER_COLLECTION)
 
     private fun getChatDocumentRef() = firebaseInstance.collection(CHATS_COLLECTION)
@@ -155,37 +127,6 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
 
     fun onTakePhoto(bitmap: Bitmap) {
         _bitmaps.value = bitmap
-    }
-
-    private suspend fun retrieveMessages(): List<FirebaseUser> {
-        try {
-            val currentUserUid = FirebaseAuth.getInstance().currentUser?.uid
-                ?: return emptyList()
-
-            val snapshot = FirebaseFirestore.getInstance().collection("users")
-                .orderBy("username.lowercase")
-                .startAt(searchTextFlow.value.lowercase())
-                .endAt(searchTextFlow.value.lowercase() + '\uf8ff')
-                .get()
-                .await()
-            return snapshot.documents.mapNotNull { document ->
-                try {
-                    val userData = document.toObject(FirebaseUser::class.java)
-                    if (userData?.id == currentUserUid) {
-                        null
-                    } else {
-                        userData
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    null
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        return emptyList()
     }
 
     /**
@@ -729,17 +670,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
      * used for the users account settings.
      */
 
-    fun updateUserProfilePicture(imageReference: String, onComplete: (Boolean) -> Unit) {
-        val fieldUpdates = hashMapOf<String, Any>("image" to imageReference)
-        getUserDocumentRef().document(auth.currentUser!!.uid).update(fieldUpdates)
-            .addOnSuccessListener {
-                onComplete.invoke(true)
-            }
-            .addOnFailureListener { exception ->
-                exception.printStackTrace()
-                onComplete.invoke(false)
-            }
-    }
+
 
     private val _user =
         MutableStateFlow(FirebaseUser())
@@ -786,11 +717,14 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun reset() {
+        updateOnlineStatus(false)
+        auth.signOut()
         _chatData.value = emptyList()
         _friend.value = InternalChatInstance()
         _friendListData.value = emptyList()
         _user.value = FirebaseUser()
         previousRandChatUser.value = emptyList()
+        gpsState.value = true
         randState.value = false
         loadedData.value = false
     }

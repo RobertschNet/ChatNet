@@ -1,8 +1,6 @@
 package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
-import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,24 +23,24 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItem
+import at.htlhl.chatnet.data.CurrentTab
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.SaveImageTask
-import at.htlhl.chatnet.ui.components.chats.EmptyChatContent
-import at.htlhl.chatnet.ui.components.dialogs.BlockUserDialog
-import at.htlhl.chatnet.ui.components.dialogs.ClearChatDialog
-import at.htlhl.chatnet.ui.components.dialogs.ShowBigUserImageDialog
-import at.htlhl.chatnet.ui.components.mixed.ChatsViewBottomSheetContent
-import at.htlhl.chatnet.ui.components.mixed.ChatsViewChatItem
-import at.htlhl.chatnet.ui.components.mixed.LoadingUserChatsElement
-import at.htlhl.chatnet.ui.components.mixed.TabsTopBar
+import at.htlhl.chatnet.ui.features.chats.EmptyChatContent
+import at.htlhl.chatnet.ui.features.dialogs.BlockUserDialog
+import at.htlhl.chatnet.ui.features.dialogs.ClearChatDialog
+import at.htlhl.chatnet.ui.features.dialogs.ShowBigUserImageDialog
+import at.htlhl.chatnet.ui.features.mixed.ChatsViewBottomSheetContent
+import at.htlhl.chatnet.ui.features.mixed.ChatsViewChatItem
+import at.htlhl.chatnet.ui.features.mixed.LoadingUserChatsElement
+import at.htlhl.chatnet.ui.features.mixed.TabsTopBar
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.imageLoader
 import coil.request.ImageRequest
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 
@@ -139,7 +137,7 @@ class ChatsView {
                 .fillMaxSize(),
             topBar = {
                 TabsTopBar(
-                    tab = "Chats",
+                    tab = CurrentTab.CHATS,
                     availableUsers = availableUsers,
                     sharedViewModel = sharedViewModel,
                 ) {

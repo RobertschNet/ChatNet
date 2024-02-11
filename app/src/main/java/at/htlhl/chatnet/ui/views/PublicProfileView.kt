@@ -21,11 +21,11 @@ import androidx.navigation.NavController
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.components.dialogs.DeleteFriendDialog
-import at.htlhl.chatnet.ui.components.mixed.ProfileChatNetIconSection
-import at.htlhl.chatnet.ui.components.mixed.ProfileFriendsFromFriendsSection
-import at.htlhl.chatnet.ui.components.mixed.ProfileInfoUserHeader
-import at.htlhl.chatnet.ui.components.mixed.ProfileUserFriendStateSection
+import at.htlhl.chatnet.ui.features.dialogs.DeleteFriendDialog
+import at.htlhl.chatnet.ui.features.mixed.ProfileChatNetIconSection
+import at.htlhl.chatnet.ui.features.mixed.ProfileFriendsFromFriendsSection
+import at.htlhl.chatnet.ui.features.mixed.ProfileInfoUserHeader
+import at.htlhl.chatnet.ui.features.mixed.ProfileUserFriendStateSection
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 
 class PublicProfileView {
