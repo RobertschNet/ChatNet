@@ -50,6 +50,7 @@ import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.FirebaseChat
+import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.ui.features.dialogs.DeleteMessageDialog
@@ -58,6 +59,9 @@ import at.htlhl.chatnet.ui.features.dialogs.UnblockToMessageDialog
 import at.htlhl.chatnet.ui.features.mixed.ChatViewMessageComponent
 import at.htlhl.chatnet.ui.features.mixed.ChatViewTopBar
 import at.htlhl.chatnet.ui.features.mixed.InputField
+import at.htlhl.chatnet.util.firebase.markMessagesAsRead
+import at.htlhl.chatnet.util.firebase.updateBlockedUserList
+import at.htlhl.chatnet.util.firebase.updateMarkAsUnreadStatus
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import kotlinx.coroutines.delay
@@ -69,9 +73,10 @@ class RandChatView {
     @Composable
     fun RandChatScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val coroutineScope = rememberCoroutineScope()
-        val friendDataState =
-            sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
+        val friendDataState = sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
         val friendData: InternalChatInstance = friendDataState.value
+        val userDataState= sharedViewModel.user.collectAsState()
+        val userData:FirebaseUser = userDataState.value
         val context = LocalContext.current
         val pageState = rememberPagerState { 2 }
         if (pageState.currentPage == 1 && !pageState.isScrollInProgress) {
@@ -100,7 +105,8 @@ class RandChatView {
                             }
                         }
                         ChatViewScreen(
-                            chatPartner = friendData,
+                            userData = userData,
+                            friendData = friendData,
                             navController = navController,
                             sharedViewModel = sharedViewModel
                         )
@@ -118,14 +124,15 @@ class RandChatView {
 
     @Composable
     fun ChatViewScreen(
+        userData: FirebaseUser,
         navController: NavController,
         sharedViewModel: SharedViewModel,
-        chatPartner: InternalChatInstance
+        friendData: InternalChatInstance
     ) {
         val chatDataState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val chatData: List<FirebaseChat> = chatDataState.value
         val matchingChat = chatData.find { chat ->
-            chat.chatRoomID == chatPartner.chatRoomID
+            chat.chatRoomID == friendData.chatRoomID
         }
         val chatMateChat = matchingChat?.tab == "chatmate"
         val chatRoomId = matchingChat?.chatRoomID ?: ""
@@ -143,10 +150,15 @@ class RandChatView {
                 )
             }
         } ?: emptyList()
-        sharedViewModel.markMessagesAsRead(user = chatPartner)
-        sharedViewModel.updateMarkAsReadStatus(isAlreadyUnread = true)
+        markMessagesAsRead(friendData=friendData, userData=userData)
+        updateMarkAsUnreadStatus(
+            userData = userData,
+            friendData = friendData,
+            isAlreadyUnread = true
+        )
         ChatViewContentStructure(
-            chatPartner = chatPartner,
+            userData = userData,
+            chatPartner = friendData,
             sharedViewModel = sharedViewModel,
             messagesForChat = messageListFromMatchingChat,
             navController = navController,
@@ -157,6 +169,7 @@ class RandChatView {
 
     @Composable
     fun ChatViewContentStructure(
+        userData: FirebaseUser,
         chatPartner: InternalChatInstance,
         navController: NavController,
         messagesForChat: List<InternalMessageInstance>,
@@ -253,7 +266,10 @@ class RandChatView {
                 chatPartner = chatPartner,
             ) { value ->
                 if (value == "unblock") {
-                    sharedViewModel.updateBlockedUserList(true)
+                    updateBlockedUserList(
+                        userData= userData,
+                        friendData= chatPartner.personList,
+                        true)
                 }
                 unblockDialog = false
             }

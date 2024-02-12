@@ -19,7 +19,7 @@ import at.htlhl.chatnet.ui.views.CameraPhotoView
 import at.htlhl.chatnet.ui.views.CameraView
 import at.htlhl.chatnet.ui.views.ChatMateView
 import at.htlhl.chatnet.ui.features.chat.ChatView
-import at.htlhl.chatnet.ui.views.ChatsView
+import at.htlhl.chatnet.ui.features.chats.screens.ChatsView
 import at.htlhl.chatnet.ui.views.DropInView
 import at.htlhl.chatnet.ui.features.finduser.screens.FindUserView
 import at.htlhl.chatnet.ui.features.login_register.screens.ForgotPasswordView

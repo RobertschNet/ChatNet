@@ -21,6 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
+import at.htlhl.chatnet.data.PersonType
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.features.finduser.components.FindUserTopSearchBar
 import at.htlhl.chatnet.ui.features.finduser.components.FindUserBackLayerContent
@@ -51,7 +52,7 @@ class FindUserView {
         val friendListData: List<FirebaseUser> = friendListDataState
 
         val pendingFriendsList =
-            friendListData.filter { friend -> friend.statusFriend == "pending" }
+            friendListData.filter { friend -> friend.statusFriend == PersonType.PENDING_PERSON }
 
         val filteredSuggestedFriendList = suggestedFriendsList.filter { friend ->
             friendListData.none { it.id == friend.id } && friend.id != sharedViewModel.auth.currentUser?.uid.toString()

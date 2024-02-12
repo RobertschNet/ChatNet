@@ -50,27 +50,37 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import at.chatnet.R
-import at.htlhl.chatnet.data.BottomSheetItem
+import at.htlhl.chatnet.data.BigUserImageDismissState.*
+import at.htlhl.chatnet.data.BottomSheetTagState
+import at.htlhl.chatnet.data.ChatsChatItemClickState
 import at.htlhl.chatnet.data.CurrentTab
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.data.LocationUserInstance
+import at.htlhl.chatnet.data.PersonType
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.SaveImageTask
 import at.htlhl.chatnet.ui.features.dialogs.ClearChatDialog
 import at.htlhl.chatnet.ui.features.dialogs.DisableDropInDialog
 import at.htlhl.chatnet.ui.features.dialogs.ShowBigUserImageDialog
-import at.htlhl.chatnet.ui.features.mixed.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.features.mixed.ChatsViewChatItem
+import at.htlhl.chatnet.ui.features.mixed.TabsBottomSheetContent
 import at.htlhl.chatnet.ui.features.mixed.TabsTopBar
 import at.htlhl.chatnet.ui.theme.shimmerEffect
+import at.htlhl.chatnet.util.firebase.deleteAllChatMessages
+import at.htlhl.chatnet.util.firebase.markMessagesAsRead
+import at.htlhl.chatnet.util.firebase.updateBlockedUserList
+import at.htlhl.chatnet.util.firebase.updateMarkAsUnreadStatus
+import at.htlhl.chatnet.util.firebase.updateMuteFriendStatus
+import at.htlhl.chatnet.util.firebase.updatePinChatStatus
+import at.htlhl.chatnet.util.generateBottomSheetItems
 import at.htlhl.chatnet.util.highlightSearchedText
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 
@@ -86,12 +96,14 @@ class DropInView {
         val coroutineScope = rememberCoroutineScope()
         var showUserIconPrompt by remember { mutableStateOf(false) }
         var showClearChatPrompt by remember { mutableStateOf(false) }
-        val modelSheetState = remember { mutableStateOf(false) }
+        var modelSheetState by remember { mutableStateOf(false) }
         var disableDropInDialog by remember {
             mutableStateOf(
                 false
             )
         }
+        val dropInState by sharedViewModel.dropInState
+        var searchedValue = sharedViewModel.searchValue.value
         val chatDataState = sharedViewModel.chatData.collectAsState()
         val chatData: List<FirebaseChat> = chatDataState.value
         val dropInDataState = sharedViewModel.completeDropInList.collectAsState()
@@ -99,59 +111,51 @@ class DropInView {
         val friendDataState = sharedViewModel.friend.collectAsState()
         val userDataState = sharedViewModel.user.collectAsState()
         val userData: FirebaseUser = userDataState.value
-        val friend: InternalChatInstance = friendDataState.value
+        val friendData: InternalChatInstance = friendDataState.value
         val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
             localUser.id != sharedViewModel.auth.currentUser?.uid
         }
-        val completeDropInList =
-            if (sharedViewModel.searchValue.value != "") dropInData.filter {
-                it.personList.username["mixedcase"]?.contains(
-                    sharedViewModel.searchValue.value,
-                    ignoreCase = true
-                ) ?: false
-                        ||
-                        it.lastMessage.text.contains(
-                            sharedViewModel.searchValue.value,
-                            ignoreCase = true
-                        )
-            } else dropInData
+        val completeDropInList = if (sharedViewModel.searchValue.value != "") dropInData.filter {
+            it.personList.username["mixedcase"]?.contains(
+                sharedViewModel.searchValue.value, ignoreCase = true
+            ) ?: false || it.lastMessage.text.contains(
+                sharedViewModel.searchValue.value, ignoreCase = true
+            )
+        } else dropInData
         val completeLocalChatUsers =
             if (sharedViewModel.searchValue.value != "") localChatUsers.filter {
                 it.username["mixedcase"]?.contains(
-                    sharedViewModel.searchValue.value,
-                    ignoreCase = true
-                ) ?: false
-                        ||
-                        it.location.contains(sharedViewModel.searchValue.value, ignoreCase = true)
+                    sharedViewModel.searchValue.value, ignoreCase = true
+                ) ?: false || it.location.contains(
+                    sharedViewModel.searchValue.value, ignoreCase = true
+                )
             } else localChatUsers
 
         val localChatUser = sharedViewModel.localChatUserList.value.find { localUser ->
             localUser.id == sharedViewModel.auth.currentUser?.uid
         }
         val userInSearchValue = java.lang.String("You").contains(
-            sharedViewModel.searchValue.value,
-            ignoreCase = true
+            sharedViewModel.searchValue.value, ignoreCase = true
         ) || localChatUser!!.location.contains(sharedViewModel.searchValue.value, ignoreCase = true)
 
         val updatedLocalChatUsers: List<InternalChatInstance> = localChatUsers.map { person ->
             val matchingChat = chatData.find { chat ->
                 chat.members.contains(person.id)
             }
-            InternalChatInstance(
-                personList = FirebaseUser(
-                    blocked = person.blocked,
-                    email = "",
-                    pinned = listOf(),
-                    color = "",
-                    connected = false,
-                    muted = person.muted,
-                    statusFriend = "",
-                    image = person.image,
-                    username = person.username,
-                    online = person.online,
-                    id = person.id,
-                    tags = listOf()
-                ),
+            InternalChatInstance(personList = FirebaseUser(
+                blocked = person.blocked,
+                email = "",
+                pinned = listOf(),
+                color = "",
+                connected = false,
+                muted = person.muted,
+                statusFriend = PersonType.EMPTY_PERSON,
+                image = person.image,
+                username = person.username,
+                online = person.online,
+                id = person.id,
+                tags = listOf()
+            ),
                 timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
                     ?: Timestamp.now(),
                 lastMessage = matchingChat?.messages?.lastOrNull() ?: InternalMessageInstance(),
@@ -159,41 +163,20 @@ class DropInView {
                 pinChat = false,
                 chatRoomID = matchingChat?.chatRoomID ?: "",
                 read = matchingChat?.messages?.count { it.sender != sharedViewModel.auth.currentUser?.uid.toString() && !it.read }
-                    ?: 0
-            )
+                    ?: 0)
         }
-        val bottomSheetItems = listOf(
-            BottomSheetItem(
-                title = if (friend.markedAsUnread || friend.read > 0) "Mark as Read" else "Mark as Unread",
-                icon = if (friend.markedAsUnread || friend.read > 0) R.drawable.chat_bubble_svgrepo_com else R.drawable.chat_bubble_outline_badged_svgrepo_com,
-                tag = "unread"
-            ),
-            BottomSheetItem(
-                title = "Clear Chat", icon = R.drawable.comment_delete_svgrepo_com, tag = "clear"
-            ),
-            BottomSheetItem(
-                title = if (userData.muted.contains(friend.personList.id)) "Unmute User" else "Mute User",
-                icon = if (userData.muted.contains(friend.personList.id)) R.drawable.speaker_none_svgrepo_com else R.drawable.speaker_svgrepo_com,
-                tag = "mute"
-            ),
-            BottomSheetItem(
-                title = if (friend.pinChat) "Unpin Chat" else "Pin Chat",
-                icon = if (friend.pinChat) R.drawable.pin_off_svgrepo_com else R.drawable.pin_svgrepo_com,
-                tag = "pin"
-            ),
+        val bottomSheetItems = generateBottomSheetItems(
+            isChatMate = false, friendData = friendData, userData = userData
         )
-        Scaffold(
-            backgroundColor = MaterialTheme.colorScheme.background,
-            modifier = Modifier
-                .fillMaxSize(),
+        Scaffold(backgroundColor = MaterialTheme.colorScheme.background,
+            modifier = Modifier.fillMaxSize(),
             topBar = {
-                TabsTopBar(
-                    tab = CurrentTab.DROPIN,
-                    availableUsers = listOf(FirebaseUser()),
-                    sharedViewModel = sharedViewModel,
-                ) {
+                TabsTopBar(tab = CurrentTab.DROPIN, dropInState = dropInState, onActionClicked = {
                     disableDropInDialog = true
-                }
+
+                }, onUpdateSearchValue = {
+                    sharedViewModel.searchValue.value = it
+                })
             },
             content = {
                 Column(modifier = Modifier.fillMaxSize()) {
@@ -209,8 +192,7 @@ class DropInView {
                         )
                     }
                     Spacer(modifier = Modifier.height(10.dp))
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(5.dp),
                         modifier = Modifier.fillMaxWidth(),
                         content = {
                             item {
@@ -222,15 +204,13 @@ class DropInView {
                             }
                             items(completeLocalChatUsers) { chat ->
                                 GPSChatList(
-                                    chat = chat,
-                                    sharedViewModel = sharedViewModel
+                                    chat = chat, sharedViewModel = sharedViewModel
                                 ) { locationUserInstance ->
                                     updatedLocalChatUsers.find { it.personList.id == locationUserInstance.id }
                                         ?.let {
                                             if (it.chatRoomID.isEmpty()) {
                                                 sharedViewModel.saveChatRoom(
-                                                    person = it.personList.id,
-                                                    tab = "dropin"
+                                                    person = it.personList.id, tab = "dropin"
                                                 ) { newChat ->
                                                     sharedViewModel.updateFriend(
                                                         InternalChatInstance(
@@ -254,8 +234,7 @@ class DropInView {
 
                                 }
                             }
-                        }
-                    )
+                        })
                     if (dropInData.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(40.dp))
                         Row {
@@ -270,28 +249,31 @@ class DropInView {
                         }
                     }
                     LazyColumn(
-                        Modifier
-                            .fillMaxSize(),
-                        state = lazyListState
+                        Modifier.fillMaxSize(), state = lazyListState
                     ) {
                         items(completeDropInList) { chat ->
                             ChatsViewChatItem(
-                                chatFriend = chat,
-                                chatUser = userData,
+                                friendElement = chat,
+                                userData = userData,
                                 displayOnlineState = true,
-                                sharedViewModel = sharedViewModel,
-                            ) { context, selectedChat ->
-                                sharedViewModel.updateFriend(selectedChat) {
+                                searchedValue = searchedValue,
+                            ) { context ->
+                                sharedViewModel.updateFriend(chat) {
                                     when (context) {
-                                        "image" -> {
+                                        ChatsChatItemClickState.IMAGE -> {
                                             showUserIconPrompt = true
                                         }
 
-                                        "message" -> {
-                                            modelSheetState.value = true
+                                        ChatsChatItemClickState.CONTEXT_MENU-> {
+                                            modelSheetState = true
                                         }
 
-                                        "navigate" -> {
+                                        ChatsChatItemClickState.MESSAGE -> {
+                                            coroutineScope.launch {
+                                                delay(500)
+                                                markMessagesAsRead(userData = userData, friendData = friendData)
+                                                updateMarkAsUnreadStatus(userData = userData, friendData = friendData, isAlreadyUnread = true)
+                                            }
                                             navController.navigate(Screens.ChatViewScreen.route)
                                         }
                                     }
@@ -302,43 +284,53 @@ class DropInView {
                 }
                 if (disableDropInDialog) {
                     DisableDropInDialog(
-                        dropInOn = !sharedViewModel.gpsState.value,
+                        dropInOn = !sharedViewModel.dropInState.value,
                         onClose = { action ->
                             if (action == "changed") {
-                                sharedViewModel.gpsState.value = !sharedViewModel.gpsState.value
+                                sharedViewModel.dropInState.value =
+                                    !sharedViewModel.dropInState.value
                             }
                             disableDropInDialog = false
-                        })
+                        }
+                    )
                 }
-            }
-        )
+            })
         if (showUserIconPrompt) {
-            ShowBigUserImageDialog(
-                sharedViewModel = sharedViewModel,
-                userData = friend,
+            ShowBigUserImageDialog(userData = userData,
+                friendData = friendData,
                 onDismiss = { action ->
                     when (action) {
-                        "message" -> {
-                            navController.navigate(Screens.ChatViewScreen.route)
+                        INFO -> {
+                            navController.navigate(Screens.ProfileInfoScreen.route)
                         }
 
-                        "block" -> {
-                            sharedViewModel.updateBlockedUserList(
-                                sharedViewModel.user.value.blocked.contains(
-                                    sharedViewModel.friend.value.personList.id
+                        BLOCK -> {
+                            updateBlockedUserList(
+                                userData = userData,
+                                friendData = friendData.personList,
+                                isAlreadyBlocked = userData.blocked.contains(
+                                    friendData.personList.id
                                 )
                             )
                         }
 
-                        "image" -> {
+                        MESSAGE -> {
+                            markMessagesAsRead(userData = userData, friendData = friendData)
+                            updateMarkAsUnreadStatus(
+                                userData = userData, friendData = friendData, isAlreadyUnread = true
+                            )
+                            navController.navigate(Screens.ChatViewScreen.route)
+                        }
+
+                        IMAGE -> {
                             coroutineScope.launch {
                                 SaveImageTask(WeakReference(context)).saveImage(sharedViewModel.friend.value.personList.image)
                             }
                         }
 
-                        "info" -> {
-                            navController.navigate(Screens.ProfileInfoScreen.route)
+                        else -> {
                         }
+
                     }
                     showUserIconPrompt = false
                 })
@@ -346,57 +338,82 @@ class DropInView {
         if (showClearChatPrompt) {
             ClearChatDialog(onDismiss = { clear ->
                 if (clear == "clear") {
-                    sharedViewModel.deleteMessagesForUser(friend.chatRoomID)
+                    deleteAllChatMessages(
+                        userData = userData, friendData = friendData
+                    )
                 }
                 showClearChatPrompt = false
             })
         }
-        if (modelSheetState.value) {
-            ModalBottomSheet(
-                windowInsets = WindowInsets(0, 0, 0, 0),
-                onDismissRequest = {
-                    modelSheetState.value = false
-                }, dragHandle = null, content = {
-                    ChatsViewBottomSheetContent(
-                        bottomSheetItems,
-                        onItemClicked = { item ->
-                            modelSheetState.value = false
-                            when (item.tag) {
-                                "unread" -> {
-                                    if (friend.read > 0) {
-                                        sharedViewModel.markMessagesAsRead(sharedViewModel.friend.value)
-                                    } else if (sharedViewModel.friend.value.markedAsUnread && sharedViewModel.friend.value.read == 0) {
-                                        sharedViewModel.updateMarkAsReadStatus(true)
-                                    } else {
-                                        sharedViewModel.updateMarkAsReadStatus(false)
-                                    }
-                                }
-
-                                "clear" -> {
-                                    showClearChatPrompt = true
-                                }
-
-                                "mute" -> {
-                                    if (userData.muted.contains(friend.personList.id)) {
-                                        sharedViewModel.updateMuteFriendStatus(true)
-                                    } else {
-                                        sharedViewModel.updateMuteFriendStatus(false)
-                                    }
-                                }
-
-                                "pin" -> {
-                                    if (friend.pinChat) {
-                                        sharedViewModel.updatePinChatStatus(true)
-                                    } else {
-                                        sharedViewModel.updatePinChatStatus(false)
-                                    }
+        if (modelSheetState) {
+            ModalBottomSheet(windowInsets = WindowInsets(0, 0, 0, 0), onDismissRequest = {
+                modelSheetState = false
+            }, dragHandle = null, content = {
+                TabsBottomSheetContent(
+                    friendData = friendData,
+                    bottomSheetItems = bottomSheetItems,
+                    onItemClicked = { item ->
+                        modelSheetState = false
+                        when (item) {
+                            BottomSheetTagState.UNREAD -> {
+                                if (friendData.read > 0) {
+                                    markMessagesAsRead(friendData = friendData, userData = userData)
+                                } else if (sharedViewModel.friend.value.markedAsUnread && sharedViewModel.friend.value.read == 0) {
+                                    updateMarkAsUnreadStatus(
+                                        userData = userData,
+                                        friendData = friendData,
+                                        isAlreadyUnread = true
+                                    )
+                                } else {
+                                    updateMarkAsUnreadStatus(
+                                        userData = userData,
+                                        friendData = friendData,
+                                        isAlreadyUnread = false
+                                    )
                                 }
                             }
-                        },
-                        friend = friend,
-                    )
-                }
-            )
+
+                            BottomSheetTagState.CLEAR -> {
+                                showClearChatPrompt = true
+                            }
+
+                            BottomSheetTagState.MUTE -> {
+                                if (userData.muted.contains(friendData.personList.id)) {
+                                    updateMuteFriendStatus(
+                                        userData = userData,
+                                        friendData = friendData.personList,
+                                        isAlreadyMuted = true
+                                    )
+                                } else {
+                                    updateMuteFriendStatus(
+                                        userData = userData,
+                                        friendData = friendData.personList,
+                                        isAlreadyMuted = false
+                                    )
+                                }
+                            }
+
+                            BottomSheetTagState.PIN -> {
+                                if (friendData.pinChat) {
+                                    updatePinChatStatus(
+                                        userData = userData,
+                                        friend = friendData,
+                                        isAlreadyPinned = true
+                                    )
+                                } else {
+                                    updatePinChatStatus(
+                                        userData = userData,
+                                        friend = friendData,
+                                        isAlreadyPinned = false
+                                    )
+                                }
+                            }
+
+                            else -> {}
+                        }
+                    },
+                )
+            })
         }
     }
 
@@ -414,12 +431,9 @@ class DropInView {
             verticalArrangement = Arrangement.Center
         ) {
             Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .width(80.dp)
+                contentAlignment = Alignment.Center, modifier = Modifier.width(80.dp)
             ) {
-                SubcomposeAsyncImage(
-                    contentScale = ContentScale.Crop,
+                SubcomposeAsyncImage(contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .clickable { onItemClicked.invoke(chat) }
                         .align(Alignment.Center)
@@ -427,8 +441,7 @@ class DropInView {
                         .clip(CircleShape)
                         .shimmerEffect(),
                     model = chat.image,
-                    contentDescription = null
-                )
+                    contentDescription = null)
                 Box(
                     modifier = Modifier
                         .offset((-5).dp)
@@ -439,9 +452,7 @@ class DropInView {
                                 colors = listOf(
                                     MaterialTheme.colorScheme.background,
                                     MaterialTheme.colorScheme.background
-                                ),
-                                start = Offset(0f, 0f),
-                                end = Offset(14.dp.value, 14.dp.value)
+                                ), start = Offset(0f, 0f), end = Offset(14.dp.value, 14.dp.value)
                             )
                         )
                         .align(Alignment.BottomEnd)
@@ -488,8 +499,7 @@ class DropInView {
             }
             Text(
                 text = highlightSearchedText(
-                    chat.username["mixedcase"].toString(),
-                    sharedViewModel.searchValue.value
+                    chat.username["mixedcase"].toString(), sharedViewModel.searchValue.value
                 ),
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -502,8 +512,7 @@ class DropInView {
             )
             Text(
                 text = highlightSearchedText(
-                    chat.location,
-                    sharedViewModel.searchValue.value
+                    chat.location, sharedViewModel.searchValue.value
                 ),
                 color = MaterialTheme.colorScheme.secondary,
                 fontSize = 12.sp,
@@ -528,9 +537,7 @@ class DropInView {
             verticalArrangement = Arrangement.Center
         ) {
             Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .width(80.dp)
+                contentAlignment = Alignment.Center, modifier = Modifier.width(80.dp)
             ) {
                 SubcomposeAsyncImage(
                     contentScale = ContentScale.Crop,
@@ -552,9 +559,7 @@ class DropInView {
                                 colors = listOf(
                                     MaterialTheme.colorScheme.background,
                                     MaterialTheme.colorScheme.background
-                                ),
-                                start = Offset(0f, 0f),
-                                end = Offset(14.dp.value, 14.dp.value)
+                                ), start = Offset(0f, 0f), end = Offset(14.dp.value, 14.dp.value)
                             )
                         )
                         .align(Alignment.BottomEnd)
@@ -613,8 +618,7 @@ class DropInView {
             )
             Text(
                 text = highlightSearchedText(
-                    localChatUser?.location ?: "Unknown",
-                    sharedViewModel.searchValue.value
+                    localChatUser?.location ?: "Unknown", sharedViewModel.searchValue.value
                 ),
                 color = MaterialTheme.colorScheme.secondary,
                 fontSize = 12.sp,

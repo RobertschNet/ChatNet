@@ -23,8 +23,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
-import at.chatnet.R
-import at.htlhl.chatnet.data.BottomSheetItem
+import at.htlhl.chatnet.data.BigUserImageDismissState.*
+import at.htlhl.chatnet.data.BottomSheetTagState
+import at.htlhl.chatnet.data.ChatsChatItemClickState
 import at.htlhl.chatnet.data.CurrentTab
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
@@ -32,10 +33,17 @@ import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.SaveImageTask
 import at.htlhl.chatnet.ui.features.dialogs.ClearChatDialog
 import at.htlhl.chatnet.ui.features.dialogs.ShowBigUserImageDialog
-import at.htlhl.chatnet.ui.features.mixed.ChatsViewBottomSheetContent
 import at.htlhl.chatnet.ui.features.mixed.ChatsViewChatItem
+import at.htlhl.chatnet.ui.features.mixed.TabsBottomSheetContent
 import at.htlhl.chatnet.ui.features.mixed.TabsTopBar
+import at.htlhl.chatnet.util.firebase.deleteAllChatMessages
+import at.htlhl.chatnet.util.firebase.deleteChatRoom
+import at.htlhl.chatnet.util.firebase.markMessagesAsRead
+import at.htlhl.chatnet.util.firebase.updateMarkAsUnreadStatus
+import at.htlhl.chatnet.util.firebase.updatePinChatStatus
+import at.htlhl.chatnet.util.generateBottomSheetItems
 import at.htlhl.chatnet.viewmodels.SharedViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 
@@ -48,93 +56,71 @@ class ChatMateView {
     @Composable
     fun ChatMateScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val lazyListState = rememberLazyListState()
-        val modelSheetState = remember { mutableStateOf(false) }
+        var modelSheetState by remember { mutableStateOf(false) }
         var showUserIconPrompt by remember { mutableStateOf(false) }
         val context = LocalContext.current
+        val dropInState by sharedViewModel.dropInState
+        val searchedValue by sharedViewModel.searchValue
         val coroutineScope = rememberCoroutineScope()
         val messageChatRoomDataState = sharedViewModel.completeChatMateList.collectAsState()
         val messageChatRoomData: List<InternalChatInstance> = messageChatRoomDataState.value
         val friendState = sharedViewModel.friend.collectAsState()
-        val friend: InternalChatInstance = friendState.value
+        val friendData: InternalChatInstance = friendState.value
         val userState = sharedViewModel.user.collectAsState()
-        val user: FirebaseUser = userState.value
+        val userData: FirebaseUser = userState.value
         var showClearChatPrompt by remember { mutableStateOf(false) }
         val completeMessageChatRoomData =
             if (sharedViewModel.searchValue.value != "") messageChatRoomData.filter {
                 it.personList.username["mixedcase"]?.contains(
-                    sharedViewModel.searchValue.value,
-                    ignoreCase = true
-                ) ?: false
-                        ||
-                        it.lastMessage.text.contains(
-                            sharedViewModel.searchValue.value,
-                            ignoreCase = true
-                        )
+                    sharedViewModel.searchValue.value, ignoreCase = true
+                ) ?: false || it.lastMessage.text.contains(
+                    sharedViewModel.searchValue.value, ignoreCase = true
+                )
             } else messageChatRoomData
-        val bottomSheetItems = listOf(
-            BottomSheetItem(
-                title = if (friend.markedAsUnread || friend.read > 0) "Mark as Read" else "Mark as Unread",
-                icon = if (friend.markedAsUnread || friend.read > 0) R.drawable.chat_bubble_svgrepo_com else R.drawable.chat_bubble_outline_badged_svgrepo_com,
-                tag = "unread"
-            ),
-            BottomSheetItem(
-                title = "Clear Chat", icon = R.drawable.comment_delete_svgrepo_com, tag = "clear"
-            ),
-            BottomSheetItem(
-                title = if (friend.pinChat) "Unpin Chat" else "Pin Chat",
-                icon = if (friend.pinChat) R.drawable.pin_off_svgrepo_com else R.drawable.pin_svgrepo_com,
-                tag = "pin"
-            ),
-            BottomSheetItem(
-                title = "Delete Chat",
-                icon = R.drawable.garbage_bin_recycle_bin_svgrepo_com,
-                tag = "delete"
-            ),
+        val bottomSheetItems = generateBottomSheetItems(
+            isChatMate = true, friendData = friendData, userData = userData
         )
         Scaffold(
             backgroundColor = MaterialTheme.colorScheme.background,
             modifier = Modifier.fillMaxSize(),
             topBar = {
-                TabsTopBar(
-                    tab = CurrentTab.CHATMATE,
-                    sharedViewModel = sharedViewModel,
-                    availableUsers = listOf(FirebaseUser()),
-                ) {
-                    sharedViewModel.createChatMateChat(
-                        onError = {
-                            Toast.makeText(
-                                context,
-                                "Only one empty chat is allowed at a time.",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    )
-                }
+                TabsTopBar(tab = CurrentTab.CHATMATE, dropInState = dropInState, onActionClicked = {
+                    sharedViewModel.createChatMateChat(onError = {
+                        Toast.makeText(
+                            context, "Only one empty chat is allowed at a time.", Toast.LENGTH_SHORT
+                        ).show()
+                    })
+                }, onUpdateSearchValue = {
+                    sharedViewModel.searchValue.value = it
+                })
             },
             content = {
                 LazyColumn(
-                    Modifier
-                        .fillMaxSize(),
-                    state = lazyListState
+                    Modifier.fillMaxSize(), state = lazyListState
                 ) {
                     items(completeMessageChatRoomData) { message ->
                         ChatsViewChatItem(
-                            chatFriend = message,
-                            chatUser = user,
+                            friendElement = message,
+                            userData = userData,
                             displayOnlineState = false,
-                            sharedViewModel = sharedViewModel,
-                        ) { context,selectedChat ->
-                            sharedViewModel.updateFriend(selectedChat){
+                            searchedValue = searchedValue
+                        ) { context ->
+                            sharedViewModel.updateFriend(message) {
                                 when (context) {
-                                    "image" -> {
+                                    ChatsChatItemClickState.IMAGE -> {
                                         showUserIconPrompt = true
                                     }
 
-                                    "message" -> {
-                                        modelSheetState.value = true
+                                   ChatsChatItemClickState.CONTEXT_MENU -> {
+                                        modelSheetState = true
                                     }
 
-                                    "navigate" -> {
+                                    ChatsChatItemClickState.MESSAGE -> {
+                                        coroutineScope.launch {
+                                            delay(500)
+                                            markMessagesAsRead(userData = userData, friendData = friendData)
+                                            updateMarkAsUnreadStatus(userData = userData, friendData = friendData, isAlreadyUnread = true)
+                                        }
                                         navController.navigate(Screens.ChatViewScreen.route)
                                     }
                                 }
@@ -146,84 +132,114 @@ class ChatMateView {
         )
         if (showUserIconPrompt) {
             ShowBigUserImageDialog(
-                sharedViewModel = sharedViewModel,
-                userData = friend,
+                userData = userData,
+                friendData = friendData,
                 onDismiss = { action ->
                     when (action) {
-                        "message" -> {
+                        INFO -> {
+                            navController.navigate(Screens.ProfileInfoScreen.route)
+
+                        }
+
+                        MESSAGE -> {
+                            markMessagesAsRead(userData = userData, friendData = friendData)
+                            updateMarkAsUnreadStatus(
+                                userData = userData,
+                                friendData = friendData,
+                                isAlreadyUnread = true
+                            )
                             navController.navigate(Screens.ChatViewScreen.route)
                         }
 
-                        "delete" -> {
-                            sharedViewModel.deleteChatRoom()
-
-                        }
-
-                        "image" -> {
+                        IMAGE -> {
                             coroutineScope.launch {
                                 SaveImageTask(WeakReference(context)).saveImage(sharedViewModel.friend.value.personList.image)
                             }
                         }
 
-                        "info" -> {
-                            navController.navigate(Screens.ProfileInfoScreen.route)
+                        DELETE -> {
+                            deleteChatRoom(friendData = friendData)
+                        }
+
+                        else -> {
                         }
                     }
                     showUserIconPrompt = false
-                }
-            )
+                })
         }
         if (showClearChatPrompt) {
             ClearChatDialog(onDismiss = { clear ->
                 if (clear == "clear") {
-                    sharedViewModel.deleteMessagesForUser(friend.chatRoomID)
+                    deleteAllChatMessages(
+                        userData = userData, friendData = friendData
+                    )
                 }
                 showClearChatPrompt = false
             })
         }
-        if (modelSheetState.value) {
-            ModalBottomSheet(
-                containerColor = MaterialTheme.colorScheme.background,
+        if (modelSheetState) {
+            ModalBottomSheet(containerColor = MaterialTheme.colorScheme.background,
                 windowInsets = WindowInsets(0, 0, 0, 0),
-                onDismissRequest = { modelSheetState.value = false },
+                onDismissRequest = { modelSheetState = false },
                 dragHandle = null,
                 content = {
-                    ChatsViewBottomSheetContent(
-                        bottomSheetItems,
+                    TabsBottomSheetContent(
+                        friendData = friendData,
+                        bottomSheetItems = bottomSheetItems,
                         onItemClicked = { item ->
-                            modelSheetState.value = false
-                            when (item.tag) {
-                                "unread" -> {
-                                    if (sharedViewModel.friend.value.read > 0) {
-                                        sharedViewModel.markMessagesAsRead(sharedViewModel.friend.value)
-                                    } else if (sharedViewModel.friend.value.markedAsUnread && sharedViewModel.friend.value.read == 0) {
-                                        sharedViewModel.updateMarkAsReadStatus(true)
+                            modelSheetState = false
+                            when (item) {
+                                BottomSheetTagState.UNREAD -> {
+                                    if (friendData.read > 0) {
+                                        markMessagesAsRead(
+                                            friendData = friendData,
+                                            userData = userData
+                                        )
+                                    } else if (friendData.markedAsUnread && friendData.read == 0) {
+                                        updateMarkAsUnreadStatus(
+                                            userData = userData,
+                                            friendData = friendData,
+                                            isAlreadyUnread = true
+                                        )
                                     } else {
-                                        sharedViewModel.updateMarkAsReadStatus(false)
+                                        updateMarkAsUnreadStatus(
+                                            userData = userData,
+                                            friendData = friendData,
+                                            isAlreadyUnread = false
+                                        )
                                     }
                                 }
 
-                                "clear" -> {
+                                BottomSheetTagState.CLEAR -> {
                                     showClearChatPrompt = true
                                 }
 
-                                "delete" -> {
-                                    sharedViewModel.deleteChatRoom()
+                                BottomSheetTagState.DELETE -> {
+                                    deleteChatRoom(friendData = friendData)
                                 }
 
-                                "pin" -> {
-                                    if (sharedViewModel.friend.value.pinChat) {
-                                        sharedViewModel.updatePinChatStatus(true)
+                                BottomSheetTagState.PIN -> {
+                                    if (friendData.pinChat) {
+                                        updatePinChatStatus(
+                                            userData = userData,
+                                            friend = friendData,
+                                            isAlreadyPinned = true
+                                        )
                                     } else {
-                                        sharedViewModel.updatePinChatStatus(false)
+                                        updatePinChatStatus(
+                                            userData = userData,
+                                            friend = friendData,
+                                            isAlreadyPinned = false
+                                        )
                                     }
+                                }
+
+                                else -> {
                                 }
                             }
                         },
-                        friend = friend,
                     )
-                }
-            )
+                })
         }
     }
 }

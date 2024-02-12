@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.chatnet.R
 import at.htlhl.chatnet.data.BottomSheetItem
+import at.htlhl.chatnet.data.BottomSheetTagState
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.ui.theme.shimmerEffect
 import coil.compose.SubcomposeAsyncImage
@@ -41,10 +42,10 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 
 @Composable
-fun ChatsViewBottomSheetContent(
+fun TabsBottomSheetContent(
+    friendData: InternalChatInstance,
     bottomSheetItems: List<BottomSheetItem>,
-    onItemClicked: (BottomSheetItem) -> Unit,
-    friend: InternalChatInstance
+    onItemClicked: (BottomSheetTagState) -> Unit
 ) {
     Column(
         content = {
@@ -65,7 +66,7 @@ fun ChatsViewBottomSheetContent(
             Row {
                 SubcomposeAsyncImage(
                     contentDescription = null,
-                    model = friend.personList.image,
+                    model = friendData.personList.image,
                     modifier = Modifier
                         .clip(CircleShape)
                         .size(40.dp)
@@ -74,7 +75,7 @@ fun ChatsViewBottomSheetContent(
                     alignment = Alignment.Center,
                 )
                 Text(
-                    text = friend.personList.username["mixedcase"].toString(),
+                    text = friendData.personList.username["mixedcase"].toString(),
                     modifier = Modifier
                         .padding(start = 16.dp)
                         .align(Alignment.CenterVertically)
@@ -99,7 +100,7 @@ fun ChatsViewBottomSheetContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                onItemClicked.invoke(bottomSheetItems[it])
+                                onItemClicked(bottomSheetItems[it].tag)
                             },
                     ) {
                         Image(

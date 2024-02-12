@@ -27,20 +27,18 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.chatnet.R
+import at.htlhl.chatnet.data.ChatsChatItemClickState
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.ui.theme.shimmerEffect
+import at.htlhl.chatnet.util.firebase.updateMarkAsUnreadStatus
 import at.htlhl.chatnet.util.highlightSearchedText
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -50,46 +48,49 @@ import java.util.Locale
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatsViewChatItem(
-    chatFriend: InternalChatInstance,
-    chatUser: FirebaseUser,
+    friendElement: InternalChatInstance,
+    userData: FirebaseUser,
+    searchedValue: String,
     displayOnlineState: Boolean,
-    sharedViewModel: SharedViewModel,
-    onClick: (String, InternalChatInstance) -> Unit
+    onClick: (ChatsChatItemClickState) -> Unit
 ) {
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
-    val formattedTime: String = formatter.format(chatFriend.timestampMessage.toDate())
-    if (chatFriend.read > 0) {
-        sharedViewModel.updateMarkAsReadStatus(true)
+    val formattedTime: String = formatter.format(friendElement.timestampMessage.toDate())
+    if (friendElement.read > 0) {
+        updateMarkAsUnreadStatus(
+            userData = userData,
+            friendData = friendElement,
+            isAlreadyUnread = true
+        )
     }
     Row(
         modifier =
         Modifier
             .combinedClickable(
                 onClick = {
-                    onClick.invoke("navigate", chatFriend)
+                    onClick.invoke(ChatsChatItemClickState.MESSAGE)
                 },
                 onLongClick = {
-                    onClick.invoke("message", chatFriend)
+                    onClick.invoke(ChatsChatItemClickState.CONTEXT_MENU)
                 },
             )
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
             .padding(top = 10.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
     ) {
-        val isOnline = chatFriend.personList.online
         Box(
             modifier = Modifier.size(50.dp)
         ) {
-            if (!chatFriend.personList.blocked.contains(sharedViewModel.auth.currentUser?.uid.toString())) {
+            if (!friendElement.personList.blocked.contains(userData.id)) {
                 SubcomposeAsyncImage(
                     contentDescription = null,
-                    model = chatFriend.personList.image,
+                    model = friendElement.personList.image,
                     modifier = Modifier
                         .clip(CircleShape)
                         .size(50.dp)
                         .shimmerEffect()
                         .clickable {
-                            onClick.invoke("image", chatFriend)
+                            onClick.invoke(ChatsChatItemClickState.IMAGE)
                         },
                     contentScale = ContentScale.Crop,
                     alignment = Alignment.Center,
@@ -102,7 +103,7 @@ fun ChatsViewChatItem(
                         .clip(CircleShape)
                         .size(50.dp)
                         .clickable {
-                            onClick.invoke("image", chatFriend)
+                            onClick.invoke(ChatsChatItemClickState.IMAGE)
                         },
                     contentScale = ContentScale.Crop,
                     alignment = Alignment.Center,
@@ -125,7 +126,7 @@ fun ChatsViewChatItem(
                         )
                         .align(Alignment.BottomEnd)
                 ) {
-                    if (isOnline) {
+                    if (friendElement.personList.online) {
                         Box(
                             modifier = Modifier
                                 .size(14.dp)
@@ -174,8 +175,8 @@ fun ChatsViewChatItem(
             ) {
                 Text(
                     text = highlightSearchedText(
-                        chatFriend.personList.username["mixedcase"].toString(),
-                        sharedViewModel.searchValue.value
+                        friendElement.personList.username["mixedcase"].toString(),
+                        searchedValue
                     ),
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
@@ -187,17 +188,17 @@ fun ChatsViewChatItem(
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = if (chatUser.blocked.contains(chatFriend.personList.id)) "" else formattedTime,
+                    text = if (userData.blocked.contains(friendElement.personList.id)) "" else formattedTime,
                     fontWeight = FontWeight.Light,
-                    fontSize = if (chatFriend.read > 0) 13.sp else 12.sp,
-                    color = if (chatFriend.read > 0) Color(0xFF00A0E8) else MaterialTheme.colorScheme.secondary,
+                    fontSize = if (friendElement.read > 0) 13.sp else 12.sp,
+                    color = if (friendElement.read > 0) Color(0xFF00A0E8) else MaterialTheme.colorScheme.secondary,
                 )
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                if (chatUser.blocked.contains(chatFriend.personList.id)) {
+                if (userData.blocked.contains(friendElement.personList.id)) {
                     Text(
                         modifier = Modifier
                             .align(Alignment.CenterVertically)
@@ -211,9 +212,9 @@ fun ChatsViewChatItem(
                     )
                 } else {
                     val messageContent =
-                        if (chatFriend.lastMessage.text.isEmpty() && chatFriend.lastMessage.images.isNotEmpty()) "Image" else chatFriend.lastMessage.text
+                        if (friendElement.lastMessage.text.isEmpty() && friendElement.lastMessage.images.isNotEmpty()) "Image" else friendElement.lastMessage.text
                     val senderPrefix =
-                        if (chatFriend.lastMessage.sender != sharedViewModel.auth.currentUser?.uid.toString()) "" else "Me: "
+                        if (friendElement.lastMessage.sender != userData.id) "" else "Me: "
                     if (messageContent.isNotEmpty()) {
                         Text(
                             modifier = Modifier
@@ -223,16 +224,16 @@ fun ChatsViewChatItem(
                             overflow = TextOverflow.Ellipsis,
                             maxLines = 1,
                             fontSize = 15.sp,
-                            color = if (chatFriend.read > 0 && !chatFriend.lastMessage.read && chatFriend.lastMessage.sender != sharedViewModel.auth.currentUser?.uid || chatFriend.markedAsUnread) Color(
+                            color = if (friendElement.read > 0 && !friendElement.lastMessage.read && friendElement.lastMessage.sender != userData.id || friendElement.markedAsUnread) Color(
                                 0xFF00A0E8
                             ) else MaterialTheme.colorScheme.secondary,
                         )
 
-                        if (chatFriend.lastMessage.images.isNotEmpty()) {
+                        if (friendElement.lastMessage.images.isNotEmpty()) {
                             Image(
                                 imageVector = Icons.Default.Image,
                                 colorFilter = ColorFilter.tint(
-                                    if (chatFriend.read > 0 && !chatFriend.lastMessage.read && chatFriend.lastMessage.sender != sharedViewModel.auth.currentUser?.uid || chatFriend.markedAsUnread) Color(
+                                    if (friendElement.read > 0 && !friendElement.lastMessage.read && friendElement.lastMessage.sender != userData.id || friendElement.markedAsUnread) Color(
                                         0xFF00A0E8
                                     ) else MaterialTheme.colorScheme.secondary
                                 ),
@@ -249,17 +250,17 @@ fun ChatsViewChatItem(
                             .weight(1f),
                         text = highlightSearchedText(
                             messageContent,
-                            sharedViewModel.searchValue.value
+                            searchedValue
                         ),
                         overflow = TextOverflow.Ellipsis,
                         maxLines = 1,
                         fontSize = 15.sp,
-                        color = if (chatFriend.read > 0 && !chatFriend.lastMessage.read && chatFriend.lastMessage.sender != sharedViewModel.auth.currentUser?.uid || chatFriend.markedAsUnread) Color(
+                        color = if (friendElement.read > 0 && !friendElement.lastMessage.read && friendElement.lastMessage.sender != userData.id || friendElement.markedAsUnread) Color(
                             0xFF00A0E8
                         ) else MaterialTheme.colorScheme.secondary,
                     )
                 }
-                if (chatUser.muted.contains(chatFriend.personList.id)) {
+                if (userData.muted.contains(friendElement.personList.id)) {
                     SubcomposeAsyncImage(
                         modifier = Modifier
                             .size(20.dp)
@@ -269,7 +270,7 @@ fun ChatsViewChatItem(
                         colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.tertiary),
                     )
                 }
-                if (chatFriend.pinChat) {
+                if (friendElement.pinChat) {
                     SubcomposeAsyncImage(
                         modifier = Modifier
                             .align(Alignment.CenterVertically)
@@ -279,11 +280,11 @@ fun ChatsViewChatItem(
                         colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.tertiary),
                     )
                 }
-                if (chatFriend.read > 0 || chatFriend.markedAsUnread) {
+                if (friendElement.read > 0 || friendElement.markedAsUnread) {
                     Spacer(modifier = Modifier.padding(start = 4.dp))
                     Box(
                         modifier = Modifier
-                            .size(if (chatFriend.read > 99) 24.dp else if (chatFriend.read > 9) 20.dp else 16.dp)
+                            .size(if (friendElement.read > 99) 24.dp else if (friendElement.read > 9) 20.dp else 16.dp)
                             .clip(CircleShape)
                             .align(Alignment.CenterVertically)
                             .background(
@@ -293,7 +294,7 @@ fun ChatsViewChatItem(
                             )
                     ) {
                         Text(
-                            text = if (chatFriend.markedAsUnread) "" else if (chatFriend.read < 100) chatFriend.read.toString() else "99+",
+                            text = if (friendElement.markedAsUnread) "" else if (friendElement.read < 100) friendElement.read.toString() else "99+",
                             modifier = Modifier.align(Alignment.Center),
                             fontSize = 12.sp,
                             textAlign = TextAlign.Center,

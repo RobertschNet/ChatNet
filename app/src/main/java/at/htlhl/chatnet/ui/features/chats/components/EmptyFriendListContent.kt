@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.features.chats
+package at.htlhl.chatnet.ui.features.chats.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,7 +26,7 @@ import at.chatnet.R
 import coil.compose.SubcomposeAsyncImage
 
 @Composable
-fun EmptyChatContent(onClicked: () -> Unit) {
+fun EmptyFriendListContent(onGetStartedClicked: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -57,13 +57,12 @@ fun EmptyChatContent(onClicked: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(30.dp))
         Button(
-            onClick = { onClicked.invoke() },
+            onClick = { onGetStartedClicked() },
             modifier = Modifier
                 .width(200.dp)
                 .height(50.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF00A0E8),
-                contentColor = Color.White
+                containerColor = Color(0xFF00A0E8), contentColor = Color.White
             ),
             shape = RoundedCornerShape(20.dp)
         ) {

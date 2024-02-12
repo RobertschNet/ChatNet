@@ -31,8 +31,8 @@ import at.htlhl.chatnet.data.InternalChatInstance
 
 @Composable
 fun BlockUserDialog(
-    chatUser: FirebaseUser,
-    chatPartner: InternalChatInstance,
+    userData: FirebaseUser,
+    friendData: InternalChatInstance,
     onClose: (String) -> Unit = {}
 ) {
     Dialog(
@@ -48,7 +48,7 @@ fun BlockUserDialog(
         ) {
             Spacer(modifier = Modifier.height(5.dp))
             Text(
-                text = if (chatUser.blocked.contains(chatPartner.personList.id)) "Unblock User?" else "Block User?",
+                text = if (userData.blocked.contains(friendData.personList.id)) "Unblock User?" else "Block User?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 overflow = TextOverflow.Ellipsis,
@@ -56,7 +56,7 @@ fun BlockUserDialog(
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                text = if (chatUser.blocked.contains(chatPartner.personList.id)) "If you unblock this user you will start receiving his messages again." else "If you block this user you will no longer receive messages from him.",
+                text = if (userData.blocked.contains(friendData.personList.id)) "If you unblock this user you will start receiving his messages again." else "If you block this user you will no longer receive messages from him.",
                 fontWeight = FontWeight.Light,
                 color = MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center,
@@ -80,7 +80,7 @@ fun BlockUserDialog(
                     .clickable { onClose.invoke("blocked") }
             ) {
                 Text(
-                    text = if (chatUser.blocked.contains(chatPartner.personList.id)) "Unblock User" else "Block User",
+                    text = if (userData.blocked.contains(friendData.personList.id)) "Unblock User" else "Block User",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
                     color = Color.Red,

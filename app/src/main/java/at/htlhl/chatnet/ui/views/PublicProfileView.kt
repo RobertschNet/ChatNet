@@ -20,12 +20,14 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
+import at.htlhl.chatnet.data.PersonType
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.features.dialogs.DeleteFriendDialog
 import at.htlhl.chatnet.ui.features.mixed.ProfileChatNetIconSection
 import at.htlhl.chatnet.ui.features.mixed.ProfileFriendsFromFriendsSection
 import at.htlhl.chatnet.ui.features.mixed.ProfileInfoUserHeader
 import at.htlhl.chatnet.ui.features.mixed.ProfileUserFriendStateSection
+import at.htlhl.chatnet.util.firebase.deleteChatRoom
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 
 class PublicProfileView {
@@ -84,7 +86,7 @@ class PublicProfileView {
     fun PublicProfileScreenContent(
         publicUser: FirebaseUser,
         friendsFromFriendsList: List<FirebaseUser>,
-        friendState: String?,
+        friendState: PersonType?,
         chatData: List<FirebaseChat>,
         sharedViewModel: SharedViewModel,
         navController: NavController,
@@ -118,7 +120,10 @@ class PublicProfileView {
         if (removeFriendDialog) {
             DeleteFriendDialog { value ->
                 if (value == "deleted") {
-                    sharedViewModel.deleteChatRoom(isPublic = true)
+                    deleteChatRoom(
+                        publicUser = publicUser,
+                        chatData = chatData
+                    )
                     sharedViewModel.deleteFriendFromFriendList(publicUser)
                     navController.navigate(Screens.ChatsViewScreen.route) {
                         popUpTo(Screens.PublicProfileScreen.route) {

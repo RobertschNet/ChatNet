@@ -24,9 +24,8 @@ import at.htlhl.chatnet.navigation.NavigationBarLayout
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.LocationUpdateService
 import at.htlhl.chatnet.ui.theme.ChatNetTheme
+import at.htlhl.chatnet.util.preLoadImages
 import at.htlhl.chatnet.viewmodels.SharedViewModel
-import coil.imageLoader
-import coil.request.ImageRequest
 import com.google.firebase.messaging.FirebaseMessaging
 
 
@@ -63,8 +62,7 @@ class MainActivity : ComponentActivity() {
                         context = applicationContext
                     )
                 }
-                FirebaseMessaging.getInstance().token
-                    .addOnCompleteListener { task ->
+                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                         if (task.isSuccessful) {
                             val token = task.result
                             Log.d("FCM Token", "Token: $token")
@@ -78,11 +76,15 @@ class MainActivity : ComponentActivity() {
                         Log.println(Log.INFO, "User", "User is logged in!!!!!!!!!")
                         viewModel.updateOnlineStatus(true)
                         viewModel.getUserData {
-                            loadImage(applicationContext, viewModel.user.value.image)
+                            preLoadImages(
+                                context = applicationContext, imageUrls = viewModel.user.value.image
+                            )
                         }
                         viewModel.fetchFriendsFromUser {
                             for (friend in viewModel.friendListData.value) {
-                                loadImage(applicationContext, friend.image)
+                                preLoadImages(
+                                    context = applicationContext, imageUrls = friend.image
+                                )
                             }
                         }
                         viewModel.fetchChatsWithMessages()
@@ -90,7 +92,9 @@ class MainActivity : ComponentActivity() {
                             for (message in chat.messages) {
                                 if (message.images.isNotEmpty()) {
                                     for (image in message.images) {
-                                        loadImage(applicationContext, image)
+                                        preLoadImages(
+                                            context = applicationContext, imageUrls = image
+                                        )
                                     }
                                 }
                             }
@@ -107,13 +111,6 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
-    }
-
-    private fun loadImage(context: Context, imageUrl: String) {
-        val request = ImageRequest.Builder(context)
-            .data(imageUrl)
-            .build()
-        context.imageLoader.enqueue(request)
     }
 
     override fun onDestroy() {
@@ -134,7 +131,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun manageLocationServiceStatus(viewModel: SharedViewModel, serviceIntent: Intent) {
-        if (viewModel.gpsState.value) {
+        if (viewModel.dropInState.value) {
             try {
                 unbindService(serviceConnection!!)
                 stopService(serviceIntent)
@@ -163,8 +160,7 @@ class MainActivity : ComponentActivity() {
 
     private fun checkFineLocationPermission(): Boolean {
         return ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_FINE_LOCATION
+            this, Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
     }
 
@@ -172,8 +168,7 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
                 manageLocationServiceStatus(
-                    viewModel,
-                    Intent(this, LocationUpdateService::class.java)
+                    viewModel, Intent(this, LocationUpdateService::class.java)
                 )
             } else {
                 // Fine location permission denied, handle accordingly (e.g., show a message)

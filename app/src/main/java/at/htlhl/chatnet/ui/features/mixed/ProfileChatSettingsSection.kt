@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.sp
 import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
+import at.htlhl.chatnet.util.firebase.updateMuteFriendStatus
+import at.htlhl.chatnet.util.firebase.updatePinChatStatus
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 
@@ -65,10 +67,16 @@ fun ProfileChatSettingsSection(
                         .height(50.dp)
                         .clickable {
                             if (user.muted.contains(friend.personList.id)) {
-                                sharedViewModel.updateMuteFriendStatus(true)
+                                updateMuteFriendStatus(
+                                    userData = user,
+                                    friendData = friend.personList,
+                                    isAlreadyMuted = true)
                                 sharedViewModel.updateFriend(friend)
                             } else {
-                                sharedViewModel.updateMuteFriendStatus(false)
+                                updateMuteFriendStatus(
+                                    userData = user,
+                                    friendData = friend.personList,
+                                    isAlreadyMuted = false)
                                 sharedViewModel.updateFriend(friend)
                             }
                         }
@@ -100,7 +108,11 @@ fun ProfileChatSettingsSection(
                     .height(50.dp)
                     .clickable {
                         if (friend.pinChat) {
-                            sharedViewModel.updatePinChatStatus(true)
+                            updatePinChatStatus(
+                                userData = user,
+                                friend = friend,
+                                isAlreadyPinned = true
+                            )
                             sharedViewModel.updateFriend(
                                 InternalChatInstance(
                                     personList = friend.personList,
@@ -113,7 +125,11 @@ fun ProfileChatSettingsSection(
                                 )
                             )
                         } else {
-                            sharedViewModel.updatePinChatStatus(false)
+                            updatePinChatStatus(
+                                userData = user,
+                                friend = friend,
+                                isAlreadyPinned = false
+                            )
                             sharedViewModel.updateFriend(
                                 InternalChatInstance(
                                     friend.personList,

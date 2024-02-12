@@ -35,19 +35,20 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import at.chatnet.R
+import at.htlhl.chatnet.data.BigUserImageDismissState
+import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.ui.theme.shimmerEffect
-import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 
 @Composable
 fun ShowBigUserImageDialog(
-    sharedViewModel: SharedViewModel,
-    userData: InternalChatInstance,
-    onDismiss: (String) -> Unit
+    friendData: InternalChatInstance,
+    userData:FirebaseUser,
+    onDismiss: (BigUserImageDismissState) -> Unit
 ) {
     Dialog(
-        onDismissRequest = { onDismiss("closed") },
+        onDismissRequest = { onDismiss(BigUserImageDismissState.DISMISSED) },
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
     ) {
         Box(
@@ -62,7 +63,7 @@ fun ShowBigUserImageDialog(
                     .background(Color.Gray.copy(alpha = 0.4f))
             ) {
                 Text(
-                    text = userData.personList.username["mixedcase"].toString(),
+                    text = friendData.personList.username["mixedcase"].toString(),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Normal,
                     maxLines = 1,
@@ -77,9 +78,9 @@ fun ShowBigUserImageDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (!userData.personList.blocked.contains(sharedViewModel.auth.currentUser?.uid.toString())) {
+                if (!friendData.personList.blocked.contains(userData.id)) {
                     SubcomposeAsyncImage(
-                        model = userData.personList.image,
+                        model = friendData.personList.image,
                         contentDescription = null,
                         modifier = Modifier
                             .size(250.dp)
@@ -103,7 +104,7 @@ fun ShowBigUserImageDialog(
                         .background(MaterialTheme.colorScheme.background),
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
-                    IconButton(onClick = { onDismiss.invoke("message") }) {
+                    IconButton(onClick = { onDismiss.invoke(BigUserImageDismissState.MESSAGE) }) {
                         Icon(
                             imageVector = Icons.Default.Message,
                             contentDescription = "Message",
@@ -111,22 +112,26 @@ fun ShowBigUserImageDialog(
                             modifier = Modifier.size(24.dp)
                         )
                     }
-                    IconButton(onClick = { onDismiss.invoke(if (userData.personList.id != "ChatMate") "block" else "delete") }) {
-                        if (userData.personList.id != "ChatMate"){
+                    IconButton(onClick = { onDismiss.invoke(if (friendData.personList.id != "ChatMate") BigUserImageDismissState.BLOCK else BigUserImageDismissState.DELETE) }) {
+                        if (friendData.personList.id != "ChatMate") {
                             Icon(
                                 imageVector = Icons.Outlined.Block,
                                 contentDescription = "Block",
                                 tint = Color(0xFF00A0E8),
                                 modifier = Modifier.size(24.dp)
                             )
-                        }else{
-                            SubcomposeAsyncImage(model = R.drawable.garbage_bin_recycle_bin_svgrepo_com, contentDescription = null, modifier = Modifier.size(24.dp),
-                                contentScale = ContentScale.FillBounds, colorFilter = ColorFilter.tint(Color(0xFF00A0E8)))
-
+                        } else {
+                            SubcomposeAsyncImage(
+                                model = R.drawable.garbage_bin_recycle_bin_svgrepo_com,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                contentScale = ContentScale.FillBounds,
+                                colorFilter = ColorFilter.tint(Color(0xFF00A0E8))
+                            )
                         }
 
                     }
-                    IconButton(onClick = { onDismiss.invoke("image") }) {
+                    IconButton(onClick = { onDismiss.invoke(BigUserImageDismissState.IMAGE) }) {
                         Icon(
                             imageVector = Icons.Default.Image,
                             contentDescription = "Image",
@@ -134,7 +139,7 @@ fun ShowBigUserImageDialog(
                             modifier = Modifier.size(24.dp)
                         )
                     }
-                    IconButton(onClick = { onDismiss.invoke("info") }) {
+                    IconButton(onClick = { onDismiss.invoke(BigUserImageDismissState.INFO) }) {
                         Icon(
                             imageVector = Icons.Outlined.Info,
                             contentDescription = "Info",

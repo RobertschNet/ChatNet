@@ -55,12 +55,15 @@ import at.htlhl.chatnet.ui.features.dialogs.UnblockToMessageDialog
 import at.htlhl.chatnet.ui.features.mixed.ChatViewMessageComponent
 import at.htlhl.chatnet.ui.features.mixed.ChatViewTopBar
 import at.htlhl.chatnet.ui.features.mixed.InputField
+import at.htlhl.chatnet.util.firebase.markMessagesAsRead
+import at.htlhl.chatnet.util.firebase.updateBlockedUserList
+import at.htlhl.chatnet.util.firebase.updateMarkAsUnreadStatus
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class ChatView : ViewModel() {
+class ChatView {
     @Composable
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val systemUiController = rememberSystemUiController()
@@ -97,19 +100,19 @@ class ChatView : ViewModel() {
         var blockDialog by remember { mutableStateOf(false) }
         var unblockDialog by remember { mutableStateOf(false) }
         val coroutineScope = rememberCoroutineScope()
-        val filteredMessages = messageListFromMatchingChat.filter { message -> message.visible.contains(sharedViewModel.auth.currentUser?.uid.toString()) }.toMutableList()
+        val filteredMessages =
+            messageListFromMatchingChat.filter { message -> message.visible.contains(sharedViewModel.auth.currentUser?.uid.toString()) }
+                .toMutableList()
         val lazyListState = rememberLazyListState()
         val context = LocalContext.current
         var currentIndex = 0
-        sharedViewModel.markMessagesAsRead(user = friendData)
-        sharedViewModel.updateMarkAsReadStatus(isAlreadyUnread = true)
+
         Scaffold(containerColor = MaterialTheme.colorScheme.background,
             modifier = Modifier
                 .fillMaxSize()
                 .imePadding(),
             topBar = {
-                ChatViewTopBar(
-                    navController = navController,
+                ChatViewTopBar(navController = navController,
                     chatPartner = friendData,
                     sharedViewModel = sharedViewModel,
                     onClick = {
@@ -131,15 +134,15 @@ class ChatView : ViewModel() {
                     onNavigate = {
                         coroutineScope.launch {
                             val indexes = filteredMessages.mapIndexedNotNull { index, message ->
-                                    if (message.text.contains(
-                                            sharedViewModel.searchValue.value, ignoreCase = true
-                                        )
-                                    ) {
-                                        index
-                                    } else {
-                                        null
-                                    }
+                                if (message.text.contains(
+                                        sharedViewModel.searchValue.value, ignoreCase = true
+                                    )
+                                ) {
+                                    index
+                                } else {
+                                    null
                                 }
+                            }
                             if (indexes.isNotEmpty()) {
                                 currentIndex = if (it) {
                                     (currentIndex + 1)
@@ -162,8 +165,7 @@ class ChatView : ViewModel() {
                             }
 
                         }
-                    }
-                )
+                    })
             },
             content = {
                 ChatViewContentList(sharedViewModel = sharedViewModel,
@@ -190,13 +192,13 @@ class ChatView : ViewModel() {
             })
         if (blockDialog) {
             BlockUserDialog(
-                chatPartner = friendData, chatUser = userData
+                friendData = friendData, userData = userData
             ) { value ->
                 if (value == "blocked") {
-                    sharedViewModel.updateBlockedUserList(
-                        sharedViewModel.user.value.blocked.contains(
-                            sharedViewModel.friend.value.personList.id
-                        )
+                    updateBlockedUserList(
+                        userData = userData,
+                        friendData = friendData.personList,
+                        isAlreadyBlocked = userData.blocked.contains(friendData.personList.id)
                     )
                 }
                 blockDialog = false
@@ -207,7 +209,9 @@ class ChatView : ViewModel() {
                 chatPartner = friendData,
             ) { value ->
                 if (value == "unblock") {
-                    sharedViewModel.updateBlockedUserList(true)
+                    updateBlockedUserList(
+                        userData = userData, friendData = friendData.personList, true
+                    )
                 }
                 unblockDialog = false
             }

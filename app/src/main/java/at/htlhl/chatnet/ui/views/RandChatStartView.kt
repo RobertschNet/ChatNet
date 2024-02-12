@@ -21,6 +21,7 @@ import androidx.compose.material.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +51,7 @@ class RandChatStartView {
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @Composable
     fun RandChatStartScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+        val dropInState by sharedViewModel.dropInState
         val friendListDataState =
             sharedViewModel.friendListData.collectAsState(initial = arrayListOf(FirebaseUser()))
         val friendListData: List<FirebaseUser> = friendListDataState.value
@@ -66,15 +68,23 @@ class RandChatStartView {
                 ) ?: false
                 //TODO:  Add filtering for tags
             } else previousRandChatUsers
-        val filteredUserTags = if (userData.tags.isEmpty()) tags.filter { tag-> tag.category=="Empty" } else tags.filter { tag -> userData.tags.contains(tag.name) }
+        val filteredUserTags =
+            if (userData.tags.isEmpty()) tags.filter { tag -> tag.category == "Empty" } else tags.filter { tag ->
+                userData.tags.contains(tag.name)
+            }
         Scaffold(
             backgroundColor = MaterialTheme.colorScheme.background,
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TabsTopBar(
                     tab = CurrentTab.RANDCHAT,
-                    availableUsers = listOf(),
-                    sharedViewModel = sharedViewModel
+                    dropInState = dropInState,
+                    onActionClicked = {
+
+                    },
+                    onUpdateSearchValue = {
+                        sharedViewModel.searchValue.value = it
+                    }
                 )
             },
             content = {
@@ -145,7 +155,7 @@ class RandChatStartView {
                                 person = previousUser,
                                 deleteAble = false,
                                 searchedText = sharedViewModel.searchValue.value,
-                                personType = if (savedUser == null) PersonType.SEARCHED_PERSON else if (savedUser.statusFriend == "pending") PersonType.PENDING_PERSON else PersonType.ACCEPTED_PERSON,
+                                personType = if (savedUser == null) PersonType.SEARCHED_PERSON else if (savedUser.statusFriend == PersonType.PENDING_PERSON) PersonType.PENDING_PERSON else PersonType.ACCEPTED_PERSON,
                                 onPersonClicked = {
                                     sharedViewModel.updatePublicUser(it)
                                     navController.navigate(Screens.PublicProfileScreen.route)

@@ -24,6 +24,7 @@ import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
+import at.htlhl.chatnet.data.PersonType
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.features.dialogs.BlockUserDialog
 import at.htlhl.chatnet.ui.features.dialogs.DeleteAllMediaDialog
@@ -36,6 +37,8 @@ import at.htlhl.chatnet.ui.features.mixed.ProfileFriendsFromFriendsSection
 import at.htlhl.chatnet.ui.features.mixed.ProfileInfoUserHeader
 import at.htlhl.chatnet.ui.features.mixed.ProfileMediaAndLinksSection
 import at.htlhl.chatnet.ui.features.mixed.ProfileUserFriendStateSection
+import at.htlhl.chatnet.util.firebase.deleteChatRoom
+import at.htlhl.chatnet.util.firebase.updateBlockedUserList
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
@@ -100,14 +103,14 @@ class ProfileInfoView {
 
     @Composable
     fun ProfileInfoContent(
-        friendsFriendState: String?,
+        friendsFriendState: PersonType?,
         chatData: List<FirebaseChat>,
         sharedViewModel: SharedViewModel,
         navController: NavController,
         friendsFromFriendsList: List<FirebaseUser>,
         imageList: List<InternalMessageInstance>,
         friend: InternalChatInstance,
-        user: FirebaseUser,
+        userData: FirebaseUser,
         friendsFromFriendsListIsLoading: Boolean
     ) {
         var blockDialog by remember { mutableStateOf(false) }
@@ -128,7 +131,7 @@ class ProfileInfoView {
             isChatMateChat = currentChat?.tab == "chatmate",
             sharedViewModel = sharedViewModel,
             friend = friend,
-            user = user,
+            user = userData,
             onDeleteAllMedia = {
                 deleteAllMediaDialog = true
             },
@@ -139,7 +142,7 @@ class ProfileInfoView {
         Spacer(modifier = Modifier.height(10.dp))
         ProfileFriendSettingsSection(
             isChatMateChat = currentChat?.tab == "chatmate",
-            user = user,
+            user = userData,
             friend = friend,
             onBlockAction = { blockDialog = true },
             onRemoveUserAction = {
@@ -173,7 +176,7 @@ class ProfileInfoView {
         if (removeFriendDialog) {
             DeleteFriendDialog { value ->
                 if (value == "deleted") {
-                    sharedViewModel.deleteChatRoom()
+                    deleteChatRoom(friendData = friend)
                     if (currentChat?.tab != "chatmate") {
                         sharedViewModel.deleteFriendFromFriendList(friend.personList)
                     }
@@ -188,12 +191,14 @@ class ProfileInfoView {
         }
         if (blockDialog) {
             BlockUserDialog(
-                chatPartner = friend,
-                chatUser = user
+                friendData = friend,
+                userData = userData
             ) { value ->
                 if (value == "blocked") {
-                    sharedViewModel.updateBlockedUserList(
-                        user.blocked.contains(
+                    updateBlockedUserList(
+                        userData = userData,
+                        friendData = friend.personList,
+                        userData.blocked.contains(
                             friend.personList.id
                         )
                     )

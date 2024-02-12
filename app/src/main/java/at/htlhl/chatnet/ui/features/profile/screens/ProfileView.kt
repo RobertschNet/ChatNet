@@ -50,7 +50,6 @@ import at.htlhl.chatnet.util.convertBitmapToWebP
 import at.htlhl.chatnet.util.uploadWebPImage
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
-import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -66,6 +65,8 @@ class ProfileView {
             color = MaterialTheme.colorScheme.background,
             darkIcons = !isSystemInDarkTheme()
         )
+
+        val dropInState by sharedViewModel.dropInState
         val userState = sharedViewModel.user.collectAsState()
         val userData: FirebaseUser = userState.value
         val context = LocalContext.current
@@ -122,8 +123,13 @@ class ProfileView {
             topBar = {
                 TabsTopBar(
                     tab = CurrentTab.PROFILE,
-                    availableUsers = listOf(FirebaseUser()),
-                    sharedViewModel = sharedViewModel
+                    dropInState = dropInState,
+                    onActionClicked = {
+                    },
+                    onUpdateSearchValue = {
+                        sharedViewModel.searchValue.value = it
+                    }
+
                 )
             },
             content = {

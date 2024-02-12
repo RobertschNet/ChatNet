@@ -25,13 +25,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
+import at.htlhl.chatnet.data.PersonType
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 
 @Composable
 fun ProfileUserFriendStateSection(
     chatData: List<FirebaseChat>,
     publicUser: FirebaseUser,
-    friendState: String?,
+    friendState: PersonType?,
     sharedViewModel: SharedViewModel,
     onRemoveFriendAction: () -> Unit
 ) {
@@ -76,7 +77,7 @@ fun ProfileUserFriendStateSection(
                             ),
                             onClick = {
                                 when (friendState) {
-                                    "pending" -> {
+                                    PersonType.PENDING_PERSON -> {
                                         val filteredChats = chatData.filter { chat ->
                                             chat.members.contains(publicUser.id) && chat.members
                                                 .contains(sharedViewModel.auth.currentUser?.uid)
@@ -102,11 +103,11 @@ fun ProfileUserFriendStateSection(
                                         )
                                     }
 
-                                    "accepted" -> {
+                                    PersonType.ACCEPTED_PERSON -> {
                                         onRemoveFriendAction.invoke()
                                     }
 
-                                    "requested" -> {
+                                    PersonType.REQUESTED_PERSON -> {
                                         sharedViewModel.cancelFriendRequest(
                                             person = publicUser
                                         )
@@ -126,7 +127,7 @@ fun ProfileUserFriendStateSection(
                             }
                         ) {
                             Text(
-                                text = if (friendState == "pending") "Accept Request" else if (friendState == "accepted") "Remove Friend" else if (friendState == "requested") "Cancel Request" else "Add Friend",
+                                text = if (friendState == PersonType.PENDING_PERSON) "Accept Request" else if (friendState == PersonType.ACCEPTED_PERSON) "Remove Friend" else if (friendState == PersonType.REQUESTED_PERSON) "Cancel Request" else "Add Friend",
                                 fontSize = 14.sp,
                                 fontFamily = FontFamily.SansSerif,
                                 fontWeight = FontWeight.Medium,
@@ -140,7 +141,7 @@ fun ProfileUserFriendStateSection(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (friendState == "pending") "This User wants to follow you, click the Button to become Friends with him." else if (friendState == "accepted") "You are already Friends with this User, click the button to remove him as Friend." else if (friendState == "requested") "You have sent this User a Friend-request, click the Button to cancel it." else "You can send this User a Friend-request to start chatting with him, click the Button to send it.",
+                            text = if (friendState == PersonType.PENDING_PERSON) "This User wants to follow you, click the Button to become Friends with him." else if (friendState == PersonType.ACCEPTED_PERSON) "You are already Friends with this User, click the button to remove him as Friend." else if (friendState == PersonType.REQUESTED_PERSON) "You have sent this User a Friend-request, click the Button to cancel it." else "You can send this User a Friend-request to start chatting with him, click the Button to send it.",
                             fontSize = 12.sp,
                             fontFamily = FontFamily.SansSerif,
                             fontWeight = FontWeight.Normal,
