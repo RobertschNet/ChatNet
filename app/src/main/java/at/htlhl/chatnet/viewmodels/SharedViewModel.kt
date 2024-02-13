@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.FormBody
@@ -1156,6 +1157,28 @@ class SharedViewModel : ViewModel() {
                 .addOnFailureListener { exception ->
                     exception.printStackTrace()
                 }
+        }
+    }
+    // Needed due to performance issues
+    suspend fun markMessagesAsRead() {
+        val chatRef = FirebaseFirestore.getInstance().collection("chats")
+            .document(friend.value.chatRoomID)
+            .collection("messages")
+        try {
+            withContext(Dispatchers.IO) {
+                val querySnapshot = chatRef.whereEqualTo("read", false).get().await()
+                val batch = FirebaseFirestore.getInstance().batch()
+                for (document in querySnapshot.documents) {
+                    val sender = document.getString("sender")
+                    if (sender != user.value.id) {
+                        val docRef = chatRef.document(document.id)
+                        batch.update(docRef, "read", true)
+                    }
+                }
+                batch.commit().await()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

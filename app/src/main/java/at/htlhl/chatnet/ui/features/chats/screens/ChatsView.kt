@@ -53,9 +53,6 @@ import at.htlhl.chatnet.util.firebase.updatePinChatStatus
 import at.htlhl.chatnet.util.generateBottomSheetItems
 import at.htlhl.chatnet.util.preLoadImages
 import at.htlhl.chatnet.viewmodels.SharedViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 
@@ -66,16 +63,20 @@ class ChatsView {
     fun ChatsScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val chatsViewModel = viewModel<ChatsViewModel>()
         val context = LocalContext.current
+
         val dropInState by sharedViewModel.dropInState
         val searchedValue by sharedViewModel.searchValue
         val isDataLoaded by sharedViewModel.isDataLoaded
+
         val lazyColumnState = rememberLazyListState()
         val coroutineScope = rememberCoroutineScope()
+
         var showBigUserImageDialog by remember { mutableStateOf(false) }
         var showClearChatDialog by remember { mutableStateOf(false) }
         var showBlockUserDialog by remember { mutableStateOf(false) }
         var modelSheetState by remember { mutableStateOf(false) }
-        val completeChatListState by sharedViewModel.completeChatList.collectAsState(
+
+        val completeChatsListState by sharedViewModel.completeChatList.collectAsState(
             initial = arrayListOf(
                 InternalChatInstance()
             )
@@ -92,17 +93,19 @@ class ChatsView {
             )
         )
         val friendDataState by sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
+
         val friendData: InternalChatInstance = friendDataState
         val userData: FirebaseUser = userDataState
         val friendListData: List<FirebaseUser> = friendListDataState
         val chatData: List<FirebaseChat> = chatDataState
-        val completeChatList: List<InternalChatInstance> = completeChatListState
+        val completeChatsList: List<InternalChatInstance> = completeChatsListState
         val friendRequests =
             friendListData.filter { friend -> friend.statusFriend == PersonType.PENDING_PERSON }
 
         val filteredFriendsList = chatsViewModel.filterFriendsList(
-            searchedValue = searchedValue, completeChatList = completeChatList
+            searchedValue = searchedValue, completeChatList = completeChatsList
         )
+
         LaunchedEffect(chatData) {
             for (chat in chatData) {
                 for (message in chat.messages) {
@@ -112,6 +115,7 @@ class ChatsView {
                 }
             }
         }
+
         val bottomSheetItems = generateBottomSheetItems(
             isChatMate = false, friendData = friendData, userData = userData
         )
@@ -157,13 +161,6 @@ class ChatsView {
                                         }
 
                                         ChatsChatItemClickState.MESSAGE -> {
-                                            coroutineScope.launch {
-                                                markMessagesAsRead(userData = userData, friendData = friendElement)
-                                                updateMarkAsUnreadStatus(
-                                                    userData = userData,
-                                                    friendData = friendElement,
-                                                    isAlreadyUnread = false)
-                                            }
                                             navController.navigate(Screens.ChatViewScreen.route)
                                         }
                                     }
@@ -180,14 +177,12 @@ class ChatsView {
                 }
             })
         if (showBigUserImageDialog) {
-            ShowBigUserImageDialog(userData = userData,
+            ShowBigUserImageDialog(
+                userData = userData,
                 friendData = friendData,
                 onDismiss = { action ->
                     when (action) {
                         MESSAGE -> {
-                            coroutineScope.launch {
-                               markMessagesAsRead(userData = userData, friendData = friendData)
-                            }
                             navController.navigate(Screens.ChatViewScreen.route)
                         }
 
@@ -253,27 +248,23 @@ class ChatsView {
                             when (item) {
                                 BottomSheetTagState.UNREAD -> {
                                     if (friendData.read > 0) {
-                                        coroutineScope.launch {
-                                            markMessagesAsRead(
-                                                userData = userData, friendData = friendData
-                                            )
-                                        }
+                                        markMessagesAsRead(
+                                            userData = userData, friendData = friendData
+                                        )
                                     } else if (friendData.markedAsUnread && friendData.read == 0) {
-                                        coroutineScope.launch{
-                                            updateMarkAsUnreadStatus(
-                                                userData = userData,
-                                                friendData = friendData,
-                                                isAlreadyUnread = true
-                                            )
-                                        }
+                                        updateMarkAsUnreadStatus(
+                                            userData = userData,
+                                            friendData = friendData,
+                                            isAlreadyUnread = true
+                                        )
+
                                     } else {
-                                        coroutineScope.launch{
-                                            updateMarkAsUnreadStatus(
-                                                userData = userData,
-                                                friendData = friendData,
-                                                isAlreadyUnread = false
-                                            )
-                                        }
+                                        updateMarkAsUnreadStatus(
+                                            userData = userData,
+                                            friendData = friendData,
+                                            isAlreadyUnread = false
+                                        )
+
                                     }
                                 }
 

@@ -60,9 +60,7 @@ import at.htlhl.chatnet.ui.features.mixed.ChatViewMessageComponent
 import at.htlhl.chatnet.ui.features.mixed.ChatViewTopBar
 import at.htlhl.chatnet.ui.features.mixed.InputField
 import at.htlhl.chatnet.util.copyToClipboard
-import at.htlhl.chatnet.util.firebase.markMessagesAsRead
 import at.htlhl.chatnet.util.firebase.updateBlockedUserList
-import at.htlhl.chatnet.util.firebase.updateMarkAsUnreadStatus
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import kotlinx.coroutines.delay
@@ -74,10 +72,11 @@ class RandChatView {
     @Composable
     fun RandChatScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val coroutineScope = rememberCoroutineScope()
-        val friendDataState = sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
+        val friendDataState =
+            sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
         val friendData: InternalChatInstance = friendDataState.value
-        val userDataState= sharedViewModel.user.collectAsState()
-        val userData:FirebaseUser = userDataState.value
+        val userDataState = sharedViewModel.user.collectAsState()
+        val userData: FirebaseUser = userDataState.value
         val context = LocalContext.current
         val pageState = rememberPagerState { 2 }
         if (pageState.currentPage == 1 && !pageState.isScrollInProgress) {
@@ -181,79 +180,70 @@ class RandChatView {
         val coroutineScope = rememberCoroutineScope()
         val context = LocalContext.current
         var currentIndex = 0
-        Scaffold(
-            modifier = Modifier
-                .imePadding(),
-            topBar = {
-                ChatViewTopBar(
-                    navController = navController,
-                    chatPartner = chatPartner,
-                    sharedViewModel = sharedViewModel,
-                    onClick = {
-                        navController.navigateUp()
-                    }, onNavigate = {
-                        coroutineScope.launch {
-                            val indexes = filteredMessages
-                                .mapIndexedNotNull { index, message ->
-                                    if (message.text.contains(
-                                            sharedViewModel.searchValue.value,
-                                            ignoreCase = true
-                                        )
-                                    ) {
-                                        index
-                                    } else {
-                                        null
-                                    }
-                                }
-                            if (indexes.isNotEmpty()) {
-                                currentIndex = if (it) {
-                                    (currentIndex + 1)
+        Scaffold(modifier = Modifier.imePadding(), topBar = {
+            ChatViewTopBar(navController = navController,
+                chatPartner = chatPartner,
+                sharedViewModel = sharedViewModel,
+                onClick = {
+                    navController.navigateUp()
+                },
+                onNavigate = {
+                    coroutineScope.launch {
+                        val indexes = filteredMessages.mapIndexedNotNull { index, message ->
+                                if (message.text.contains(
+                                        sharedViewModel.searchValue.value, ignoreCase = true
+                                    )
+                                ) {
+                                    index
                                 } else {
-                                    (currentIndex - 1)
+                                    null
                                 }
-                                if (currentIndex >= indexes.size) {
-                                    currentIndex = 0
-                                } else if (currentIndex < 0) {
-                                    currentIndex = indexes.size - 1
-                                }
-
-                                lazyListState.animateScrollToItem(indexes[currentIndex])
                             }
-                            if (indexes.isEmpty()) {
-                                Toast.makeText(context, "No results", Toast.LENGTH_SHORT).show()
-                            } else if (indexes.size < 2) {
-                                Toast.makeText(context, "No more results", Toast.LENGTH_SHORT)
-                                    .show()
+                        if (indexes.isNotEmpty()) {
+                            currentIndex = if (it) {
+                                (currentIndex + 1)
+                            } else {
+                                (currentIndex - 1)
+                            }
+                            if (currentIndex >= indexes.size) {
+                                currentIndex = 0
+                            } else if (currentIndex < 0) {
+                                currentIndex = indexes.size - 1
                             }
 
+                            lazyListState.animateScrollToItem(indexes[currentIndex])
                         }
-                    }
-                )
-            },
-            content = {
-                it.calculateBottomPadding()
-                ChatViewContentList(
-                    sharedViewModel = sharedViewModel,
-                    chatMateChat = chatMateChat,
-                    messages = filteredMessages,
-                    lazyListState = lazyListState,
-                    chatRoomId = chatRoomId,
-                    onChatMateResponseState = { message ->
-                        chatMateResponse = message
-                    }
+                        if (indexes.isEmpty()) {
+                            Toast.makeText(context, "No results", Toast.LENGTH_SHORT).show()
+                        } else if (indexes.size < 2) {
+                            Toast.makeText(context, "No more results", Toast.LENGTH_SHORT).show()
+                        }
 
-                )
-            }, bottomBar = {
-                InputField(
-                    chatPartner = chatPartner,
-                    onChatMateResponse = chatMateResponse,
-                    sharedViewModel = sharedViewModel,
-                    navController = navController,
-                    chatMateChat = chatMateChat
-                ) {
-                    unblockDialog = true
+                    }
+                })
+        }, content = {
+            it.calculateBottomPadding()
+            ChatViewContentList(sharedViewModel = sharedViewModel,
+                chatMateChat = chatMateChat,
+                messages = filteredMessages,
+                lazyListState = lazyListState,
+                chatRoomId = chatRoomId,
+                onChatMateResponseState = { message ->
+                    chatMateResponse = message
                 }
+
+            )
+        }, bottomBar = {
+            InputField(
+                chatPartner = chatPartner,
+                onChatMateResponse = chatMateResponse,
+                sharedViewModel = sharedViewModel,
+                navController = navController,
+                chatMateChat = chatMateChat
+            ) {
+                unblockDialog = true
             }
+        }
 
         )
         if (unblockDialog) {
@@ -262,9 +252,8 @@ class RandChatView {
             ) { value ->
                 if (value == "unblock") {
                     updateBlockedUserList(
-                        userData= userData,
-                        friendData= chatPartner.personList,
-                        true)
+                        userData = userData, friendData = chatPartner.personList, true
+                    )
                 }
                 unblockDialog = false
             }
@@ -328,7 +317,8 @@ class RandChatView {
                             text = message.text,
                             timestamp = message.timestamp,
                             visible = message.visible,
-                        ), chatRoomId = chatRoomId
+                        ),
+                        chatRoomId = chatRoomId
                     ) {
                         onChatMateResponseState.invoke(it)
                     }
@@ -359,8 +349,7 @@ class RandChatView {
         } else {
             TODO("VERSION.SDK_INT < S")
         }
-        ChatViewMessageComponent(
-            sharedViewModel = sharedViewModel,
+        ChatViewMessageComponent(sharedViewModel = sharedViewModel,
             isUser = isUser,
             chatMateChat = chatMateChat,
             previousMessage = previousMessage,
@@ -374,13 +363,11 @@ class RandChatView {
                     anchorPosition.value = Offset(20f, 0f)
                 }
                 val effect = VibrationEffect.createOneShot(
-                    100,
-                    VibrationEffect.DEFAULT_AMPLITUDE
+                    100, VibrationEffect.DEFAULT_AMPLITUDE
                 )
                 vibrator.defaultVibrator.vibrate(effect)
                 menuDialog = true
-            }
-        )
+            })
         if (deleteDialog) {
             DeleteMessageDialog(isUser = isUser) { value ->
                 if (value == "delete") {
@@ -416,45 +403,41 @@ class RandChatView {
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @Composable
     fun LoadingScreen(navController: NavController) {
-        Scaffold(
-            backgroundColor = MaterialTheme.colorScheme.background,
-            topBar = {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.Top
+        Scaffold(backgroundColor = MaterialTheme.colorScheme.background, topBar = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.Top
+            ) {
+                IconButton(
+                    onClick = { navController.navigateUp() }, modifier = Modifier.size(45.dp)
                 ) {
-                    IconButton(
-                        onClick = { navController.navigateUp() },
-                        modifier = Modifier.size(45.dp)
-                    ) {
-                        SubcomposeAsyncImage(
-                            model = R.drawable.back_svgrepo_com_1_,
-                            contentDescription = null,
-                            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                }
-            }, content = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(50.dp))
-                    Spacer(modifier = Modifier.height(5.dp))
-                    Text(
-                        text = "Searching for User...",
-                        color = MaterialTheme.colorScheme.primary,
-                        fontFamily = FontFamily.SansSerif
+                    SubcomposeAsyncImage(
+                        model = R.drawable.back_svgrepo_com_1_,
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
             }
-        )
+        }, content = {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(50.dp))
+                Spacer(modifier = Modifier.height(5.dp))
+                Text(
+                    text = "Searching for User...",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontFamily = FontFamily.SansSerif
+                )
+            }
+        })
     }
 }

@@ -50,7 +50,6 @@ class LocationUpdateService : Service() {
             override fun onLocationResult(locationResult: LocationResult) {
                 super.onLocationResult(locationResult)
                 locationResult.lastLocation?.let { location ->
-                    lastKnownLocation = location
                     val latitude = location.latitude
                     val longitude = location.longitude
                     val hash =
@@ -60,9 +59,7 @@ class LocationUpdateService : Service() {
                         "lat" to latitude,
                         "lng" to longitude,
                     )
-                    if (isLocationDifferent(location)) {
-                        sendLocation(updates, auth)
-                    }
+                    sendLocation(updates, auth)
                     fetchLocation(latitude, longitude)
                 }
             }

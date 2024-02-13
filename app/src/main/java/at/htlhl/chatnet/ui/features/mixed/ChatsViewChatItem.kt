@@ -54,19 +54,8 @@ fun ChatsViewChatItem(
 ) {
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
     val formattedTime: String = formatter.format(friendElement.timestampMessage.toDate())
-    if (friendElement.read > 0) {
-        /*
-                updateMarkAsUnreadStatus(
-                    userData = userData,
-                    friendData = friendElement,
-                    isAlreadyUnread = true
-                )
-
-         */
-    }
     Row(
-        modifier =
-        Modifier
+        modifier = Modifier
             .combinedClickable(
                 onClick = {
                     onClick.invoke(ChatsChatItemClickState.MESSAGE)
@@ -120,9 +109,7 @@ fun ChatsViewChatItem(
                                 colors = listOf(
                                     MaterialTheme.colorScheme.background,
                                     MaterialTheme.colorScheme.background
-                                ),
-                                start = Offset(0f, 0f),
-                                end = Offset(14.dp.value, 14.dp.value)
+                                ), start = Offset(0f, 0f), end = Offset(14.dp.value, 14.dp.value)
                             )
                         )
                         .align(Alignment.BottomEnd)
@@ -176,8 +163,7 @@ fun ChatsViewChatItem(
             ) {
                 Text(
                     text = highlightSearchedText(
-                        friendElement.personList.username["mixedcase"].toString(),
-                        searchedValue
+                        friendElement.personList.username["mixedcase"].toString(), searchedValue
                     ),
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
@@ -196,8 +182,7 @@ fun ChatsViewChatItem(
                 )
             }
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End
             ) {
                 if (userData.blocked.contains(friendElement.personList.id)) {
                     Text(
@@ -250,8 +235,7 @@ fun ChatsViewChatItem(
                             .align(Alignment.CenterVertically)
                             .weight(1f),
                         text = highlightSearchedText(
-                            messageContent,
-                            searchedValue
+                            messageContent, searchedValue
                         ),
                         overflow = TextOverflow.Ellipsis,
                         maxLines = 1,

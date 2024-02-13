@@ -73,11 +73,10 @@ class ChatView {
         )
         val chatDataState = sharedViewModel.chatData.collectAsState(initial = emptyList())
         val chatData: List<FirebaseChat> = chatDataState.value
-        val friendDataState =
-            sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
-        val friendData: InternalChatInstance = friendDataState.value
-        val userDataState = sharedViewModel.user.collectAsState(initial = FirebaseUser())
-        val userData: FirebaseUser = userDataState.value
+        val friendDataState by sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
+        val friendData: InternalChatInstance = friendDataState
+        val userDataState by sharedViewModel.user.collectAsState(initial = FirebaseUser())
+        val userData: FirebaseUser = userDataState
         val matchingChat = chatData.find { chat ->
             chat.chatRoomID == friendData.chatRoomID
         }
@@ -107,6 +106,9 @@ class ChatView {
         val lazyListState = rememberLazyListState()
         val context = LocalContext.current
         var currentIndex = 0
+        LaunchedEffect(matchingChat?.messages?.size) {
+            sharedViewModel.markMessagesAsRead()
+        }
         Scaffold(containerColor = MaterialTheme.colorScheme.background,
             modifier = Modifier
                 .fillMaxSize()

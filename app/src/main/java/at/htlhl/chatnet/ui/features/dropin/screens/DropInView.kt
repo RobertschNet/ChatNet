@@ -1,8 +1,5 @@
-package at.htlhl.chatnet.ui.views
+package at.htlhl.chatnet.ui.features.dropin.screens
 
-import android.annotation.SuppressLint
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -49,8 +46,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import at.htlhl.chatnet.data.BigUserImageDismissState.*
+import at.htlhl.chatnet.data.BigUserImageDismissState.BLOCK
+import at.htlhl.chatnet.data.BigUserImageDismissState.IMAGE
+import at.htlhl.chatnet.data.BigUserImageDismissState.INFO
+import at.htlhl.chatnet.data.BigUserImageDismissState.MESSAGE
 import at.htlhl.chatnet.data.BottomSheetTagState
 import at.htlhl.chatnet.data.ChatsChatItemClickState
 import at.htlhl.chatnet.data.CurrentTab
@@ -65,6 +66,7 @@ import at.htlhl.chatnet.services.SaveImageTask
 import at.htlhl.chatnet.ui.features.dialogs.ClearChatDialog
 import at.htlhl.chatnet.ui.features.dialogs.DisableDropInDialog
 import at.htlhl.chatnet.ui.features.dialogs.ShowBigUserImageDialog
+import at.htlhl.chatnet.ui.features.dropin.viewmodels.DropInViewModel
 import at.htlhl.chatnet.ui.features.mixed.ChatsViewChatItem
 import at.htlhl.chatnet.ui.features.mixed.TabsBottomSheetContent
 import at.htlhl.chatnet.ui.features.mixed.TabsTopBar
@@ -80,56 +82,48 @@ import at.htlhl.chatnet.util.highlightSearchedText
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Timestamp
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 
 
 class DropInView {
-    @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
-    @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun DropInScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+        val dropInViewModel = viewModel<DropInViewModel>()
         val context = LocalContext.current
-        val lazyListState = rememberLazyListState()
-        val coroutineScope = rememberCoroutineScope()
-        var showUserIconPrompt by remember { mutableStateOf(false) }
-        var showClearChatPrompt by remember { mutableStateOf(false) }
-        var modelSheetState by remember { mutableStateOf(false) }
-        var disableDropInDialog by remember {
-            mutableStateOf(
-                false
-            )
-        }
         val dropInState by sharedViewModel.dropInState
-        var searchedValue = sharedViewModel.searchValue.value
-        val chatDataState = sharedViewModel.chatData.collectAsState()
-        val chatData: List<FirebaseChat> = chatDataState.value
-        val dropInDataState = sharedViewModel.completeDropInList.collectAsState()
-        val dropInData: List<InternalChatInstance> = dropInDataState.value
-        val friendDataState = sharedViewModel.friend.collectAsState()
-        val userDataState = sharedViewModel.user.collectAsState()
-        val userData: FirebaseUser = userDataState.value
-        val friendData: InternalChatInstance = friendDataState.value
-        val localChatUsers = sharedViewModel.localChatUserList.value.filter { localUser ->
-            localUser.id != sharedViewModel.auth.currentUser?.uid
+        val searchedValue by sharedViewModel.searchValue
+        val lazyColumnState = rememberLazyListState()
+        val coroutineScope = rememberCoroutineScope()
+        var showBigUserImageDialog by remember { mutableStateOf(false) }
+        var showClearChatDialog by remember { mutableStateOf(false) }
+        var showBlockUserDialog by remember { mutableStateOf(false) }
+        var modelSheetState by remember { mutableStateOf(false) }
+        var disableDropInDialog by remember { mutableStateOf(false) }
+
+        val completeDopInChatListState by sharedViewModel.completeDropInList.collectAsState()
+        val chatDataState by sharedViewModel.chatData.collectAsState()
+        val userDataState by sharedViewModel.user.collectAsState()
+        val friendDataState by sharedViewModel.friend.collectAsState()
+
+
+        val chatData: List<FirebaseChat> = chatDataState
+        val completeDopInChatList: List<InternalChatInstance> = completeDopInChatListState
+        val userData: FirebaseUser = userDataState
+        val friendData: InternalChatInstance = friendDataState
+
+        val dropInUsersNearbyList = sharedViewModel.localChatUserList.value.filter { nearbyUsers ->
+            nearbyUsers.id != userData.id
         }
-        val completeDropInList = if (sharedViewModel.searchValue.value != "") dropInData.filter {
-            it.personList.username["mixedcase"]?.contains(
-                sharedViewModel.searchValue.value, ignoreCase = true
-            ) ?: false || it.lastMessage.text.contains(
-                sharedViewModel.searchValue.value, ignoreCase = true
-            )
-        } else dropInData
-        val completeLocalChatUsers =
-            if (sharedViewModel.searchValue.value != "") localChatUsers.filter {
-                it.username["mixedcase"]?.contains(
-                    sharedViewModel.searchValue.value, ignoreCase = true
-                ) ?: false || it.location.contains(
-                    sharedViewModel.searchValue.value, ignoreCase = true
-                )
-            } else localChatUsers
+        val filteredDropInChatList = dropInViewModel.filterDropInPersonsList(
+            searchedValue = searchedValue, completeDopInChatList = completeDopInChatList
+        )
+        val filteredNearbyUsersList = dropInViewModel.filterDropInNearbyUsersList(
+            searchedValue = searchedValue, dropInUsersNearbyList = dropInUsersNearbyList
+        )
+
+
 
         val localChatUser = sharedViewModel.localChatUserList.value.find { localUser ->
             localUser.id == sharedViewModel.auth.currentUser?.uid
@@ -138,7 +132,7 @@ class DropInView {
             sharedViewModel.searchValue.value, ignoreCase = true
         ) || localChatUser!!.location.contains(sharedViewModel.searchValue.value, ignoreCase = true)
 
-        val updatedLocalChatUsers: List<InternalChatInstance> = localChatUsers.map { person ->
+        val updatedLocalChatUsers: List<InternalChatInstance> = dropInUsersNearbyList.map { person ->
             val matchingChat = chatData.find { chat ->
                 chat.members.contains(person.id)
             }
@@ -173,13 +167,16 @@ class DropInView {
             topBar = {
                 TabsTopBar(tab = CurrentTab.DROPIN, dropInState = dropInState, onActionClicked = {
                     disableDropInDialog = true
-
                 }, onUpdateSearchValue = {
                     sharedViewModel.searchValue.value = it
                 })
             },
-            content = {
-                Column(modifier = Modifier.fillMaxSize()) {
+            content = { paddingValues ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = paddingValues.calculateTopPadding())
+                ) {
                     Spacer(modifier = Modifier.height(20.dp))
                     Row {
                         Spacer(modifier = Modifier.width(15.dp))
@@ -202,7 +199,7 @@ class DropInView {
                                     }
                                 }
                             }
-                            items(completeLocalChatUsers) { chat ->
+                            items(dropInUsersNearbyList) { chat ->
                                 GPSChatList(
                                     chat = chat, sharedViewModel = sharedViewModel
                                 ) { locationUserInstance ->
@@ -235,7 +232,7 @@ class DropInView {
                                 }
                             }
                         })
-                    if (dropInData.isNotEmpty()) {
+                    if (completeDopInChatList.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(40.dp))
                         Row {
                             Spacer(modifier = Modifier.width(15.dp))
@@ -249,9 +246,9 @@ class DropInView {
                         }
                     }
                     LazyColumn(
-                        Modifier.fillMaxSize(), state = lazyListState
+                        Modifier.fillMaxSize(), state = lazyColumnState
                     ) {
-                        items(completeDropInList) { chat ->
+                        items(filteredDropInChatList) { chat ->
                             ChatsViewChatItem(
                                 friendElement = chat,
                                 userData = userData,
@@ -261,7 +258,7 @@ class DropInView {
                                 sharedViewModel.updateFriend(chat) {
                                     when (context) {
                                         ChatsChatItemClickState.IMAGE -> {
-                                            showUserIconPrompt = true
+                                            showBigUserImageDialog = true
                                         }
 
                                         ChatsChatItemClickState.CONTEXT_MENU -> {
@@ -269,18 +266,6 @@ class DropInView {
                                         }
 
                                         ChatsChatItemClickState.MESSAGE -> {
-                                            coroutineScope.launch {
-                                                delay(500)
-                                                markMessagesAsRead(
-                                                    userData = userData,
-                                                    friendData = friendData
-                                                )
-                                                updateMarkAsUnreadStatus(
-                                                    userData = userData,
-                                                    friendData = friendData,
-                                                    isAlreadyUnread = true
-                                                )
-                                            }
                                             navController.navigate(Screens.ChatViewScreen.route)
                                         }
                                     }
@@ -298,11 +283,10 @@ class DropInView {
                                     !sharedViewModel.dropInState.value
                             }
                             disableDropInDialog = false
-                        }
-                    )
+                        })
                 }
             })
-        if (showUserIconPrompt) {
+        if (showBigUserImageDialog) {
             ShowBigUserImageDialog(userData = userData,
                 friendData = friendData,
                 onDismiss = { action ->
@@ -322,14 +306,6 @@ class DropInView {
                         }
 
                         MESSAGE -> {
-                            coroutineScope.launch {
-                                markMessagesAsRead(userData = userData, friendData = friendData)
-                                updateMarkAsUnreadStatus(
-                                    userData = userData,
-                                    friendData = friendData,
-                                    isAlreadyUnread = true
-                                )
-                            }
                             navController.navigate(Screens.ChatViewScreen.route)
                         }
 
@@ -343,17 +319,17 @@ class DropInView {
                         }
 
                     }
-                    showUserIconPrompt = false
+                    showBigUserImageDialog = false
                 })
         }
-        if (showClearChatPrompt) {
+        if (showClearChatDialog) {
             ClearChatDialog(onDismiss = { clear ->
                 if (clear == "clear") {
                     deleteAllChatMessages(
                         userData = userData, friendData = friendData
                     )
                 }
-                showClearChatPrompt = false
+                showClearChatDialog = false
             })
         }
         if (modelSheetState) {
@@ -368,33 +344,25 @@ class DropInView {
                         when (item) {
                             BottomSheetTagState.UNREAD -> {
                                 if (friendData.read > 0) {
-                                    coroutineScope.launch {
-                                        markMessagesAsRead(
-                                            friendData = friendData,
-                                            userData = userData
-                                        )
-                                    }
+                                    markMessagesAsRead(userData = userData, friendData = friendData)
+
                                 } else if (sharedViewModel.friend.value.markedAsUnread && sharedViewModel.friend.value.read == 0) {
-                                    coroutineScope.launch {
-                                        updateMarkAsUnreadStatus(
-                                            userData = userData,
-                                            friendData = friendData,
-                                            isAlreadyUnread = true
-                                        )
-                                    }
+                                    updateMarkAsUnreadStatus(
+                                        userData = userData, friendData = friendData,
+                                        isAlreadyUnread = true
+                                    )
+
                                 } else {
-                                    coroutineScope.launch {
-                                        updateMarkAsUnreadStatus(
-                                            userData = userData,
-                                            friendData = friendData,
-                                            isAlreadyUnread = false
-                                        )
-                                    }
+                                    updateMarkAsUnreadStatus(
+                                        userData = userData, friendData = friendData,
+                                        isAlreadyUnread = false
+                                    )
+
                                 }
                             }
 
                             BottomSheetTagState.CLEAR -> {
-                                showClearChatPrompt = true
+                                showClearChatDialog = true
                             }
 
                             BottomSheetTagState.MUTE -> {

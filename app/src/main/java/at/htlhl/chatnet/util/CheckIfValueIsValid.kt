@@ -15,9 +15,5 @@ fun checkIfValueIsValid(type: TextFieldTypeState, value: String): Boolean {
         TextFieldTypeState.PASSWORD -> {
             value.matches("^(?!.*\\s).{6,4096}$".toRegex())
         }
-
-        else -> {
-            false
-        }
     }
 }
