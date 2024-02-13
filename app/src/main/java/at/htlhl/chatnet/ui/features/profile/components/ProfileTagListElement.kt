@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.features.profile
+package at.htlhl.chatnet.ui.features.profile.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -17,7 +17,7 @@ import at.htlhl.chatnet.data.TagElement
 import at.htlhl.chatnet.ui.features.mixed.TagElement
 
 @Composable
-fun ProfileTagElement(tags: List<TagElement>) {
+fun ProfileTagListElement(tags: List<TagElement>) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -94,5 +94,4 @@ fun ProfileTagElement(tags: List<TagElement>) {
             )
         }
     }
-
 }

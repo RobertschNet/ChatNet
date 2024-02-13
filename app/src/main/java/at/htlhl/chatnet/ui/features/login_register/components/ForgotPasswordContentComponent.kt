@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.chatnet.R
 import at.htlhl.chatnet.data.AccountDataState
+import at.htlhl.chatnet.data.TextFieldTypeState
 import at.htlhl.chatnet.ui.features.dialogs.PasswordResetEmailDialog
 import at.htlhl.chatnet.util.checkIfValueIsValid
 import coil.compose.SubcomposeAsyncImage
@@ -98,7 +99,7 @@ fun ForgotPasswordContentComponent(
                 supportingText = {
                     if (email.isNotEmpty()) {
                         Column {
-                            if (!checkIfValueIsValid(type = "email", value = email)) {
+                            if (!checkIfValueIsValid(type = TextFieldTypeState.EMAIL, value = email)) {
                                 Text(
                                     text = "Email is invalid",
                                     color = Color.Red,

@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.features.profile
+package at.htlhl.chatnet.ui.features.profile.components
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -38,12 +38,12 @@ import coil.compose.SubcomposeAsyncImage
 import kotlinx.coroutines.delay
 
 @Composable
-fun ProfileProfilePictureElement(
+fun ProfileProfilePictureComponent(
     userData: FirebaseUser,
     updateProfilePictureLoading: Boolean,
     updateProfilePictureException: Boolean,
-    onImageClicked: () -> Unit,
-    onProfileChangeClicked: () -> Unit,
+    onProfilePictureClicked: () -> Unit,
+    onChangeProfilePictureClicked: () -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -58,7 +58,7 @@ fun ProfileProfilePictureElement(
                 .fillMaxSize()
                 .clip(CircleShape)
                 .clickable {
-                    onImageClicked.invoke()
+                    onProfilePictureClicked()
                 }
                 .shimmerEffect()
         )
@@ -77,7 +77,6 @@ fun ProfileProfilePictureElement(
                 .align(Alignment.BottomEnd)
         ) {
             var rotationState by remember { mutableFloatStateOf(0f) }
-
             val rotation by animateFloatAsState(
                 targetValue = rotationState,
                 animationSpec = tween(
@@ -102,7 +101,7 @@ fun ProfileProfilePictureElement(
                 modifier = Modifier
                     .size(40.dp)
                     .clickable(enabled = !updateProfilePictureLoading) {
-                        onProfileChangeClicked.invoke()
+                        onChangeProfilePictureClicked()
                     }
                     .align(Alignment.Center)
                     .clip(CircleShape)

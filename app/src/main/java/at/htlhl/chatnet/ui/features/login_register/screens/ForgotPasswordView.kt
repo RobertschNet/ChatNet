@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.AccountDataState
+import at.htlhl.chatnet.data.TextFieldTypeState
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.features.login_register.components.ForgotPasswordBottomBarComponent
 import at.htlhl.chatnet.ui.features.login_register.components.ForgotPasswordContentComponent
@@ -127,7 +128,7 @@ class ForgotPasswordView {
                     loginRegisterViewModel.checkIfEmailExists(email = email) { success ->
                         emailExists = success
                         emailTexFieldColor = if (!success || !checkIfValueIsValid(
-                                type = "email", value = email
+                                type = TextFieldTypeState.EMAIL, value = email
                             )
                         ) {
                             AccountDataState.Invalid

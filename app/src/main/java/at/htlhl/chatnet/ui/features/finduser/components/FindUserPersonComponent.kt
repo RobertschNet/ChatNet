@@ -38,8 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.PersonType
-import at.htlhl.chatnet.data.tags
 import at.htlhl.chatnet.ui.theme.shimmerEffect
+import at.htlhl.chatnet.util.getPersonTagsList
 import at.htlhl.chatnet.util.highlightSearchedText
 import coil.compose.SubcomposeAsyncImage
 
@@ -55,10 +55,7 @@ fun FindUserPersonComponent(
     onFriendActionClicked: (FirebaseUser, Boolean) -> Unit,
     onDenyFriendRequestClicked: (FirebaseUser) -> Unit
 ) {
-    val filteredPersonTags =
-        if (person.tags.isEmpty()) tags.filter { tag -> tag.category == "Empty" } else tags.filter { tag ->
-            person.tags.contains(tag.name)
-        }
+    val filteredPersonTags = getPersonTagsList(personData = person)
     Row(
         modifier = Modifier
             .fillMaxWidth()

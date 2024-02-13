@@ -111,15 +111,22 @@ class ChatMateView {
                                         showUserIconPrompt = true
                                     }
 
-                                   ChatsChatItemClickState.CONTEXT_MENU -> {
+                                    ChatsChatItemClickState.CONTEXT_MENU -> {
                                         modelSheetState = true
                                     }
 
                                     ChatsChatItemClickState.MESSAGE -> {
                                         coroutineScope.launch {
                                             delay(500)
-                                            markMessagesAsRead(userData = userData, friendData = friendData)
-                                            updateMarkAsUnreadStatus(userData = userData, friendData = friendData, isAlreadyUnread = true)
+                                            markMessagesAsRead(
+                                                userData = userData,
+                                                friendData = friendData
+                                            )
+                                            updateMarkAsUnreadStatus(
+                                                userData = userData,
+                                                friendData = friendData,
+                                                isAlreadyUnread = true
+                                            )
                                         }
                                         navController.navigate(Screens.ChatViewScreen.route)
                                     }
@@ -142,12 +149,14 @@ class ChatMateView {
                         }
 
                         MESSAGE -> {
-                            markMessagesAsRead(userData = userData, friendData = friendData)
-                            updateMarkAsUnreadStatus(
-                                userData = userData,
-                                friendData = friendData,
-                                isAlreadyUnread = true
-                            )
+                            coroutineScope.launch {
+                                markMessagesAsRead(userData = userData, friendData = friendData)
+                                updateMarkAsUnreadStatus(
+                                    userData = userData,
+                                    friendData = friendData,
+                                    isAlreadyUnread = true
+                                )
+                            }
                             navController.navigate(Screens.ChatViewScreen.route)
                         }
 
@@ -191,22 +200,29 @@ class ChatMateView {
                             when (item) {
                                 BottomSheetTagState.UNREAD -> {
                                     if (friendData.read > 0) {
-                                        markMessagesAsRead(
-                                            friendData = friendData,
-                                            userData = userData
-                                        )
+                                        coroutineScope.launch {
+                                            markMessagesAsRead(
+                                                userData = userData,
+                                                friendData = friendData
+                                            )
+                                        }
+
                                     } else if (friendData.markedAsUnread && friendData.read == 0) {
-                                        updateMarkAsUnreadStatus(
-                                            userData = userData,
-                                            friendData = friendData,
-                                            isAlreadyUnread = true
-                                        )
+                                        coroutineScope.launch {
+                                            updateMarkAsUnreadStatus(
+                                                userData = userData,
+                                                friendData = friendData,
+                                                isAlreadyUnread = true
+                                            )
+                                        }
                                     } else {
-                                        updateMarkAsUnreadStatus(
-                                            userData = userData,
-                                            friendData = friendData,
-                                            isAlreadyUnread = false
-                                        )
+                                        coroutineScope.launch {
+                                            updateMarkAsUnreadStatus(
+                                                userData = userData,
+                                                friendData = friendData,
+                                                isAlreadyUnread = false
+                                            )
+                                        }
                                     }
                                 }
 

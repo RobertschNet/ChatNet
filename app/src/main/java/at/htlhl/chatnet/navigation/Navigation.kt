@@ -1,6 +1,6 @@
 package at.htlhl.chatnet.navigation
 
-import at.htlhl.chatnet.ui.views.TagSelectView
+import at.htlhl.chatnet.ui.features.tags.screens.TagSelectView
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi

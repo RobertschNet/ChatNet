@@ -20,6 +20,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.AccountDataState
+import at.htlhl.chatnet.data.TextFieldTypeState
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.features.login_register.components.RegisterBottomBarComponent
 import at.htlhl.chatnet.ui.features.login_register.components.RegisterContentComponent
@@ -148,7 +149,7 @@ class RegisterView {
                             usernameExists = success
                             usernameTexFieldColor =
                                 if (success || !checkIfValueIsValid(
-                                        type = "username",
+                                        type = TextFieldTypeState.USERNAME,
                                         value = username
                                     )
                                 ) {
@@ -171,7 +172,7 @@ class RegisterView {
                             emailExists = success
                             emailTexFieldColor =
                                 if (success || !checkIfValueIsValid(
-                                        type = "email",
+                                        type = TextFieldTypeState.EMAIL,
                                         value = email
                                     )
                                 ) {
@@ -191,7 +192,7 @@ class RegisterView {
                     onPasswordValueChange = { passwordText ->
                         password = passwordText
                         passwordTexFieldColor =
-                            if (!checkIfValueIsValid(type = "password", value = password)) {
+                            if (!checkIfValueIsValid(type = TextFieldTypeState.PASSWORD, value = password)) {
                                 AccountDataState.Invalid
                             } else {
                                 AccountDataState.Valid

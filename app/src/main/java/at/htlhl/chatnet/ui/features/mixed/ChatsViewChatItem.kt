@@ -38,9 +38,7 @@ import at.htlhl.chatnet.data.ChatsChatItemClickState
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.ui.theme.shimmerEffect
-import at.htlhl.chatnet.util.firebase.updateMarkAsUnreadStatus
 import at.htlhl.chatnet.util.highlightSearchedText
-import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -57,11 +55,14 @@ fun ChatsViewChatItem(
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
     val formattedTime: String = formatter.format(friendElement.timestampMessage.toDate())
     if (friendElement.read > 0) {
-        updateMarkAsUnreadStatus(
-            userData = userData,
-            friendData = friendElement,
-            isAlreadyUnread = true
-        )
+        /*
+                updateMarkAsUnreadStatus(
+                    userData = userData,
+                    friendData = friendElement,
+                    isAlreadyUnread = true
+                )
+
+         */
     }
     Row(
         modifier =

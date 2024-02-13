@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.features.profile
+package at.htlhl.chatnet.ui.features.profile.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -23,15 +23,15 @@ import androidx.compose.ui.unit.sp
 import at.htlhl.chatnet.data.FirebaseUser
 
 @Composable
-fun ProfileUsernameElement(
+fun ProfileUsernameComponent(
     userData:FirebaseUser,
-    onClick: () -> Unit,
+    onUsernameClicked: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .padding(start = 20.dp, top = 20.dp)
             .clickable {
-                onClick.invoke()
+                onUsernameClicked()
             }
             .fillMaxWidth(),
     ) {
@@ -72,7 +72,7 @@ fun ProfileUsernameElement(
                 color = MaterialTheme.colorScheme.secondary,
                 overflow = TextOverflow.Clip,
                 fontSize = 12.sp,
-                fontFamily = FontFamily.Default,
+                fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Light,
                 lineHeight = 16.sp,
                 modifier = Modifier

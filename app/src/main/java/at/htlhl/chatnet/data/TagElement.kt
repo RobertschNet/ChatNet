@@ -40,48 +40,63 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 
 data class TagElement(
-    val name: String,
-    val icon: ImageVector,
-    val color: Color,
-    val category: String
+    val name: String, val icon: ImageVector, val color: Color, val category: TagCategoryState
 )
 
 val tags = listOf(
-    TagElement("Music", Icons.Default.Headphones, Color(0xFFFF0000), "Leisure"),
-    TagElement("Movies", Icons.Default.LocalMovies, Color(0xFFFF0000),"Leisure"),
-    TagElement("Reading", Icons.Default.MenuBook, Color(0xFFFF0000),"Leisure"),
-    TagElement("Drawing", Icons.Default.Draw, Color(0xFFFF0000),"Leisure"),
-    TagElement("Gaming", Icons.Default.VideogameAsset, Color(0xFFFF0000),"Leisure"),
-    TagElement("Coding", Icons.Default.Code, Color(0xFFFF0000),"Leisure"),
-    TagElement("Singing", Icons.Default.MusicNote, Color(0xFFFF0000),"Leisure"),
-    TagElement("Dancing", Icons.Default.Details, Color(0xFFFF0000),"Leisure"),
-    TagElement("Cinema", Icons.Default.Movie, Color(0xFFFF0000),"Leisure"),
-    TagElement("Dining Out", Icons.Default.Dining, Color(0xFFFF0000),"Leisure"),
-    TagElement("Walking", Icons.Default.DirectionsWalk, Color(0xFF001AFF),"Sports"),
-    TagElement("Running", Icons.Default.DirectionsRun, Color(0xFF001AFF),"Sports"),
-    TagElement("Hiking", Icons.Default.Hiking, Color(0xFF001AFF),"Sports"),
-    TagElement("Cycling", Icons.Default.DirectionsBike, Color(0xFF001AFF),"Sports"),
-    TagElement("Swimming", Icons.Default.Water, Color(0xFF001AFF),"Sports"),
-    TagElement("Training", Icons.Default.SportsGymnastics, Color(0xFF001AFF),"Sports"),
-    TagElement("Skiing", Icons.Default.DownhillSkiing, Color(0xFF001AFF),"Sports"),
-    TagElement("Snowboarding", Icons.Default.Snowboarding, Color(0xFF001AFF),"Sports"),
-    TagElement("Skateboarding", Icons.Default.Skateboarding, Color(0xFF001AFF),"Sports"),
-    TagElement("Soccer", Icons.Default.SportsSoccer, Color(0xFF001AFF),"Sports"),
-    TagElement("Football", Icons.Default.SportsFootball, Color(0xFF001AFF),"Sports"),
-    TagElement("Basketball", Icons.Default.SportsBasketball, Color(0xFF001AFF),"Sports"),
-    TagElement("Tennis", Icons.Default.SportsTennis, Color(0xFF001AFF),"Sports"),
-    TagElement("Student", Icons.Default.School, Color(0xFF00FF21),"Lifestyle"),
-    TagElement("Entrepreneur", Icons.Default.Engineering, Color(0xFF00FF21),"Lifestyle"),
-    TagElement("Travelling", Icons.Default.CardTravel, Color(0xFF00FF21),"Lifestyle"),
-    TagElement("Shopping", Icons.Default.ShoppingCart, Color(0xFF00FF21),"Lifestyle"),
-    TagElement("Cooking", Icons.Default.Kitchen, Color(0xFF00FF21),"Lifestyle"),
-    TagElement("Fashion", Icons.Default.Details, Color(0xFF00FF21),"Lifestyle"),
-    TagElement("Vegan", Icons.Default.FoodBank, Color(0xFF00FF21),"Lifestyle"),
-    TagElement("LGBTQ+", Icons.Default.Flag, Color(0xFF00FF21),"Lifestyle"),
-    TagElement("Cars", Icons.Default.DirectionsCar, Color(0xFFFF5722),"Interests"),
-    TagElement("Technology", Icons.Default.Computer, Color(0xFFFF5722),"Interests"),
-    TagElement("Social Media", Icons.Default.Smartphone, Color(0xFFFF5722),"Interests"),
-    TagElement("Dogs", Icons.Default.Pets, Color(0xFF5C3326),"Pets"),
-    TagElement("Cats", Icons.Default.Pets, Color(0xFF5C3326),"Pets"),
-    TagElement("No Tags", Icons.Default.RemoveCircleOutline, Color.Gray,"Empty"),
+    TagElement("Music", Icons.Default.Headphones, Color(0xFFFF0000), TagCategoryState.LEISURE),
+    TagElement("Movies", Icons.Default.LocalMovies, Color(0xFFFF0000), TagCategoryState.LEISURE),
+    TagElement("Reading", Icons.Default.MenuBook, Color(0xFFFF0000), TagCategoryState.LEISURE),
+    TagElement("Drawing", Icons.Default.Draw, Color(0xFFFF0000), TagCategoryState.LEISURE),
+    TagElement("Gaming", Icons.Default.VideogameAsset, Color(0xFFFF0000), TagCategoryState.LEISURE),
+    TagElement("Coding", Icons.Default.Code, Color(0xFFFF0000), TagCategoryState.LEISURE),
+    TagElement("Singing", Icons.Default.MusicNote, Color(0xFFFF0000), TagCategoryState.LEISURE),
+    TagElement("Dancing", Icons.Default.Details, Color(0xFFFF0000), TagCategoryState.LEISURE),
+    TagElement("Cinema", Icons.Default.Movie, Color(0xFFFF0000), TagCategoryState.LEISURE),
+    TagElement("Dining Out", Icons.Default.Dining, Color(0xFFFF0000), TagCategoryState.LEISURE),
+    TagElement("Walking", Icons.Default.DirectionsWalk, Color(0xFF001AFF), TagCategoryState.SPORTS),
+    TagElement("Running", Icons.Default.DirectionsRun, Color(0xFF001AFF), TagCategoryState.SPORTS),
+    TagElement("Hiking", Icons.Default.Hiking, Color(0xFF001AFF), TagCategoryState.SPORTS),
+    TagElement("Cycling", Icons.Default.DirectionsBike, Color(0xFF001AFF), TagCategoryState.SPORTS),
+    TagElement("Swimming", Icons.Default.Water, Color(0xFF001AFF), TagCategoryState.SPORTS),
+    TagElement(
+        "Training", Icons.Default.SportsGymnastics, Color(0xFF001AFF), TagCategoryState.SPORTS
+    ),
+    TagElement("Skiing", Icons.Default.DownhillSkiing, Color(0xFF001AFF), TagCategoryState.SPORTS),
+    TagElement(
+        "Snowboarding", Icons.Default.Snowboarding, Color(0xFF001AFF), TagCategoryState.SPORTS
+    ),
+    TagElement(
+        "Skateboarding", Icons.Default.Skateboarding, Color(0xFF001AFF), TagCategoryState.SPORTS
+    ),
+    TagElement("Soccer", Icons.Default.SportsSoccer, Color(0xFF001AFF), TagCategoryState.SPORTS),
+    TagElement(
+        "Football", Icons.Default.SportsFootball, Color(0xFF001AFF), TagCategoryState.SPORTS
+    ),
+    TagElement(
+        "Basketball", Icons.Default.SportsBasketball, Color(0xFF001AFF), TagCategoryState.SPORTS
+    ),
+    TagElement("Tennis", Icons.Default.SportsTennis, Color(0xFF001AFF), TagCategoryState.SPORTS),
+    TagElement("Student", Icons.Default.School, Color(0xFF00FF21), TagCategoryState.LIFESTYLE),
+    TagElement(
+        "Entrepreneur", Icons.Default.Engineering, Color(0xFF00FF21), TagCategoryState.LIFESTYLE
+    ),
+    TagElement(
+        "Travelling", Icons.Default.CardTravel, Color(0xFF00FF21), TagCategoryState.LIFESTYLE
+    ),
+    TagElement(
+        "Shopping", Icons.Default.ShoppingCart, Color(0xFF00FF21), TagCategoryState.LIFESTYLE
+    ),
+    TagElement("Cooking", Icons.Default.Kitchen, Color(0xFF00FF21), TagCategoryState.LIFESTYLE),
+    TagElement("Fashion", Icons.Default.Details, Color(0xFF00FF21), TagCategoryState.LIFESTYLE),
+    TagElement("Vegan", Icons.Default.FoodBank, Color(0xFF00FF21), TagCategoryState.LIFESTYLE),
+    TagElement("LGBTQ+", Icons.Default.Flag, Color(0xFF00FF21), TagCategoryState.LIFESTYLE),
+    TagElement("Cars", Icons.Default.DirectionsCar, Color(0xFFFF5722), TagCategoryState.INTERESTS),
+    TagElement("Technology", Icons.Default.Computer, Color(0xFFFF5722), TagCategoryState.INTERESTS),
+    TagElement(
+        "Social Media", Icons.Default.Smartphone, Color(0xFFFF5722), TagCategoryState.INTERESTS
+    ),
+    TagElement("Dogs", Icons.Default.Pets, Color(0xFF5C3326), TagCategoryState.PETS),
+    TagElement("Cats", Icons.Default.Pets, Color(0xFF5C3326), TagCategoryState.PETS),
+    TagElement("No Tags", Icons.Default.RemoveCircleOutline, Color.Gray, TagCategoryState.EMPTY),
 )

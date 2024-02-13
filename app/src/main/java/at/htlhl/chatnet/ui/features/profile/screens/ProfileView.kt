@@ -1,17 +1,16 @@
 package at.htlhl.chatnet.ui.features.profile.screens
 
-import android.annotation.SuppressLint
 import android.graphics.BitmapFactory
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.Scaffold
 import androidx.compose.material3.MaterialTheme
@@ -33,20 +32,22 @@ import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.CurrentTab
 import at.htlhl.chatnet.data.FirebaseUser
-import at.htlhl.chatnet.data.tags
+import at.htlhl.chatnet.data.TextFieldTypeState
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.features.dialogs.DeleteAccountDialog
 import at.htlhl.chatnet.ui.features.mixed.TabsTopBar
-import at.htlhl.chatnet.ui.features.profile.ProfileChangeUsernameElement
-import at.htlhl.chatnet.ui.features.profile.ProfileDeleteAccountElement
-import at.htlhl.chatnet.ui.features.profile.ProfileEmailElement
-import at.htlhl.chatnet.ui.features.profile.ProfileProfilePictureElement
-import at.htlhl.chatnet.ui.features.profile.ProfileSwitchAccountElement
-import at.htlhl.chatnet.ui.features.profile.ProfileTagInfoElement
-import at.htlhl.chatnet.ui.features.profile.ProfileUsernameElement
-import at.htlhl.chatnet.ui.features.profile.profileCheckIfUsernameIsValid
+import at.htlhl.chatnet.ui.features.profile.components.ProfileChangeUsernameComponent
+import at.htlhl.chatnet.ui.features.profile.components.ProfileDeleteAccountComponent
+import at.htlhl.chatnet.ui.features.profile.components.ProfileProfilePictureComponent
+import at.htlhl.chatnet.ui.features.profile.components.ProfileSwitchAccountComponent
+import at.htlhl.chatnet.ui.features.profile.components.ProfileUserEmailComponent
+import at.htlhl.chatnet.ui.features.profile.components.ProfileUserTagListComponent
+import at.htlhl.chatnet.ui.features.profile.components.ProfileUsernameComponent
 import at.htlhl.chatnet.ui.features.profile.viewmodels.ProfileViewModel
+import at.htlhl.chatnet.util.checkIfValueIsValid
 import at.htlhl.chatnet.util.convertBitmapToWebP
+import at.htlhl.chatnet.util.copyToClipboard
+import at.htlhl.chatnet.util.getPersonTagsList
 import at.htlhl.chatnet.util.uploadWebPImage
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
@@ -56,21 +57,18 @@ import kotlinx.coroutines.launch
 
 class ProfileView {
 
-    @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @Composable
     fun ProfileScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val profileViewModel = viewModel<ProfileViewModel>()
+        val dropInState by sharedViewModel.dropInState
         val systemUiController = rememberSystemUiController()
         systemUiController.setStatusBarColor(
-            color = MaterialTheme.colorScheme.background,
-            darkIcons = !isSystemInDarkTheme()
+            color = MaterialTheme.colorScheme.background, darkIcons = !isSystemInDarkTheme()
         )
-
-        val dropInState by sharedViewModel.dropInState
-        val userState = sharedViewModel.user.collectAsState()
-        val userData: FirebaseUser = userState.value
+        val userDataState by sharedViewModel.user.collectAsState()
+        val userData: FirebaseUser = userDataState
         val context = LocalContext.current
-        val filteredTags = if (userData.tags.isEmpty()) tags.filter { tag -> tag.category == "Empty" } else tags.filter { tag -> userData.tags.contains(tag.name) }
+        val filteredTags = getPersonTagsList(personData = userData)
         var usernameText by remember { mutableStateOf("") }
         var updateProfilePictureLoading by remember { mutableStateOf(false) }
         var updateProfilePictureException by remember { mutableStateOf(false) }
@@ -78,152 +76,154 @@ class ProfileView {
         var isLoading by remember { mutableStateOf(false) }
         var changeUsernameException by remember { mutableStateOf(false) }
         val coroutineScope = rememberCoroutineScope()
-        var modelBottomSheetState by remember { mutableStateOf(false) }
+        var modelSheetState by remember { mutableStateOf(false) }
         var usernameTextFieldColor by remember { mutableStateOf(Color.Red) }
         var usernameAlreadyExists by remember { mutableStateOf(false) }
         val focusRequester = remember { FocusRequester() }
         val googleSignInOptions = remember {
             GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(R.string.web_client_id.toString())
-                .requestEmail()
-                .build()
+                .requestIdToken(R.string.web_client_id.toString()).requestEmail().build()
         }
 
-        val multiplePhotoPickerLauncher =
-            rememberLauncherForActivityResult(contract = ActivityResultContracts.PickVisualMedia(),
-                onResult = { uri ->
-                    if (uri == null) {
-                        updateProfilePictureLoading = false
-                        return@rememberLauncherForActivityResult
-                    }
-                    val inputStream = context.contentResolver.openInputStream(uri)
-                    val bitmap = BitmapFactory.decodeStream(inputStream)
-                    val webpByteArray = convertBitmapToWebP(bitmap)
-                    uploadWebPImage(
-                        webpByteArray = webpByteArray,
-                        saveLocation = "users/",
-                        onUploadSuccess = { downloadUrl ->
-                            profileViewModel.updateUserProfilePicture(downloadUrl) {success ->
-                                updateProfilePictureLoading = false
-                                updateProfilePictureException = !success
-                            }
-                        },
-                        onUploadError = {
-                            updateProfilePictureLoading = false
-                            updateProfilePictureException = true
-                        }
-                    )
+        val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.PickVisualMedia(),
+            onResult = { uri ->
+                if (uri == null) {
+                    updateProfilePictureLoading = false
+                    return@rememberLauncherForActivityResult
                 }
-            )
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val bitmap = BitmapFactory.decodeStream(inputStream)
+                val webpByteArray = convertBitmapToWebP(bitmap)
+                uploadWebPImage(webpByteArray = webpByteArray,
+                    saveLocation = "users/",
+                    onUploadSuccess = { downloadUrl ->
+                        profileViewModel.updateUserProfilePicture(downloadUrl) { success ->
+                            updateProfilePictureLoading = false
+                            updateProfilePictureException = !success
+                        }
+                    },
+                    onUploadError = {
+                        updateProfilePictureLoading = false
+                        updateProfilePictureException = true
+                    })
+            })
         Scaffold(
             backgroundColor = MaterialTheme.colorScheme.background,
             modifier = Modifier
                 .fillMaxSize()
                 .imePadding(),
             topBar = {
-                TabsTopBar(
-                    tab = CurrentTab.PROFILE,
+                TabsTopBar(tab = CurrentTab.PROFILE,
                     dropInState = dropInState,
-                    onActionClicked = {
-                    },
                     onUpdateSearchValue = {
                         sharedViewModel.searchValue.value = it
-                    }
-
-                )
+                    })
             },
-            content = {
+            content = { paddingValues ->
                 LazyColumn(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
+                        .padding(top = paddingValues.calculateTopPadding())
                         .fillMaxSize()
                 ) {
                     item {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            ProfileProfilePictureElement(
-                                userData = userData,
-                                updateProfilePictureLoading = updateProfilePictureLoading,
-                                updateProfilePictureException = updateProfilePictureException,
-                                onImageClicked = {
-                                    navController.navigate(Screens.ProfilePictureView.route)
-                                },
-                                onProfileChangeClicked = {
-                                    updateProfilePictureException = false
-                                    updateProfilePictureLoading = true
-                                    multiplePhotoPickerLauncher.launch(
-                                        PickVisualMediaRequest(
-                                            ActivityResultContracts.PickVisualMedia.ImageOnly
-                                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        ProfileProfilePictureComponent(userData = userData,
+                            updateProfilePictureLoading = updateProfilePictureLoading,
+                            updateProfilePictureException = updateProfilePictureException,
+                            onProfilePictureClicked = {
+                                navController.navigate(Screens.ProfilePictureView.route)
+                            },
+                            onChangeProfilePictureClicked = {
+                                updateProfilePictureException = false
+                                updateProfilePictureLoading = true
+                                multiplePhotoPickerLauncher.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
                                     )
-                                }
-                            )
-                            ProfileUsernameElement(userData = userData) {
-                                modelBottomSheetState = true
-                                coroutineScope.launch {
-                                    delay(500)
-                                    focusRequester.requestFocus()
-                                }
+                                )
+                            })
+                        Spacer(modifier = Modifier.height(10.dp))
+                        ProfileUsernameComponent(userData = userData, onUsernameClicked = {
+                            modelSheetState = true
+                            coroutineScope.launch {
+                                delay(500)
+                                focusRequester.requestFocus()
                             }
-
-                            ProfileTagInfoElement(filteredTags = filteredTags) {
+                        })
+                        Spacer(modifier = Modifier.height(10.dp))
+                        ProfileUserTagListComponent(filteredTags = filteredTags,
+                            onTagListClicked = {
                                 navController.navigate(Screens.TagSelectScreen.route)
+                            })
+                        Spacer(modifier = Modifier.height(10.dp))
+                        ProfileUserEmailComponent(userData = userData, onEmailClicked = {
+                            copyToClipboard(
+                                context = context, label = "Email", text = userData.email
+                            )
+                        })
+                        Spacer(modifier = Modifier.height(10.dp))
+                        ProfileSwitchAccountComponent(onSwitchAccount = {
+                            profileViewModel.logout(context, googleSignInOptions)
+                            sharedViewModel.reset()
+                            navController.navigate(Screens.LoginFlow.route) {
+                                popUpTo(Screens.MainFlow.route) {
+                                    inclusive = true
+                                }
                             }
-
-                            ProfileEmailElement(userData = userData) {
-                                sharedViewModel.copyToClipboard(context, userData.email)
-                            }
-                            ProfileSwitchAccountElement {
-                                profileViewModel.logout(context, googleSignInOptions)
-                                sharedViewModel.reset()
+                        })
+                        Spacer(modifier = Modifier.height(10.dp))
+                        ProfileDeleteAccountComponent(onDeleteAccountClicked = {
+                            deleteAccountDialog = true
+                        })
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
+                }
+                if (deleteAccountDialog) {
+                    DeleteAccountDialog { deleteClicked ->
+                        if (deleteClicked) {
+                            profileViewModel.deleteUserAccount(onSuccess = {
                                 navController.navigate(Screens.LoginFlow.route) {
                                     popUpTo(Screens.MainFlow.route) {
                                         inclusive = true
                                     }
                                 }
-                            }
-                            ProfileDeleteAccountElement {
-                                deleteAccountDialog = true
-                            }
+                            }, onFailure = {
+                                Toast.makeText(
+                                    context, "Error deleting account", Toast.LENGTH_SHORT
+                                ).show()
+                            })
                         }
-                    }
-                    item {
-                        Spacer(modifier = Modifier.height(20.dp))
+                        deleteAccountDialog = false
                     }
                 }
-                if (deleteAccountDialog) {
-                    DeleteAccountDialog {
-                        if (it == "deleted") {
-                            //TODO: Implement Delete Account
-                        } else {
-                            deleteAccountDialog = false
-                        }
-                    }
-                }
-                if (modelBottomSheetState) {
-                    ProfileChangeUsernameElement(
-                        userData = userData,
+                if (modelSheetState) {
+                    ProfileChangeUsernameComponent(userData = userData,
                         usernameText = usernameText,
                         usernameTextFieldColor = usernameTextFieldColor,
                         isLoading = isLoading,
                         focusRequester = focusRequester,
                         usernameAlreadyExists = usernameAlreadyExists,
                         changeUsernameException = changeUsernameException,
-                        onDismissModelBottomSheet = {
-                            modelBottomSheetState = false
+                        usernameIsValid = checkIfValueIsValid(
+                            type = TextFieldTypeState.USERNAME, value = usernameText
+                        ),
+                        onDismissModelSheet = {
+                            modelSheetState = false
                         },
-                        onValueChange = {
-                            usernameText = it
-                          profileViewModel.checkIfUsernameExists(usernameText) { exists ->
+                        onUsernameValueChange = { changedText ->
+                            usernameText = changedText
+                            profileViewModel.checkIfUsernameExists(usernameText) { exists ->
                                 usernameAlreadyExists = exists
-                                usernameTextFieldColor =
-                                    if (exists || !profileCheckIfUsernameIsValid(usernameText)) {
-                                        Color.Red
-                                    } else {
-                                        Color(0xFF00A0E8)
-                                    }
+                                usernameTextFieldColor = if (exists || !checkIfValueIsValid(
+                                        type = TextFieldTypeState.USERNAME, value = usernameText
+                                    )
+                                ) {
+                                    Color.Red
+                                } else {
+                                    Color(0xFF00A0E8)
+                                }
                                 if (usernameText.isEmpty()) {
                                     usernameTextFieldColor = Color.Red
                                 }
@@ -233,29 +233,30 @@ class ProfileView {
                             }
                             changeUsernameException = false
                         },
-                        onSavePressed = {
+                        onSaveUsernamePressed = {
                             isLoading = true
-                           profileViewModel.checkIfUsernameExists(usernameText) { exists ->
-                                if (!exists && profileCheckIfUsernameIsValid(usernameText)) {
-                                    sharedViewModel.updateUsername(
-                                        usernameText,
-                                    ) {
-                                        isLoading = false
-                                        if (it) {
-                                            usernameText = ""
-                                            usernameTextFieldColor = Color.Red
-                                            modelBottomSheetState = false
-                                        } else {
-                                            changeUsernameException = true
-                                        }
-                                    }
+                            profileViewModel.checkIfUsernameExists(usernameText) { exists ->
+                                if (!exists && checkIfValueIsValid(
+                                        type = TextFieldTypeState.USERNAME, value = usernameText
+                                    )
+                                ) {
+                                    profileViewModel.updateProfileUsername(userName = usernameText,
+                                        callback = { success ->
+                                            isLoading = false
+                                            if (success) {
+                                                usernameText = ""
+                                                usernameTextFieldColor = Color.Red
+                                                modelSheetState = false
+                                            } else {
+                                                changeUsernameException = true
+                                            }
+                                        })
                                 } else {
                                     isLoading = false
                                     changeUsernameException = true
                                 }
                             }
-                        }
-                    )
+                        })
                 }
             },
         )

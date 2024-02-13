@@ -27,7 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.htlhl.chatnet.data.FirebaseUser
-import at.htlhl.chatnet.data.tags
+import at.htlhl.chatnet.util.getPersonTagsList
 import coil.compose.SubcomposeAsyncImage
 
 @Composable
@@ -70,10 +70,7 @@ fun ProfileFriendsFromFriendsSection(
                         }
                     }
                     friendsFromFriendsList.forEach {
-                        val filteredTags =
-                            if (it.tags.isEmpty()) tags.filter { tag -> tag.category == "Empty" } else tags.filter { tag ->
-                                it.tags.contains(tag.name)
-                            }
+                        val filteredTags = getPersonTagsList(personData = it)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.clickable { onUserClicked.invoke(it) }) {

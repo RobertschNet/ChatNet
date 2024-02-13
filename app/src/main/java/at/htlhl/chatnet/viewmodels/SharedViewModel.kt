@@ -633,22 +633,7 @@ class SharedViewModel : ViewModel() {
             .addOnFailureListener { exception -> exception.printStackTrace() }
     }
 
-    fun updateUsername(name: String, callback: (Boolean) -> Unit) {
-        val fieldUpdates = mapOf(
-            "username.lowercase" to name.lowercase(),
-            "username.mixedcase" to name,
-        )
 
-        firebaseInstance.collection(USER_COLLECTION).document(auth.currentUser!!.uid)
-            .update(fieldUpdates)
-            .addOnSuccessListener {
-                callback.invoke(true)
-            }
-            .addOnFailureListener { exception ->
-                exception.printStackTrace()
-                callback.invoke(false)
-            }
-    }
 
     /**
      * This section contains the logic for the Firebase communication,
@@ -809,12 +794,7 @@ class SharedViewModel : ViewModel() {
     }
 
 
-    fun copyToClipboard(context: Context, text: String) {
-        val clipboardManager =
-            context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = ClipData.newPlainText("Message", text)
-        clipboardManager.setPrimaryClip(clip)
-    }
+
 
     fun resetRandChat() {
         val url = "https://randchat-ie4mphraqq-uc.a.run.app/randChat"
@@ -844,10 +824,6 @@ class SharedViewModel : ViewModel() {
                 }
             }
         })
-    }
-
-    fun checkIfUserIsLoggedIn(): Boolean {
-        return auth.currentUser != null
     }
 
     fun createChatMateChat(
@@ -1196,18 +1172,6 @@ class SharedViewModel : ViewModel() {
                     .addOnFailureListener { exception ->
                         exception.printStackTrace()
                     }
-            }
-            .addOnFailureListener { exception ->
-                exception.printStackTrace()
-            }
-    }
-
-
-    fun updateUserTags(tags: List<String>) {
-        val userRef = getUserDocumentRef().document(auth.currentUser?.uid.toString())
-        val updateData = mapOf("tags" to tags)
-        userRef.update(updateData)
-            .addOnSuccessListener {
             }
             .addOnFailureListener { exception ->
                 exception.printStackTrace()

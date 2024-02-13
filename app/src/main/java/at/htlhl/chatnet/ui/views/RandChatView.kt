@@ -59,6 +59,7 @@ import at.htlhl.chatnet.ui.features.dialogs.UnblockToMessageDialog
 import at.htlhl.chatnet.ui.features.mixed.ChatViewMessageComponent
 import at.htlhl.chatnet.ui.features.mixed.ChatViewTopBar
 import at.htlhl.chatnet.ui.features.mixed.InputField
+import at.htlhl.chatnet.util.copyToClipboard
 import at.htlhl.chatnet.util.firebase.markMessagesAsRead
 import at.htlhl.chatnet.util.firebase.updateBlockedUserList
 import at.htlhl.chatnet.util.firebase.updateMarkAsUnreadStatus
@@ -150,12 +151,6 @@ class RandChatView {
                 )
             }
         } ?: emptyList()
-        markMessagesAsRead(friendData=friendData, userData=userData)
-        updateMarkAsUnreadStatus(
-            userData = userData,
-            friendData = friendData,
-            isAlreadyUnread = true
-        )
         ChatViewContentStructure(
             userData = userData,
             chatPartner = friendData,
@@ -404,7 +399,7 @@ class RandChatView {
                     }
 
                     "copy" -> {
-                        sharedViewModel.copyToClipboard(context, message.text)
+                        copyToClipboard(context = context, label = "Message", text = message.text)
                     }
 
                     "generate" -> {

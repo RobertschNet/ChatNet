@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.AccountDataState
+import at.htlhl.chatnet.data.TextFieldTypeState
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.features.login_register.components.LoginBottomBarComponent
 import at.htlhl.chatnet.ui.features.login_register.components.LoginContentComponent
@@ -145,7 +146,7 @@ class LoginView {
                     onEmailValueChange = { emailText ->
                         email = emailText
                         emailTexFieldColor =
-                            if (checkIfValueIsValid(type = "email", value = email)) {
+                            if (checkIfValueIsValid(type = TextFieldTypeState.EMAIL, value = email)) {
                                 AccountDataState.Valid
                             } else {
                                 AccountDataState.Invalid
@@ -163,7 +164,7 @@ class LoginView {
                     onPasswordValueChange = { passwordText ->
                         password = passwordText
                         passwordTexFieldColor = if (checkIfValueIsValid(
-                                type = "password",
+                                type = TextFieldTypeState.PASSWORD,
                                 value = password
                             )
                         ) {

@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.features.profile
+package at.htlhl.chatnet.ui.features.profile.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -25,15 +25,15 @@ import androidx.compose.ui.unit.sp
 import at.htlhl.chatnet.data.TagElement
 
 @Composable
-fun ProfileTagInfoElement(
+fun ProfileUserTagListComponent(
     filteredTags: List<TagElement>,
-    onClick: () -> Unit,
+    onTagListClicked: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .padding(start = 20.dp, top = 20.dp)
             .clickable {
-                onClick.invoke()
+                onTagListClicked()
             }
             .fillMaxWidth(),
     ) {
@@ -60,14 +60,14 @@ fun ProfileTagInfoElement(
                     .padding(bottom = 3.dp)
             )
             Spacer(modifier = Modifier.height(2.dp))
-            ProfileTagElement(tags = filteredTags)
+            ProfileTagListElement(tags = filteredTags)
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "These are your tags. Other users will see these tags when they view your profile.",
                 color = MaterialTheme.colorScheme.secondary,
                 overflow = TextOverflow.Clip,
                 fontSize = 12.sp,
-                fontFamily = FontFamily.Default,
+                fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Light,
                 lineHeight = 16.sp,
                 modifier = Modifier

@@ -40,7 +40,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.FirebaseChat
@@ -55,6 +54,7 @@ import at.htlhl.chatnet.ui.features.dialogs.UnblockToMessageDialog
 import at.htlhl.chatnet.ui.features.mixed.ChatViewMessageComponent
 import at.htlhl.chatnet.ui.features.mixed.ChatViewTopBar
 import at.htlhl.chatnet.ui.features.mixed.InputField
+import at.htlhl.chatnet.util.copyToClipboard
 import at.htlhl.chatnet.util.firebase.markMessagesAsRead
 import at.htlhl.chatnet.util.firebase.updateBlockedUserList
 import at.htlhl.chatnet.util.firebase.updateMarkAsUnreadStatus
@@ -66,6 +66,7 @@ import kotlinx.coroutines.launch
 class ChatView {
     @Composable
     fun ChatViewScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+
         val systemUiController = rememberSystemUiController()
         systemUiController.setStatusBarColor(
             color = MaterialTheme.colorScheme.background, darkIcons = !isSystemInDarkTheme()
@@ -106,7 +107,6 @@ class ChatView {
         val lazyListState = rememberLazyListState()
         val context = LocalContext.current
         var currentIndex = 0
-
         Scaffold(containerColor = MaterialTheme.colorScheme.background,
             modifier = Modifier
                 .fillMaxSize()
@@ -373,6 +373,7 @@ class ChatView {
             }
         }
 
+
         if (menuDialog) {
             OptionsDialog(offset = anchorPosition.value) { value ->
                 when (value) {
@@ -381,7 +382,7 @@ class ChatView {
                     }
 
                     "copy" -> {
-                        sharedViewModel.copyToClipboard(context, message.text)
+                        copyToClipboard(context = context, label = "Message", text = message.text)
                     }
 
                     "generate" -> {

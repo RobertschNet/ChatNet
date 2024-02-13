@@ -28,10 +28,10 @@ import androidx.compose.ui.window.DialogProperties
 
 @Composable
 fun DeleteAccountDialog(
-    onClose: (String) -> Unit = {}
+    onDeleteAccountClicked: (Boolean) -> Unit = {}
 ) {
     Dialog(
-        onDismissRequest = { onClose.invoke("closed") },
+        onDismissRequest = { onDeleteAccountClicked.invoke(false) },
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
     ) {
         Column(
@@ -72,7 +72,7 @@ fun DeleteAccountDialog(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onClose.invoke("deleted") }
+                    .clickable { onDeleteAccountClicked.invoke(true) }
             ) {
                 Text(
                     text = "Delete",
@@ -91,7 +91,7 @@ fun DeleteAccountDialog(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onClose.invoke("closed") }
+                    .clickable { onDeleteAccountClicked.invoke(false) }
             ) {
                 Text(
                     text = "Cancel",

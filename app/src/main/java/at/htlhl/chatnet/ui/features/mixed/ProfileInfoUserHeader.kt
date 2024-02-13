@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseUser
-import at.htlhl.chatnet.data.tags
+import at.htlhl.chatnet.util.getPersonTagsList
 import coil.compose.SubcomposeAsyncImage
 
 @Composable
@@ -34,7 +34,7 @@ fun ProfileInfoUserHeader(
     navController: NavController,
     friend: FirebaseUser
 ) {
-    val friendUserTags = if (friend.tags.isEmpty()) tags.filter { tag-> tag.category=="Empty" } else tags.filter { tag -> friend.tags.contains(tag.name) }
+    val friendUserTags = getPersonTagsList(personData = friend)
     Card(modifier = Modifier.fillMaxWidth(), elevation = 10.dp, backgroundColor = MaterialTheme.colorScheme.background) {
         Box(modifier = Modifier.fillMaxWidth()) {
             SubcomposeAsyncImage(model = R.drawable.back_svgrepo_com_1_,

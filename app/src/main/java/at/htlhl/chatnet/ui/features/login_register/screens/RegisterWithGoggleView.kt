@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.AccountDataState
+import at.htlhl.chatnet.data.TextFieldTypeState
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.features.login_register.components.RegisterWithGoogleBottomBarComponent
 import at.htlhl.chatnet.ui.features.login_register.components.RegisterWithGoogleContentComponent
@@ -62,7 +63,7 @@ class RegisterWithGoggleView {
                     loginRegisterViewModel.checkIfUsernameExists(name = username) { success ->
                         usernameExists = success
                         usernameTextFieldColor = if (success || !checkIfValueIsValid(
-                                type = "username", value = username
+                                type = TextFieldTypeState.USERNAME, value = username
                             )
                         ) {
                             AccountDataState.Invalid

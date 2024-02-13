@@ -47,8 +47,8 @@ fun TabsTopBarContent(
 ) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = tab.toString().lowercase(Locale.ROOT)
-                .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
+            text = tab.toString().lowercase()
+                .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() },
             fontWeight = FontWeight.Medium,
             fontSize = 30.sp,
             color = MaterialTheme.colorScheme.primary,

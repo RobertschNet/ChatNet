@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.htlhl.chatnet.data.AccountDataState
+import at.htlhl.chatnet.data.TextFieldTypeState
 import at.htlhl.chatnet.util.checkIfValueIsValid
 
 @Composable
@@ -86,7 +87,7 @@ fun RegisterWithGoogleContentComponent(
                 supportingText = {
                     if (username.isNotEmpty()) {
                         Column {
-                            if (!checkIfValueIsValid(type = "username", value = username)) {
+                            if (!checkIfValueIsValid(type = TextFieldTypeState.USERNAME, value = username)) {
                                 Text(
                                     text = "Username is not valid",
                                     color = Color.Red,

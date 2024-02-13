@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.features.profile
+package at.htlhl.chatnet.ui.features.profile.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -20,21 +20,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import at.htlhl.chatnet.data.FirebaseUser
 
 @Composable
-fun ProfileDeleteAccountElement(
-    onClick: () -> Unit,
+fun ProfileUserEmailComponent(
+    userData: FirebaseUser,
+    onEmailClicked: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .padding(start = 20.dp, top = 20.dp)
             .clickable {
-                onClick.invoke()
+                onEmailClicked()
             }
             .fillMaxWidth(),
     ) {
         Icon(
-            imageVector = Icons.Default.Delete,
+            imageVector = Icons.Default.Email,
             tint = MaterialTheme.colorScheme.secondary,
             contentDescription = null,
             modifier = Modifier
@@ -47,7 +49,7 @@ fun ProfileDeleteAccountElement(
             modifier = Modifier.padding(start = 15.dp)
         ) {
             Text(
-                text = "Delete Account",
+                text = "Email",
                 color = MaterialTheme.colorScheme.secondary,
                 fontSize = 14.sp,
                 fontFamily = FontFamily.SansSerif,
@@ -56,11 +58,21 @@ fun ProfileDeleteAccountElement(
                     .padding(bottom = 3.dp)
             )
             Text(
-                text = "Delete your account and all your data. This action is irreversible!",
+                text = userData.email,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Normal,
+                fontFamily = FontFamily.SansSerif,
+                modifier = Modifier
+                    .padding(bottom = 5.dp)
+            )
+            Text(
+                text = "This is your email. Other users will not see this email when they view your profile.",
                 color = MaterialTheme.colorScheme.secondary,
                 overflow = TextOverflow.Clip,
                 fontSize = 12.sp,
-                fontFamily = FontFamily.Default,
+                fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Light,
                 lineHeight = 16.sp,
                 modifier = Modifier

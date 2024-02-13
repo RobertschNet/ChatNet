@@ -37,12 +37,12 @@ import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.PersonType
 import at.htlhl.chatnet.data.TagElement
-import at.htlhl.chatnet.data.tags
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.features.finduser.components.FindUserPersonComponent
 import at.htlhl.chatnet.ui.features.mixed.TabsTopBar
 import at.htlhl.chatnet.ui.features.mixed.TagElement
 import at.htlhl.chatnet.ui.theme.shimmerEffect
+import at.htlhl.chatnet.util.getPersonTagsList
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 
@@ -68,10 +68,7 @@ class RandChatStartView {
                 ) ?: false
                 //TODO:  Add filtering for tags
             } else previousRandChatUsers
-        val filteredUserTags =
-            if (userData.tags.isEmpty()) tags.filter { tag -> tag.category == "Empty" } else tags.filter { tag ->
-                userData.tags.contains(tag.name)
-            }
+        val filteredUserTags = getPersonTagsList(personData = userData)
         Scaffold(
             backgroundColor = MaterialTheme.colorScheme.background,
             modifier = Modifier.fillMaxSize(),

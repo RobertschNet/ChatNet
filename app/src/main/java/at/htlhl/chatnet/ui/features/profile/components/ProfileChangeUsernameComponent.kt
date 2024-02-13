@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.features.profile
+package at.htlhl.chatnet.ui.features.profile.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,24 +36,25 @@ import at.htlhl.chatnet.data.FirebaseUser
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileChangeUsernameElement(
+fun ProfileChangeUsernameComponent(
     userData: FirebaseUser,
     usernameText: String,
     usernameTextFieldColor: Color,
+    usernameIsValid:Boolean,
     focusRequester: FocusRequester,
     isLoading: Boolean,
     usernameAlreadyExists: Boolean,
     changeUsernameException: Boolean,
-    onValueChange: (String) -> Unit,
-    onSavePressed: () -> Unit,
-    onDismissModelBottomSheet: () -> Unit,
+    onUsernameValueChange: (String) -> Unit,
+    onSaveUsernamePressed: () -> Unit,
+    onDismissModelSheet: () -> Unit,
 ) {
     ModalBottomSheet(
         containerColor = MaterialTheme.colorScheme.background,
         dragHandle = {},
         shape = RectangleShape,
         windowInsets = WindowInsets(0, 0, 0, 0),
-        onDismissRequest = { onDismissModelBottomSheet.invoke() },
+        onDismissRequest = { onDismissModelSheet.invoke() },
     ) {
         Column {
             Text(
@@ -63,8 +64,7 @@ fun ProfileChangeUsernameElement(
                 fontSize = 18.sp,
                 modifier = Modifier.padding(top = 20.dp, start = 20.dp)
             )
-            TextField(
-                value = usernameText,
+            TextField(value = usernameText,
                 singleLine = true,
                 trailingIcon = {
                     Text(
@@ -78,7 +78,7 @@ fun ProfileChangeUsernameElement(
                 },
                 keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Text),
                 onValueChange = {
-                    onValueChange.invoke(it)
+                    onUsernameValueChange(it)
                 },
                 textStyle = TextStyle(
                     color = MaterialTheme.colorScheme.primary,
@@ -116,16 +116,14 @@ fun ProfileChangeUsernameElement(
                     .focusRequester(focusRequester = focusRequester)
                     .padding(start = 20.dp, end = 40.dp)
             )
-            if (!profileCheckIfUsernameIsValid(usernameText)) {
+            if (!usernameIsValid) {
                 Text(
                     text = "Username is invalid.",
                     color = Color.Red,
                     fontFamily = FontFamily.SansSerif,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(
-                        start = 20.dp,
-                        end = 40.dp,
-                        top = 5.dp
+                        start = 20.dp, end = 40.dp, top = 5.dp
                     )
                 )
             }
@@ -136,9 +134,7 @@ fun ProfileChangeUsernameElement(
                     fontFamily = FontFamily.SansSerif,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(
-                        start = 20.dp,
-                        end = 40.dp,
-                        top = 5.dp
+                        start = 20.dp, end = 40.dp, top = 5.dp
                     )
                 )
             }
@@ -149,9 +145,7 @@ fun ProfileChangeUsernameElement(
                     fontFamily = FontFamily.SansSerif,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(
-                        start = 20.dp,
-                        end = 40.dp,
-                        top = 5.dp
+                        start = 20.dp, end = 40.dp, top = 5.dp
                     )
                 )
             }
@@ -162,17 +156,15 @@ fun ProfileChangeUsernameElement(
                     .padding(bottom = 20.dp),
                 horizontalArrangement = Arrangement.End
             ) {
-                Text(
-                    text = "Cancel",
+                Text(text = "Cancel",
                     textAlign = TextAlign.End,
                     fontFamily = FontFamily.SansSerif,
                     color = Color(0xFF00A0E8),
                     modifier = Modifier
                         .clickable {
-                            onDismissModelBottomSheet.invoke()
+                            onDismissModelSheet()
                         }
-                        .padding(end = 40.dp)
-                )
+                        .padding(end = 40.dp))
                 if (isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier
@@ -181,8 +173,7 @@ fun ProfileChangeUsernameElement(
                         color = Color(0xFF00A0E8)
                     )
                 } else {
-                    Text(
-                        text = "Save",
+                    Text(text = "Save",
                         fontFamily = FontFamily.SansSerif,
                         textAlign = TextAlign.End,
                         color = if (usernameTextFieldColor != Color.Red) Color(
@@ -190,10 +181,9 @@ fun ProfileChangeUsernameElement(
                         ) else Color.Gray,
                         modifier = Modifier
                             .clickable(enabled = usernameTextFieldColor != Color.Red) {
-                                onSavePressed.invoke()
+                                onSaveUsernamePressed()
                             }
-                            .padding(end = 20.dp)
-                    )
+                            .padding(end = 20.dp))
                 }
             }
         }
