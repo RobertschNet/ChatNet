@@ -3,6 +3,8 @@ package at.htlhl.chatnet.ui.views
 import android.annotation.SuppressLint
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -45,12 +47,17 @@ import at.htlhl.chatnet.ui.theme.shimmerEffect
 import at.htlhl.chatnet.util.getPersonTagsList
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 class RandChatStartView {
-    @RequiresApi(Build.VERSION_CODES.O)
+
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @Composable
     fun RandChatStartScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+        val systemUiController = rememberSystemUiController()
+        systemUiController.setStatusBarColor(
+            color = MaterialTheme.colorScheme.background, darkIcons = !isSystemInDarkTheme()
+        )
         val dropInState by sharedViewModel.dropInState
         val friendListDataState =
             sharedViewModel.friendListData.collectAsState(initial = arrayListOf(FirebaseUser()))
@@ -95,6 +102,11 @@ class RandChatStartView {
                             .size(120.dp)
                             .align(Alignment.CenterHorizontally)
                             .clip(CircleShape)
+                            .clickable {
+                                sharedViewModel.updatePublicUser(newFriend = userData, onComplete = {
+                                    navController.navigate(Screens.ProfilePictureView.route)
+                                })
+                            }
                             .shimmerEffect()
                     )
                     Spacer(modifier = Modifier.height(5.dp))

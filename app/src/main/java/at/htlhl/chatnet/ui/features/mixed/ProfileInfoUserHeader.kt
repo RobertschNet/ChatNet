@@ -32,7 +32,8 @@ import coil.compose.SubcomposeAsyncImage
 @Composable
 fun ProfileInfoUserHeader(
     navController: NavController,
-    friend: FirebaseUser
+    friend: FirebaseUser,
+    onImageClick: () -> Unit
 ) {
     val friendUserTags = getPersonTagsList(personData = friend)
     Card(modifier = Modifier.fillMaxWidth(), elevation = 10.dp, backgroundColor = MaterialTheme.colorScheme.background) {
@@ -59,6 +60,9 @@ fun ProfileInfoUserHeader(
                     modifier = Modifier
                         .padding(10.dp)
                         .size(150.dp)
+                        .clickable {
+                            onImageClick()
+                        }
                         .clip(CircleShape)
                 )
                 Text(

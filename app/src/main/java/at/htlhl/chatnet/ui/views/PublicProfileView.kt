@@ -2,6 +2,7 @@ package at.htlhl.chatnet.ui.views
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -29,12 +30,17 @@ import at.htlhl.chatnet.ui.features.mixed.ProfileInfoUserHeader
 import at.htlhl.chatnet.ui.features.mixed.ProfileUserFriendStateSection
 import at.htlhl.chatnet.util.firebase.deleteChatRoom
 import at.htlhl.chatnet.viewmodels.SharedViewModel
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 class PublicProfileView {
     @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @Composable
     fun PublicProfileScreen(sharedViewModel: SharedViewModel, navController: NavController) {
         var friendsFromFriendsListLoading by remember { mutableStateOf(true) }
+        val systemUiController = rememberSystemUiController()
+        systemUiController.setStatusBarColor(
+            color = MaterialTheme.colorScheme.background, darkIcons = !isSystemInDarkTheme()
+        )
         val lazyListState = rememberLazyListState()
         val publicUserState = sharedViewModel.publicUserFlow.collectAsState()
         val publicUser: FirebaseUser = publicUserState.value
@@ -48,38 +54,37 @@ class PublicProfileView {
             friendsFromFriendsListLoading = false
             friendsFromFriendsList = it
         }
-        Scaffold(
-            backgroundColor = MaterialTheme.colorScheme.onBackground,
+        Scaffold(backgroundColor = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.fillMaxSize(),
             content = {
-                LazyColumn(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.onBackground)
-                        .fillMaxSize(),
-                    state = lazyListState,
-                    content = {
-                        item {
-                            ProfileInfoUserHeader(
-                                navController = navController,
-                                friend = publicUser
-                            )
-                        }
-                        item {
-                            PublicProfileScreenContent(
-                                publicUser = publicUser,
-                                friendsFromFriendsList = friendsFromFriendsList,
-                                friendState = friendState,
-                                chatData = chatData,
-                                sharedViewModel = sharedViewModel,
-                                navController = navController,
-                                friendsFromFriendsListLoading = friendsFromFriendsListLoading
-                            )
-                        }
+                LazyColumn(modifier = Modifier
+                    .background(MaterialTheme.colorScheme.onBackground)
+                    .fillMaxSize(), state = lazyListState, content = {
+                    item {
+                        ProfileInfoUserHeader(navController = navController,
+                            friend = publicUser,
+                            onImageClick = {
+                                sharedViewModel.updatePublicUser(newFriend = publicUser,
+                                    onComplete = {
+                                        navController.navigate(Screens.ProfilePictureView.route)
+                                    })
+                            }
+                        )
                     }
-                )
+                    item {
+                        PublicProfileScreenContent(
+                            publicUser = publicUser,
+                            friendsFromFriendsList = friendsFromFriendsList,
+                            friendState = friendState,
+                            chatData = chatData,
+                            sharedViewModel = sharedViewModel,
+                            navController = navController,
+                            friendsFromFriendsListLoading = friendsFromFriendsListLoading
+                        )
+                    }
+                })
 
-            }
-        )
+            })
     }
 
     @Composable
@@ -120,10 +125,7 @@ class PublicProfileView {
         if (removeFriendDialog) {
             DeleteFriendDialog { value ->
                 if (value == "deleted") {
-                    deleteChatRoom(
-                        publicUser = publicUser,
-                        chatData = chatData
-                    )
+                    deleteChatRoom(publicUser = publicUser, chatData = chatData)
                     sharedViewModel.deleteFriendFromFriendList(publicUser)
                     navController.navigate(Screens.ChatsViewScreen.route) {
                         popUpTo(Screens.PublicProfileScreen.route) {

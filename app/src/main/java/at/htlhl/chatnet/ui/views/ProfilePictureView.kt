@@ -13,6 +13,7 @@ import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseUser
+import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
@@ -31,8 +33,8 @@ class ProfilePictureView {
     fun ProfilePictureViewScreen(sharedViewModel: SharedViewModel, navController: NavController) {
         val systemUiController = rememberSystemUiController()
         systemUiController.setStatusBarColor(color = Color.Black, darkIcons = false)
-        val userDataState = sharedViewModel.user.collectAsState(initial = FirebaseUser())
-        val userData: FirebaseUser = userDataState.value
+        val userDataState by sharedViewModel.publicUserFlow.collectAsState(initial = FirebaseUser())
+        val userData: FirebaseUser = userDataState
         Box(
             Modifier
                 .fillMaxSize()

@@ -47,7 +47,9 @@ class ProfileInfoView {
     @Composable
     fun ProfileInfoScreen(sharedViewModel: SharedViewModel, navController: NavController) {
         val systemUiController = rememberSystemUiController()
-        systemUiController.setStatusBarColor(color = MaterialTheme.colorScheme.background, darkIcons = !isSystemInDarkTheme())
+        systemUiController.setStatusBarColor(
+            color = MaterialTheme.colorScheme.background, darkIcons = !isSystemInDarkTheme()
+        )
         var friendsFromFriendsListLoading by remember { mutableStateOf(true) }
         val lazyListState = rememberLazyListState()
         val friendState = sharedViewModel.friend.collectAsState()
@@ -65,40 +67,38 @@ class ProfileInfoView {
             friendsFromFriendsListLoading = false
             friendsFromFriendsList = it
         }
-        Scaffold(
-            backgroundColor = MaterialTheme.colorScheme.onBackground,
+        Scaffold(backgroundColor = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.fillMaxSize(),
             content = {
-                LazyColumn(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.onBackground)
-                        .fillMaxSize(),
-                    state = lazyListState,
-                    content = {
-                        item {
-                            ProfileInfoUserHeader(
-                                navController = navController,
-                                friend = friend.personList
-                            )
-                        }
-                        item {
-                            ProfileInfoContent(
-                                friendsFriendState,
-                                chatData,
-                                sharedViewModel,
-                                navController,
-                                friendsFromFriendsList,
-                                imageList,
-                                friend,
-                                user,
-                                friendsFromFriendsListLoading
-                            )
-                        }
+                LazyColumn(modifier = Modifier
+                    .background(MaterialTheme.colorScheme.onBackground)
+                    .fillMaxSize(), state = lazyListState, content = {
+                    item {
+                        ProfileInfoUserHeader(navController = navController,
+                            friend = friend.personList,
+                            onImageClick = {
+                                sharedViewModel.updatePublicUser(newFriend = friend.personList,
+                                    onComplete = {
+                                        navController.navigate(Screens.ProfilePictureView.route)
+                                    })
+                            })
                     }
-                )
+                    item {
+                        ProfileInfoContent(
+                            friendsFriendState,
+                            chatData,
+                            sharedViewModel,
+                            navController,
+                            friendsFromFriendsList,
+                            imageList,
+                            friend,
+                            user,
+                            friendsFromFriendsListLoading
+                        )
+                    }
+                })
 
-            }
-        )
+            })
     }
 
     @Composable
@@ -127,8 +127,7 @@ class ProfileInfoView {
             )
             Spacer(modifier = Modifier.height(10.dp))
         }
-        ProfileChatSettingsSection(
-            isChatMateChat = currentChat?.tab == "chatmate",
+        ProfileChatSettingsSection(isChatMateChat = currentChat?.tab == "chatmate",
             sharedViewModel = sharedViewModel,
             friend = friend,
             user = userData,
@@ -137,18 +136,15 @@ class ProfileInfoView {
             },
             onDeleteAllMessages = {
                 deleteAllMessagesDialog = true
-            }
-        )
+            })
         Spacer(modifier = Modifier.height(10.dp))
-        ProfileFriendSettingsSection(
-            isChatMateChat = currentChat?.tab == "chatmate",
+        ProfileFriendSettingsSection(isChatMateChat = currentChat?.tab == "chatmate",
             user = userData,
             friend = friend,
             onBlockAction = { blockDialog = true },
             onRemoveUserAction = {
                 removeFriendDialog = true
-            }
-        )
+            })
         Spacer(modifier = Modifier.height(10.dp))
         if (friendsFromFriendsList.isNotEmpty() || friendsFromFriendsListIsLoading) {
             ProfileFriendsFromFriendsSection(
@@ -191,8 +187,7 @@ class ProfileInfoView {
         }
         if (blockDialog) {
             BlockUserDialog(
-                friendData = friend,
-                userData = userData
+                friendData = friend, userData = userData
             ) { value ->
                 if (value == "blocked") {
                     updateBlockedUserList(

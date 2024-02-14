@@ -2,6 +2,7 @@ package at.htlhl.chatnet.ui.features.dropin.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -81,6 +82,7 @@ import at.htlhl.chatnet.util.generateBottomSheetItems
 import at.htlhl.chatnet.util.highlightSearchedText
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
@@ -91,6 +93,10 @@ class DropInView {
     @Composable
     fun DropInScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         val dropInViewModel = viewModel<DropInViewModel>()
+        val systemUiController = rememberSystemUiController()
+        systemUiController.setStatusBarColor(
+            color = MaterialTheme.colorScheme.background, darkIcons = !isSystemInDarkTheme()
+        )
         val context = LocalContext.current
         val dropInState by sharedViewModel.dropInState
         val searchedValue by sharedViewModel.searchValue
@@ -194,9 +200,16 @@ class DropInView {
                         content = {
                             item {
                                 if (userInSearchValue || sharedViewModel.searchValue.value.isEmpty()) {
-                                    UserListItem(userData, localChatUser, sharedViewModel) {
-                                        //TODO: Navigate to user profile
-                                    }
+                                    UserListItem(
+                                        user = userData,
+                                        localChatUser = localChatUser,
+                                        sharedViewModel = sharedViewModel,
+                                        onClick = {
+                                            sharedViewModel.updatePublicUser(newFriend = userData, onComplete = {
+                                                navController.navigate(Screens.ProfilePictureView.route)
+                                            })
+                                        }
+                                    )
                                 }
                             }
                             items(dropInUsersNearbyList) { chat ->

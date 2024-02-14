@@ -85,36 +85,37 @@ class ProfileView {
                 .requestIdToken(R.string.web_client_id.toString()).requestEmail().build()
         }
 
-        val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.PickVisualMedia(),
-            onResult = { uri ->
-                if (uri == null) {
-                    updateProfilePictureLoading = false
-                    return@rememberLauncherForActivityResult
-                }
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val bitmap = BitmapFactory.decodeStream(inputStream)
-                val webpByteArray = convertBitmapToWebP(bitmap)
-                uploadWebPImage(webpByteArray = webpByteArray,
-                    saveLocation = "users/",
-                    onUploadSuccess = { downloadUrl ->
-                        profileViewModel.updateUserProfilePicture(downloadUrl) { success ->
-                            updateProfilePictureLoading = false
-                            updateProfilePictureException = !success
-                        }
-                    },
-                    onUploadError = {
+        val multiplePhotoPickerLauncher =
+            rememberLauncherForActivityResult(contract = ActivityResultContracts.PickVisualMedia(),
+                onResult = { uri ->
+                    if (uri == null) {
                         updateProfilePictureLoading = false
-                        updateProfilePictureException = true
-                    })
-            })
+                        return@rememberLauncherForActivityResult
+                    }
+                    val inputStream = context.contentResolver.openInputStream(uri)
+                    val bitmap = BitmapFactory.decodeStream(inputStream)
+                    val webpByteArray = convertBitmapToWebP(bitmap)
+                    uploadWebPImage(webpByteArray = webpByteArray,
+                        saveLocation = "users/",
+                        onUploadSuccess = { downloadUrl ->
+                            profileViewModel.updateUserProfilePicture(downloadUrl) { success ->
+                                updateProfilePictureLoading = false
+                                updateProfilePictureException = !success
+                            }
+                        },
+                        onUploadError = {
+                            updateProfilePictureLoading = false
+                            updateProfilePictureException = true
+                        })
+                })
         Scaffold(
             backgroundColor = MaterialTheme.colorScheme.background,
             modifier = Modifier
                 .fillMaxSize()
                 .imePadding(),
             topBar = {
-                TabsTopBar(tab = CurrentTab.PROFILE,
+                TabsTopBar(
+                    tab = CurrentTab.PROFILE,
                     dropInState = dropInState,
                     onUpdateSearchValue = {
                         sharedViewModel.searchValue.value = it
@@ -133,7 +134,10 @@ class ProfileView {
                             updateProfilePictureLoading = updateProfilePictureLoading,
                             updateProfilePictureException = updateProfilePictureException,
                             onProfilePictureClicked = {
-                                navController.navigate(Screens.ProfilePictureView.route)
+                                sharedViewModel.updatePublicUser(newFriend = userData,
+                                    onComplete = {
+                                        navController.navigate(Screens.ProfilePictureView.route)
+                                    })
                             },
                             onChangeProfilePictureClicked = {
                                 updateProfilePictureException = false
@@ -153,7 +157,8 @@ class ProfileView {
                             }
                         })
                         Spacer(modifier = Modifier.height(10.dp))
-                        ProfileUserTagListComponent(filteredTags = filteredTags,
+                        ProfileUserTagListComponent(
+                            filteredTags = filteredTags,
                             onTagListClicked = {
                                 navController.navigate(Screens.TagSelectScreen.route)
                             })
@@ -240,7 +245,8 @@ class ProfileView {
                                         type = TextFieldTypeState.USERNAME, value = usernameText
                                     )
                                 ) {
-                                    profileViewModel.updateProfileUsername(userName = usernameText,
+                                    profileViewModel.updateProfileUsername(
+                                        userName = usernameText,
                                         callback = { success ->
                                             isLoading = false
                                             if (success) {
