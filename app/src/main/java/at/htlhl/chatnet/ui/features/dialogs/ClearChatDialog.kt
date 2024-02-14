@@ -26,14 +26,16 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
 @Composable
-fun ClearChatDialog(onDismiss: (String) -> Unit) {
+fun ClearChatDialog(onClearChatClicked: (Boolean) -> Unit) {
     Dialog(
-        onDismissRequest = { onDismiss.invoke("closed") },
+        onDismissRequest = { onClearChatClicked(false) },
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
     ) {
         Column(
             modifier = Modifier
-                .background(MaterialTheme.colorScheme.background, RoundedCornerShape(20.dp))
+                .background(
+                    MaterialTheme.colorScheme.background, RoundedCornerShape(20.dp)
+                )
                 .width(250.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
@@ -50,7 +52,7 @@ fun ClearChatDialog(onDismiss: (String) -> Unit) {
                 text = "All messages/images from both users will be deleted.",
                 fontWeight = FontWeight.Light,
                 textAlign = TextAlign.Center,
-                color= MaterialTheme.colorScheme.secondary,
+                color = MaterialTheme.colorScheme.secondary,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(
                     top = 10.dp, bottom = 20.dp, start = 10.dp, end = 10.dp
@@ -64,7 +66,7 @@ fun ClearChatDialog(onDismiss: (String) -> Unit) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onDismiss.invoke("clear") }) {
+                    .clickable { onClearChatClicked(true) }) {
                 Text(
                     text = "Clear",
                     fontWeight = FontWeight.SemiBold,
@@ -81,11 +83,11 @@ fun ClearChatDialog(onDismiss: (String) -> Unit) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onDismiss.invoke("closed") }) {
+                    .clickable { onClearChatClicked(false) }) {
                 Text(
                     text = "Cancel",
                     fontWeight = FontWeight.SemiBold,
-                    color= MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.primary,
                     fontSize = 15.sp,
                     modifier = Modifier.padding(bottom = 10.dp, top = 10.dp)
                 )

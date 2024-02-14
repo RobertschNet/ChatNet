@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import at.htlhl.chatnet.data.CurrentTab
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.PersonType
@@ -27,6 +28,7 @@ import at.htlhl.chatnet.ui.features.finduser.components.FindUserTopSearchBar
 import at.htlhl.chatnet.ui.features.finduser.components.FindUserBackLayerContent
 import at.htlhl.chatnet.ui.features.finduser.components.FindUserFrontLayerContent
 import at.htlhl.chatnet.ui.features.finduser.viewmodels.FindUserViewModel
+import at.htlhl.chatnet.util.firebase.saveChatRoom
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import kotlinx.coroutines.launch
 
@@ -46,10 +48,12 @@ class FindUserView {
         val chatDataState by sharedViewModel.chatData.collectAsState()
         val suggestedFriendsListState by sharedViewModel.friendRandomFriendsListData.collectAsState()
         val friendListDataState by sharedViewModel.friendListData.collectAsState()
+        val userDataState by sharedViewModel.user.collectAsState()
 
         val chatData: List<FirebaseChat> = chatDataState
         val suggestedFriendsList: List<FirebaseUser> = suggestedFriendsListState
         val friendListData: List<FirebaseUser> = friendListDataState
+        val userData:FirebaseUser = userDataState
 
         val pendingFriendsList =
             friendListData.filter { friend -> friend.statusFriend == PersonType.PENDING_PERSON }
@@ -108,9 +112,10 @@ class FindUserView {
                                     .contains(sharedViewModel.auth.currentUser?.uid)
                             }
                             if (filteredChats.isEmpty()) {
-                                sharedViewModel.saveChatRoom(
-                                    person = clickedPerson.id,
-                                    tab = "chats"
+                                saveChatRoom(
+                                    userID = userData.id,
+                                    friendID = clickedPerson.id,
+                                    tab = CurrentTab.CHATS
                                 )
                             } else {
                                 sharedViewModel.updateChatRoom(
@@ -157,9 +162,10 @@ class FindUserView {
                                     .contains(sharedViewModel.auth.currentUser?.uid)
                             }
                             if (filteredChats.isEmpty()) {
-                                sharedViewModel.saveChatRoom(
-                                    person = clickedPerson.id,
-                                    tab = "chats"
+                                saveChatRoom(
+                                    userID = userData.id,
+                                    friendID = clickedPerson.id,
+                                    tab = CurrentTab.CHATS
                                 )
                             } else {
                                 sharedViewModel.updateChatRoom(

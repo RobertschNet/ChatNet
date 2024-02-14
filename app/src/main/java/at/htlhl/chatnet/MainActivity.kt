@@ -22,7 +22,7 @@ import androidx.core.view.WindowCompat
 import androidx.navigation.compose.rememberNavController
 import at.htlhl.chatnet.navigation.NavigationBarLayout
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.services.LocationUpdateService
+import at.htlhl.chatnet.services.DropInUpdateService
 import at.htlhl.chatnet.ui.theme.ChatNetTheme
 import at.htlhl.chatnet.util.preLoadImages
 import at.htlhl.chatnet.viewmodels.SharedViewModel
@@ -31,7 +31,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 
 class MainActivity : ComponentActivity() {
     private var serviceConnection: ServiceConnection? = null
-    private var locationUpdateService: LocationUpdateService? = null
+    private var dropInUpdateService: DropInUpdateService? = null
     private val viewModel by viewModels<SharedViewModel>()
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -43,7 +43,7 @@ class MainActivity : ComponentActivity() {
                 viewModel.completeChatList.value.isEmpty() && viewModel.auth.currentUser != null
             }
         }
-        val serviceIntent = Intent(this, LocationUpdateService::class.java)
+        val serviceIntent = Intent(this, DropInUpdateService::class.java)
         setContent {
             val navController = rememberNavController()
             ChatNetTheme {
@@ -104,7 +104,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
             if (checkFineLocationPermission()) {
-                manageLocationServiceStatus(viewModel, serviceIntent)
+                manageDropInServiceStatus(viewModel, serviceIntent)
             } else {
                 requestFineLocationPermissionLauncher.launch(
                     Manifest.permission.ACCESS_FINE_LOCATION
@@ -116,7 +116,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         serviceConnection?.let { unbindService(it) }
-        stopService(Intent(this, LocationUpdateService::class.java))
+        stopService(Intent(this, DropInUpdateService::class.java))
     }
 
     override fun onPause() {
@@ -130,28 +130,27 @@ class MainActivity : ComponentActivity() {
         viewModel.updateOnlineStatus(true)
     }
 
-    private fun manageLocationServiceStatus(viewModel: SharedViewModel, serviceIntent: Intent) {
+    private fun manageDropInServiceStatus(viewModel: SharedViewModel, serviceIntent: Intent) {
         if (viewModel.dropInState.value) {
             try {
                 unbindService(serviceConnection!!)
                 stopService(serviceIntent)
-            } catch (e: Exception) {
-                Log.println(Log.ERROR, "Location", e.toString())
+            } catch (_: Exception) {
+
             }
         } else {
             startService(serviceIntent)
             serviceConnection = object : ServiceConnection {
                 override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                    val binder = service as LocationUpdateService.YourBinder
-                    locationUpdateService = binder.getService()
-                    locationUpdateService?.locationLiveData?.observe(this@MainActivity) { location ->
-                        Log.println(Log.INFO, "Location", location.toString())
-                        viewModel.localChatUserList.value = location
+                    val binder = service as DropInUpdateService.YourBinder
+                    dropInUpdateService = binder.getService()
+                    dropInUpdateService?.nearbyDropInUsersList?.observe(this@MainActivity) { nearbyUsers ->
+                        viewModel.updateNearbyDropInUsersList(newNearbyUsers = nearbyUsers)
                     }
                 }
 
                 override fun onServiceDisconnected(name: ComponentName?) {
-                    locationUpdateService = null
+                    dropInUpdateService = null
                 }
             }
             bindService(serviceIntent, serviceConnection!!, Context.BIND_AUTO_CREATE)
@@ -167,8 +166,8 @@ class MainActivity : ComponentActivity() {
     private val requestFineLocationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
-                manageLocationServiceStatus(
-                    viewModel, Intent(this, LocationUpdateService::class.java)
+                manageDropInServiceStatus(
+                    viewModel, Intent(this, DropInUpdateService::class.java)
                 )
             } else {
                 // Fine location permission denied, handle accordingly (e.g., show a message)

@@ -45,6 +45,8 @@ class PublicProfileView {
         val publicUserState = sharedViewModel.publicUserFlow.collectAsState()
         val publicUser: FirebaseUser = publicUserState.value
         val friendListState = sharedViewModel.friendListData.collectAsState()
+        val userDataState by sharedViewModel.user.collectAsState()
+        val userData:FirebaseUser = userDataState
         val friendList = friendListState.value
         val chatDataState = sharedViewModel.chatData.collectAsState()
         val chatData = chatDataState.value
@@ -73,6 +75,7 @@ class PublicProfileView {
                     }
                     item {
                         PublicProfileScreenContent(
+                            userData = userData,
                             publicUser = publicUser,
                             friendsFromFriendsList = friendsFromFriendsList,
                             friendState = friendState,
@@ -89,6 +92,7 @@ class PublicProfileView {
 
     @Composable
     fun PublicProfileScreenContent(
+        userData: FirebaseUser,
         publicUser: FirebaseUser,
         friendsFromFriendsList: List<FirebaseUser>,
         friendState: PersonType?,
@@ -113,6 +117,7 @@ class PublicProfileView {
         }
         Spacer(modifier = Modifier.height(10.dp))
         ProfileUserFriendStateSection(
+            userData = userData,
             publicUser = publicUser,
             chatData = chatData,
             friendState = friendState,

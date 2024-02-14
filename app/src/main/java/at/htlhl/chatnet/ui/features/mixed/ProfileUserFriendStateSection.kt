@@ -23,13 +23,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import at.htlhl.chatnet.data.CurrentTab
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.PersonType
+import at.htlhl.chatnet.util.firebase.saveChatRoom
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 
 @Composable
 fun ProfileUserFriendStateSection(
+    userData: FirebaseUser,
     chatData: List<FirebaseChat>,
     publicUser: FirebaseUser,
     friendState: PersonType?,
@@ -83,9 +86,10 @@ fun ProfileUserFriendStateSection(
                                                 .contains(sharedViewModel.auth.currentUser?.uid)
                                         }
                                         if (filteredChats.isEmpty()) {
-                                            sharedViewModel.saveChatRoom(
-                                                person = publicUser.id,
-                                                tab = "chats"
+                                            saveChatRoom(
+                                                userID = userData.id,
+                                                friendID = publicUser.id,
+                                                tab = CurrentTab.CHATS
                                             )
                                         } else {
                                             sharedViewModel.updateChatRoom(

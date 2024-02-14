@@ -37,13 +37,14 @@ import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.SaveImageTask
 import at.htlhl.chatnet.ui.features.chats.components.EmptyFriendListContent
 import at.htlhl.chatnet.ui.features.chats.viewmodels.ChatsViewModel
-import at.htlhl.chatnet.ui.features.dialogs.BlockUserDialog
+import at.htlhl.chatnet.ui.features.dialogs.ChangeBlockStateDialog
 import at.htlhl.chatnet.ui.features.dialogs.ClearChatDialog
 import at.htlhl.chatnet.ui.features.dialogs.ShowBigUserImageDialog
 import at.htlhl.chatnet.ui.features.mixed.ChatsViewChatItem
 import at.htlhl.chatnet.ui.features.mixed.LoadingUserChatsElement
 import at.htlhl.chatnet.ui.features.mixed.TabsBottomSheetContent
 import at.htlhl.chatnet.ui.features.mixed.TabsTopBar
+import at.htlhl.chatnet.util.firebase.createMediaImageList
 import at.htlhl.chatnet.util.firebase.deleteAllChatMessages
 import at.htlhl.chatnet.util.firebase.markMessagesAsRead
 import at.htlhl.chatnet.util.firebase.updateBlockedUserList
@@ -73,7 +74,7 @@ class ChatsView {
 
         var showBigUserImageDialog by remember { mutableStateOf(false) }
         var showClearChatDialog by remember { mutableStateOf(false) }
-        var showBlockUserDialog by remember { mutableStateOf(false) }
+        var changeBlockStateDialog by remember { mutableStateOf(false) }
         var modelSheetState by remember { mutableStateOf(false) }
 
         val completeChatsListState by sharedViewModel.completeChatList.collectAsState(
@@ -187,7 +188,7 @@ class ChatsView {
                         }
 
                         BLOCK -> {
-                            showBlockUserDialog = true
+                            changeBlockStateDialog = true
 
                         }
 
@@ -198,9 +199,11 @@ class ChatsView {
                         }
 
                         INFO -> {
-                            chatData.find { it.chatRoomID == friendData.chatRoomID }
-                                ?.let { chatsViewModel.createImageList(messages = it.messages) }
-                                ?.let { sharedViewModel.updateImageList(it) }
+                            chatData.find { it.chatRoomID == friendData.chatRoomID }?.let {
+                                createMediaImageList(
+                                    userID = userData.id, messages = it.messages
+                                )
+                            }?.let { sharedViewModel.updateImageList(it) }
                             navController.navigate(Screens.ProfileInfoScreen.route)
                         }
 
@@ -213,8 +216,8 @@ class ChatsView {
                 })
         }
         if (showClearChatDialog) {
-            ClearChatDialog(onDismiss = { clear ->
-                if (clear == "clear") {
+            ClearChatDialog(onClearChatClicked = { clearClicked ->
+                if (clearClicked) {
                     deleteAllChatMessages(
                         userData = userData, friendData = friendData
                     )
@@ -222,17 +225,19 @@ class ChatsView {
                 showClearChatDialog = false
             })
         }
-        if (showBlockUserDialog) {
-            BlockUserDialog(userData = userData, friendData = friendData) {
-                if (it == "blocked") {
-                    updateBlockedUserList(
-                        userData = userData,
-                        friendData = friendData.personList,
-                        isAlreadyBlocked = userData.blocked.contains(friendData.personList.id)
-                    )
-                }
-                showBlockUserDialog = false
-            }
+        if (changeBlockStateDialog) {
+            ChangeBlockStateDialog(userData = userData,
+                friendData = friendData,
+                onChangeBlockStateClicked = { stateChanged ->
+                    if (stateChanged) {
+                        updateBlockedUserList(
+                            userData = userData,
+                            friendData = friendData.personList,
+                            isAlreadyBlocked = userData.blocked.contains(friendData.personList.id)
+                        )
+                    }
+                    changeBlockStateDialog = false
+                })
         }
         if (modelSheetState) {
             ModalBottomSheet(containerColor = MaterialTheme.colorScheme.background,

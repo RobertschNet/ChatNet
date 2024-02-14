@@ -26,7 +26,7 @@ import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.data.PersonType
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.features.dialogs.BlockUserDialog
+import at.htlhl.chatnet.ui.features.dialogs.ChangeBlockStateDialog
 import at.htlhl.chatnet.ui.features.dialogs.DeleteAllMediaDialog
 import at.htlhl.chatnet.ui.features.dialogs.DeleteAllMessagesDialog
 import at.htlhl.chatnet.ui.features.dialogs.DeleteFriendDialog
@@ -77,7 +77,8 @@ class ProfileInfoView {
                         ProfileInfoUserHeader(navController = navController,
                             friend = friend.personList,
                             onImageClick = {
-                                sharedViewModel.updatePublicUser(newFriend = friend.personList,
+                                sharedViewModel.updatePublicUser(
+                                    newFriend = friend.personList,
                                     onComplete = {
                                         navController.navigate(Screens.ProfilePictureView.route)
                                     })
@@ -113,7 +114,7 @@ class ProfileInfoView {
         userData: FirebaseUser,
         friendsFromFriendsListIsLoading: Boolean
     ) {
-        var blockDialog by remember { mutableStateOf(false) }
+        var changeBlockStateDialog by remember { mutableStateOf(false) }
         var removeFriendDialog by remember { mutableStateOf(false) }
         var deleteAllMediaDialog by remember { mutableStateOf(false) }
         var deleteAllMessagesDialog by remember { mutableStateOf(false) }
@@ -141,7 +142,7 @@ class ProfileInfoView {
         ProfileFriendSettingsSection(isChatMateChat = currentChat?.tab == "chatmate",
             user = userData,
             friend = friend,
-            onBlockAction = { blockDialog = true },
+            onBlockAction = { changeBlockStateDialog = true },
             onRemoveUserAction = {
                 removeFriendDialog = true
             })
@@ -158,6 +159,7 @@ class ProfileInfoView {
         if (currentChat != null && currentChat.tab == "dropin") {
             Spacer(modifier = Modifier.height(10.dp))
             ProfileUserFriendStateSection(
+                userData = userData,
                 chatData = chatData,
                 publicUser = friend.personList,
                 friendState = friendsFriendState,
@@ -185,21 +187,21 @@ class ProfileInfoView {
                 removeFriendDialog = false
             }
         }
-        if (blockDialog) {
-            BlockUserDialog(
-                friendData = friend, userData = userData
-            ) { value ->
-                if (value == "blocked") {
-                    updateBlockedUserList(
-                        userData = userData,
-                        friendData = friend.personList,
-                        userData.blocked.contains(
-                            friend.personList.id
+        if (changeBlockStateDialog) {
+            ChangeBlockStateDialog(friendData = friend,
+                userData = userData,
+                onChangeBlockStateClicked = { stateChanged ->
+                    if (stateChanged) {
+                        updateBlockedUserList(
+                            userData = userData,
+                            friendData = friend.personList,
+                            userData.blocked.contains(
+                                friend.personList.id
+                            )
                         )
-                    )
-                }
-                blockDialog = false
-            }
+                    }
+                    changeBlockStateDialog = false
+                })
         }
         if (deleteAllMediaDialog) {
             DeleteAllMediaDialog { value ->

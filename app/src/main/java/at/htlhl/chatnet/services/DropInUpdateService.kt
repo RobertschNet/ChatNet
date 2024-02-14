@@ -30,7 +30,7 @@ import com.google.firebase.ktx.Firebase
 import java.io.IOException
 import java.util.Locale
 
-class LocationUpdateService : Service() {
+class DropInUpdateService : Service() {
     private val locationScanInterval = 30000L // 60 second
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -38,7 +38,7 @@ class LocationUpdateService : Service() {
     private lateinit var locationCallback: LocationCallback
     val auth: FirebaseAuth = Firebase.auth
     private var lastKnownLocation: Location? = null
-    val locationLiveData = MutableLiveData<List<LocationUserInstance>>()
+    val nearbyDropInUsersList = MutableLiveData<List<LocationUserInstance>>()
 
     override fun onCreate() {
         super.onCreate()
@@ -141,7 +141,7 @@ class LocationUpdateService : Service() {
     }
 
     inner class YourBinder : Binder() {
-        fun getService(): LocationUpdateService = this@LocationUpdateService
+        fun getService(): DropInUpdateService = this@DropInUpdateService
     }
 
     fun sendLocation(documentId: MutableMap<String, Any>, auth: FirebaseAuth) {
@@ -213,7 +213,7 @@ class LocationUpdateService : Service() {
                     )
 
                 }
-                locationLiveData.postValue(personList)
+                nearbyDropInUsersList.postValue(personList)
             }
     }
 }

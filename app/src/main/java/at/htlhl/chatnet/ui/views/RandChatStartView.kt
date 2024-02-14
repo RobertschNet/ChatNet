@@ -44,6 +44,7 @@ import at.htlhl.chatnet.ui.features.finduser.components.FindUserPersonComponent
 import at.htlhl.chatnet.ui.features.mixed.TabsTopBar
 import at.htlhl.chatnet.ui.features.mixed.TagElement
 import at.htlhl.chatnet.ui.theme.shimmerEffect
+import at.htlhl.chatnet.util.firebase.saveChatRoom
 import at.htlhl.chatnet.util.getPersonTagsList
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -176,9 +177,10 @@ class RandChatStartView {
                                                 .contains(sharedViewModel.auth.currentUser?.uid)
                                         }
                                         if (filteredChats.isEmpty()) {
-                                            sharedViewModel.saveChatRoom(
-                                                person = clickedPerson.id,
-                                                tab = "chats"
+                                            saveChatRoom(
+                                                userID = userData.id,
+                                                friendID = clickedPerson.id,
+                                                tab = CurrentTab.CHATS
                                             )
                                         } else {
                                             sharedViewModel.updateChatRoom(

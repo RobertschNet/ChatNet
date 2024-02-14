@@ -47,7 +47,7 @@ import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.features.dialogs.BlockUserDialog
+import at.htlhl.chatnet.ui.features.dialogs.ChangeBlockStateDialog
 import at.htlhl.chatnet.ui.features.dialogs.DeleteMessageDialog
 import at.htlhl.chatnet.ui.features.dialogs.OptionsDialog
 import at.htlhl.chatnet.ui.features.dialogs.UnblockToMessageDialog
@@ -55,9 +55,7 @@ import at.htlhl.chatnet.ui.features.mixed.ChatViewMessageComponent
 import at.htlhl.chatnet.ui.features.mixed.ChatViewTopBar
 import at.htlhl.chatnet.ui.features.mixed.InputField
 import at.htlhl.chatnet.util.copyToClipboard
-import at.htlhl.chatnet.util.firebase.markMessagesAsRead
 import at.htlhl.chatnet.util.firebase.updateBlockedUserList
-import at.htlhl.chatnet.util.firebase.updateMarkAsUnreadStatus
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import kotlinx.coroutines.delay
@@ -97,7 +95,7 @@ class ChatView {
             }
         } ?: emptyList()
         var chatMateResponse by remember { mutableStateOf("") }
-        var blockDialog by remember { mutableStateOf(false) }
+        var changeBlockStateDialog by remember { mutableStateOf(false) }
         var unblockDialog by remember { mutableStateOf(false) }
         val coroutineScope = rememberCoroutineScope()
         val filteredMessages =
@@ -129,7 +127,7 @@ class ChatView {
                             }
 
                             else -> {
-                                blockDialog = true
+                                changeBlockStateDialog = true
                             }
                         }
                     },
@@ -192,19 +190,19 @@ class ChatView {
                     unblockDialog = true
                 }
             })
-        if (blockDialog) {
-            BlockUserDialog(
-                friendData = friendData, userData = userData
-            ) { value ->
-                if (value == "blocked") {
-                    updateBlockedUserList(
-                        userData = userData,
-                        friendData = friendData.personList,
-                        isAlreadyBlocked = userData.blocked.contains(friendData.personList.id)
-                    )
+        if (changeBlockStateDialog) {
+            ChangeBlockStateDialog(
+                friendData = friendData, userData = userData, onChangeBlockStateClicked = { stateChanged ->
+                    if (stateChanged) {
+                        updateBlockedUserList(
+                            userData = userData,
+                            friendData = friendData.personList,
+                            isAlreadyBlocked = userData.blocked.contains(friendData.personList.id)
+                        )
+                    }
+                    changeBlockStateDialog = false
                 }
-                blockDialog = false
-            }
+            )
         }
         if (unblockDialog) {
             UnblockToMessageDialog(

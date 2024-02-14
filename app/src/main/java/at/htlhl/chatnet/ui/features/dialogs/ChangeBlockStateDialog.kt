@@ -30,13 +30,13 @@ import at.htlhl.chatnet.data.InternalChatInstance
 
 
 @Composable
-fun BlockUserDialog(
+fun ChangeBlockStateDialog(
     userData: FirebaseUser,
     friendData: InternalChatInstance,
-    onClose: (String) -> Unit = {}
+    onChangeBlockStateClicked: (Boolean) -> Unit = {}
 ) {
     Dialog(
-        onDismissRequest = { onClose.invoke("closed") },
+        onDismissRequest = { onChangeBlockStateClicked(false) },
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
     ) {
         Column(
@@ -77,7 +77,7 @@ fun BlockUserDialog(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onClose.invoke("blocked") }
+                    .clickable { onChangeBlockStateClicked(true) }
             ) {
                 Text(
                     text = if (userData.blocked.contains(friendData.personList.id)) "Unblock User" else "Block User",
@@ -96,7 +96,7 @@ fun BlockUserDialog(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onClose.invoke("closed") }
+                    .clickable { onChangeBlockStateClicked(false) }
             ) {
                 Text(
                     text = "Cancel",

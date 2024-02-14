@@ -38,7 +38,7 @@
         </service>
 
         <service
-            android:name="at.htlhl.chatnet.services.LocationUpdateService"
+            android:name="at.htlhl.chatnet.services.DropInUpdateService"
             android:exported="false"
             android:enabled="true"
             android:foregroundServiceType="location"

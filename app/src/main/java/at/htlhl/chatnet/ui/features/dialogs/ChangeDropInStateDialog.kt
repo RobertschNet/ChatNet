@@ -27,12 +27,12 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
 @Composable
-fun DisableDropInDialog(
-    dropInOn: Boolean,
-    onClose: (String) -> Unit = {}
+fun ChangeDropInStateDialog(
+    isDropInOn: Boolean,
+    onChangeDropInState: (Boolean) -> Unit = {}
 ) {
     Dialog(
-        onDismissRequest = { onClose.invoke("closed") },
+        onDismissRequest = { onChangeDropInState.invoke(false) },
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
     ) {
         Column(
@@ -44,7 +44,7 @@ fun DisableDropInDialog(
         ) {
             Spacer(modifier = Modifier.height(5.dp))
             Text(
-                text = if (dropInOn) "Disable Drop-In?" else "Enable Drop-In?",
+                text = if (isDropInOn) "Disable Drop-In?" else "Enable Drop-In?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 overflow = TextOverflow.Ellipsis,
@@ -52,7 +52,7 @@ fun DisableDropInDialog(
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                text = if (dropInOn) "If you disable Drop-In your location will no longer be visible to others." else "If you enable Drop-In your location will be visible to others.",
+                text = if (isDropInOn) "If you disable Drop-In your location will no longer be visible to others." else "If you enable Drop-In your location will be visible to others.",
                 fontWeight = FontWeight.Light,
                 color = MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center,
@@ -73,10 +73,10 @@ fun DisableDropInDialog(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onClose.invoke("changed") }
+                    .clickable { onChangeDropInState.invoke(true) }
             ) {
                 Text(
-                    text = if (dropInOn) "Disable" else "Enable",
+                    text = if (isDropInOn) "Disable" else "Enable",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
                     color = Color.Red,
@@ -92,7 +92,7 @@ fun DisableDropInDialog(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onClose.invoke("closed") }
+                    .clickable { onChangeDropInState.invoke(false) }
             ) {
                 Text(
                     text = "Cancel",

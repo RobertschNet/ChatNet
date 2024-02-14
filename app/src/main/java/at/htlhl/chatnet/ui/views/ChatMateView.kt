@@ -67,7 +67,7 @@ class ChatMateView {
         val friendData: InternalChatInstance = friendState.value
         val userState = sharedViewModel.user.collectAsState()
         val userData: FirebaseUser = userState.value
-        var showClearChatPrompt by remember { mutableStateOf(false) }
+        var showClearChatDialog by remember { mutableStateOf(false) }
         val completeMessageChatRoomData =
             if (sharedViewModel.searchValue.value != "") messageChatRoomData.filter {
                 it.personList.username["mixedcase"]?.contains(
@@ -154,14 +154,14 @@ class ChatMateView {
                     showUserIconPrompt = false
                 })
         }
-        if (showClearChatPrompt) {
-            ClearChatDialog(onDismiss = { clear ->
-                if (clear == "clear") {
+        if (showClearChatDialog) {
+            ClearChatDialog(onClearChatClicked = { clearClicked ->
+                if (clearClicked) {
                     deleteAllChatMessages(
                         userData = userData, friendData = friendData
                     )
                 }
-                showClearChatPrompt = false
+                showClearChatDialog = false
             })
         }
         if (modelSheetState) {
@@ -200,7 +200,7 @@ class ChatMateView {
                                 }
 
                                 BottomSheetTagState.CLEAR -> {
-                                    showClearChatPrompt = true
+                                    showClearChatDialog = true
                                 }
 
                                 BottomSheetTagState.DELETE -> {
