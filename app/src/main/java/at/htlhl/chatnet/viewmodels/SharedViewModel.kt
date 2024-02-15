@@ -34,7 +34,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.SetOptions
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -81,7 +80,7 @@ class SharedViewModel : ViewModel() {
     var isDataLoaded = mutableStateOf(false)
 
     val chatMateResponseState = mutableStateOf(ChatMateResponseState.Success)
-    var previousRandChatUser = mutableStateOf<List<FirebaseUser>>(emptyList())
+    var previousRandChatUsersList = mutableStateOf<List<FirebaseUser>>(emptyList())
     private val publicUser = MutableStateFlow(FirebaseUser())
     val publicUserFlow: StateFlow<FirebaseUser> get() = publicUser
 
@@ -126,6 +125,7 @@ class SharedViewModel : ViewModel() {
         imageList.value = newImageList
         onComplete()
     }
+
     fun updateDropInState(newState: Boolean, onComplete: () -> Unit = {}) {
         dropInState.value = newState
         onComplete()
@@ -271,6 +271,7 @@ class SharedViewModel : ViewModel() {
                 read = matchingChat?.messages?.count { it.sender != auth.currentUser?.uid && !it.read }
                     ?: 0)
         }
+        onComplete()
     }
 
     private fun updateFriendsList(
@@ -593,46 +594,10 @@ class SharedViewModel : ViewModel() {
         }
     }
 
-
     /**
      * This section contains the logic for the Firebase communication, used for searching for users,
      * in the SearchView.
      */
-
-
-
-
-
-    fun updateChatRoom(tab: String, chatRoomId: String) {
-        val fieldUpdates = hashMapOf<String, Any>(
-            "tab" to tab,
-        )
-        getChatDocumentRef().document(chatRoomId).update(fieldUpdates).addOnSuccessListener { }
-            .addOnFailureListener { exception -> exception.printStackTrace() }
-    }
-
-    fun saveFriendForFriend(person: FirebaseUser, status: String) {
-        val fieldUpdates = mapOf(
-            "status" to status, "id" to auth.currentUser!!.uid
-        )
-        firebaseInstance.collection("$USER_COLLECTION/${person.id}/$FRIENDS_COLLECTION")
-            .document(auth.currentUser!!.uid)
-            .set(fieldUpdates, SetOptions.mergeFields("status", "id"))
-            .addOnFailureListener { exception ->
-                exception.printStackTrace()
-            }
-    }
-
-
-    fun saveFriendForUser(person: FirebaseUser, status: String) {
-        val fieldUpdates = mapOf(
-            "status" to status,
-            "id" to person.id,
-        )
-        firebaseInstance.collection("$USER_COLLECTION/${auth.currentUser!!.uid}/$FRIENDS_COLLECTION")
-            .document(person.id).set(fieldUpdates, SetOptions.mergeFields("status", "id"))
-            .addOnFailureListener { exception -> exception.printStackTrace() }
-    }
 
 
     /**
@@ -691,7 +656,7 @@ class SharedViewModel : ViewModel() {
         _friend.value = InternalChatInstance()
         _friendListData.value = emptyList()
         _user.value = FirebaseUser()
-        previousRandChatUser.value = emptyList()
+        previousRandChatUsersList.value = emptyList()
         dropInState.value = true
         randState.value = false
         isDataLoaded.value = false
@@ -798,27 +763,6 @@ class SharedViewModel : ViewModel() {
         })
     }
 
-    fun createChatMateChat(
-        onSuccess: () -> Unit = {}, onError: () -> Unit
-    ) {
-        if (chatData.value.any { chat ->
-                chat.tab == "chatmate" && chat.members.contains(auth.currentUser?.uid.toString()) && chat.messages.isEmpty()
-            }) {
-            onError.invoke()
-            return
-        }
-
-        val membersArray = arrayListOf(auth.currentUser!!.uid, "ChatMate")
-        val fieldUpdates = hashMapOf(
-            "members" to membersArray,
-            "tab" to "chatmate",
-            "unread" to emptyList<String>(),
-        )
-        getChatDocumentRef().document().set(fieldUpdates).addOnSuccessListener {
-            onSuccess.invoke()
-        }.addOnFailureListener { exception -> exception.printStackTrace() }
-    }
-
 
     private val _friendRandomFriendsListData = MutableStateFlow<List<FirebaseUser>>(emptyList())
     val friendRandomFriendsListData: StateFlow<List<FirebaseUser>> get() = _friendRandomFriendsListData
@@ -909,7 +853,7 @@ class SharedViewModel : ViewModel() {
         sharedViewModel: SharedViewModel,
         state: Boolean,
         navController: NavController,
-        onComplete: () -> Unit
+        onComplete: () -> Unit = {}
     ) {
         val url = "https://randchat-ie4mphraqq-uc.a.run.app/randChat"
         val client = OkHttpClient()
@@ -958,8 +902,8 @@ class SharedViewModel : ViewModel() {
                 if (documentSnapshot.exists()) {
                     Log.println(Log.INFO, "Response", sharedViewModel.chatData.value.toString())
                     val personList = documentSnapshot.toObject(FirebaseUser::class.java)
-                    if (!previousRandChatUser.value.contains(personList)) {
-                        previousRandChatUser.value += personList!!
+                    if (!previousRandChatUsersList.value.contains(personList)) {
+                        previousRandChatUsersList.value += personList!!
                     }
                     val specificChat = sharedViewModel.chatData.value.find {
                         it.tab == "randchat" && it.members.contains(uID) && it.members.contains(auth.currentUser?.uid.toString())
@@ -1140,12 +1084,12 @@ class SharedViewModel : ViewModel() {
         val userRef = getUserDocumentRef().document(auth.currentUser?.uid.toString())
         val friendRef = getUserDocumentRef().document(person.id)
         userRef.collection(FRIENDS_COLLECTION).document(person.id).delete().addOnSuccessListener {
-                friendRef.collection(FRIENDS_COLLECTION).document(auth.currentUser?.uid.toString())
-                    .delete().addOnSuccessListener {}.addOnFailureListener { exception ->
-                        exception.printStackTrace()
-                    }
-            }.addOnFailureListener { exception ->
-                exception.printStackTrace()
-            }
+            friendRef.collection(FRIENDS_COLLECTION).document(auth.currentUser?.uid.toString())
+                .delete().addOnSuccessListener {}.addOnFailureListener { exception ->
+                    exception.printStackTrace()
+                }
+        }.addOnFailureListener { exception ->
+            exception.printStackTrace()
+        }
     }
 }

@@ -1,11 +1,9 @@
-package at.htlhl.chatnet.ui.views
+package at.htlhl.chatnet.ui.features.chatmate.screens
 
-import android.annotation.SuppressLint
-import android.os.Build
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -22,16 +20,23 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import at.htlhl.chatnet.data.BigUserImageDismissState.*
+import at.htlhl.chatnet.data.BigUserImageDismissState.DELETE
+import at.htlhl.chatnet.data.BigUserImageDismissState.IMAGE
+import at.htlhl.chatnet.data.BigUserImageDismissState.INFO
+import at.htlhl.chatnet.data.BigUserImageDismissState.MESSAGE
 import at.htlhl.chatnet.data.BottomSheetTagState
 import at.htlhl.chatnet.data.ChatsChatItemClickState
 import at.htlhl.chatnet.data.CurrentTab
+import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.SaveImageTask
+import at.htlhl.chatnet.ui.features.chatmate.viewmodels.ChatMateViewModel
 import at.htlhl.chatnet.ui.features.dialogs.ClearChatDialog
+import at.htlhl.chatnet.ui.features.dialogs.DeleteChatDialog
 import at.htlhl.chatnet.ui.features.dialogs.ShowBigUserImageDialog
 import at.htlhl.chatnet.ui.features.mixed.ChatsViewChatItem
 import at.htlhl.chatnet.ui.features.mixed.TabsBottomSheetContent
@@ -48,66 +53,77 @@ import java.lang.ref.WeakReference
 
 class ChatMateView {
 
-
     @OptIn(ExperimentalMaterial3Api::class)
-    @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
-    @RequiresApi(Build.VERSION_CODES.S)
     @Composable
     fun ChatMateScreen(navController: NavController, sharedViewModel: SharedViewModel) {
-        val lazyListState = rememberLazyListState()
-        var modelSheetState by remember { mutableStateOf(false) }
-        var showUserIconPrompt by remember { mutableStateOf(false) }
+        val chatMateViewModel = viewModel<ChatMateViewModel>()
         val context = LocalContext.current
+
         val dropInState by sharedViewModel.dropInState
         val searchedValue by sharedViewModel.searchValue
+
+        val lazyColumnState = rememberLazyListState()
         val coroutineScope = rememberCoroutineScope()
-        val messageChatRoomDataState = sharedViewModel.completeChatMateList.collectAsState()
-        val messageChatRoomData: List<InternalChatInstance> = messageChatRoomDataState.value
-        val friendState = sharedViewModel.friend.collectAsState()
-        val friendData: InternalChatInstance = friendState.value
-        val userState = sharedViewModel.user.collectAsState()
-        val userData: FirebaseUser = userState.value
+
+        var modelSheetState by remember { mutableStateOf(false) }
+        var showBigUserImageDialog by remember { mutableStateOf(false) }
         var showClearChatDialog by remember { mutableStateOf(false) }
-        val completeMessageChatRoomData =
-            if (sharedViewModel.searchValue.value != "") messageChatRoomData.filter {
-                it.personList.username["mixedcase"]?.contains(
-                    sharedViewModel.searchValue.value, ignoreCase = true
-                ) ?: false || it.lastMessage.text.contains(
-                    sharedViewModel.searchValue.value, ignoreCase = true
-                )
-            } else messageChatRoomData
+        var deleteChatDialog by remember { mutableStateOf(false) }
+
+        val completeChatMateListState by sharedViewModel.completeChatMateList.collectAsState()
+        val friendDataState by sharedViewModel.friend.collectAsState()
+        val userDataState by sharedViewModel.user.collectAsState()
+        val chatDataState by sharedViewModel.chatData.collectAsState()
+
+        val completeChatMateChatsList: List<InternalChatInstance> = completeChatMateListState
+        val friendData: InternalChatInstance = friendDataState
+        val userData: FirebaseUser = userDataState
+        val chatData: List<FirebaseChat> = chatDataState
+
+        val filteredChatMateChatsList = chatMateViewModel.filterChatMateChatsList(
+            completeChatMateChatsList = completeChatMateChatsList, searchedValue = searchedValue
+        )
         val bottomSheetItems = generateBottomSheetItems(
             isChatMate = true, friendData = friendData, userData = userData
         )
+
         Scaffold(
             backgroundColor = MaterialTheme.colorScheme.background,
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TabsTopBar(tab = CurrentTab.CHATMATE, dropInState = dropInState, onActionClicked = {
-                    sharedViewModel.createChatMateChat(onError = {
-                        Toast.makeText(
-                            context, "Only one empty chat is allowed at a time.", Toast.LENGTH_SHORT
-                        ).show()
-                    })
-                }, onUpdateSearchValue = {
-                    sharedViewModel.searchValue.value = it
+                    chatMateViewModel.createChatMateChat(
+                        userID = userData.id,
+                        chatData = chatData,
+                        onEmptyChatAlreadyExists = {
+                            Toast.makeText(
+                                context,
+                                "Only one empty chat is allowed at a time.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        })
+                }, onUpdateSearchValue = { updatedSearchValue ->
+                    sharedViewModel.updateSearchValue(newSearchValue = updatedSearchValue)
                 })
             },
-            content = {
+            content = { paddingValues ->
                 LazyColumn(
-                    Modifier.fillMaxSize(), state = lazyListState
+                    Modifier
+                        .fillMaxSize()
+                        .padding(top = paddingValues.calculateTopPadding()),
+                    state = lazyColumnState
                 ) {
-                    items(completeMessageChatRoomData) { message ->
+                    items(filteredChatMateChatsList) { chatMateChat ->
                         ChatsViewChatItem(
-                            friendElement = message,
+                            friendElement = chatMateChat,
                             userData = userData,
                             displayOnlineState = false,
                             searchedValue = searchedValue
                         ) { context ->
-                            sharedViewModel.updateFriend(message) {
+                            sharedViewModel.updateFriend(newFriend = chatMateChat, onComplete = {
                                 when (context) {
                                     ChatsChatItemClickState.IMAGE -> {
-                                        showUserIconPrompt = true
+                                        showBigUserImageDialog = true
                                     }
 
                                     ChatsChatItemClickState.CONTEXT_MENU -> {
@@ -118,20 +134,20 @@ class ChatMateView {
                                         navController.navigate(Screens.ChatViewScreen.route)
                                     }
                                 }
-                            }
+                            })
                         }
                     }
                 }
             },
         )
-        if (showUserIconPrompt) {
-            ShowBigUserImageDialog(userData = userData,
+        if (showBigUserImageDialog) {
+            ShowBigUserImageDialog(
+                userData = userData,
                 friendData = friendData,
                 onDismiss = { action ->
                     when (action) {
                         INFO -> {
                             navController.navigate(Screens.ProfileInfoScreen.route)
-
                         }
 
                         MESSAGE -> {
@@ -140,18 +156,18 @@ class ChatMateView {
 
                         IMAGE -> {
                             coroutineScope.launch {
-                                SaveImageTask(WeakReference(context)).saveImage(sharedViewModel.friend.value.personList.image)
+                                SaveImageTask(WeakReference(context)).saveImage(friendData.personList.image)
                             }
                         }
 
                         DELETE -> {
-                            deleteChatRoom(friendData = friendData)
+                            deleteChatDialog = true
                         }
 
                         else -> {
                         }
                     }
-                    showUserIconPrompt = false
+                    showBigUserImageDialog = false
                 })
         }
         if (showClearChatDialog) {
@@ -163,6 +179,15 @@ class ChatMateView {
                 }
                 showClearChatDialog = false
             })
+        }
+        if (deleteChatDialog) {
+           DeleteChatDialog(onChatDeletedClicked = { chatDeleted ->
+               if (chatDeleted) {
+                   deleteChatRoom(friendData = friendData)
+               }
+               deleteChatDialog = false
+              }
+           )
         }
         if (modelSheetState) {
             ModalBottomSheet(containerColor = MaterialTheme.colorScheme.background,
@@ -179,8 +204,7 @@ class ChatMateView {
                                 BottomSheetTagState.UNREAD -> {
                                     if (friendData.read > 0) {
                                         markMessagesAsRead(
-                                            userData = userData,
-                                            friendData = friendData
+                                            userData = userData, friendData = friendData
                                         )
                                     } else if (friendData.markedAsUnread && friendData.read == 0) {
                                         updateMarkAsUnreadStatus(
@@ -188,14 +212,12 @@ class ChatMateView {
                                             friendData = friendData,
                                             isAlreadyUnread = true
                                         )
-
                                     } else {
                                         updateMarkAsUnreadStatus(
                                             userData = userData,
                                             friendData = friendData,
                                             isAlreadyUnread = false
                                         )
-
                                     }
                                 }
 
@@ -204,7 +226,7 @@ class ChatMateView {
                                 }
 
                                 BottomSheetTagState.DELETE -> {
-                                    deleteChatRoom(friendData = friendData)
+                                    deleteChatDialog = true
                                 }
 
                                 BottomSheetTagState.PIN -> {

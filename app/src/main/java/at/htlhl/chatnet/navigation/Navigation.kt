@@ -17,7 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import at.htlhl.chatnet.ui.views.CameraPhotoView
 import at.htlhl.chatnet.ui.views.CameraView
-import at.htlhl.chatnet.ui.views.ChatMateView
+import at.htlhl.chatnet.ui.features.chatmate.screens.ChatMateView
 import at.htlhl.chatnet.ui.features.chat.ChatView
 import at.htlhl.chatnet.ui.features.chats.screens.ChatsView
 import at.htlhl.chatnet.ui.features.dropin.screens.DropInView
@@ -29,8 +29,8 @@ import at.htlhl.chatnet.ui.views.ProfileInfoView
 import at.htlhl.chatnet.ui.views.ProfilePictureView
 import at.htlhl.chatnet.ui.features.profile.screens.ProfileView
 import at.htlhl.chatnet.ui.views.PublicProfileView
-import at.htlhl.chatnet.ui.views.RandChatStartView
-import at.htlhl.chatnet.ui.views.RandChatView
+import at.htlhl.chatnet.ui.features.randchat.screens.RandChatStartView
+import at.htlhl.chatnet.ui.features.randchat.screens.RandChatView
 import at.htlhl.chatnet.ui.features.login_register.screens.RegisterView
 import at.htlhl.chatnet.ui.features.login_register.screens.RegisterWithGoggleView
 import at.htlhl.chatnet.viewmodels.SharedViewModel

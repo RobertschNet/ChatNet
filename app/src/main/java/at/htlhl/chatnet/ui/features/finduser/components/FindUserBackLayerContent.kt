@@ -73,8 +73,8 @@ fun FindUserBackLayerContent(
                         deleteAble = false,
                         searchedText = searchedText,
                         personType = if (specificUser == null) PersonType.SEARCHED_PERSON else if (specificUser.statusFriend == PersonType.PENDING_PERSON) PersonType.PENDING_PERSON else PersonType.ACCEPTED_PERSON,
-                        onPersonClicked = {
-                            onPersonClicked(it)
+                        onPersonClicked = {clickedPerson->
+                            onPersonClicked(clickedPerson)
                         },
                         onFriendActionClicked = { clickedPerson, add ->
                             onFriendActionClicked(clickedPerson, add)

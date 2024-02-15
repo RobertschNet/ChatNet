@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.views
+package at.htlhl.chatnet.ui.features.randchat.screens
 
 import android.annotation.SuppressLint
 import android.content.Context

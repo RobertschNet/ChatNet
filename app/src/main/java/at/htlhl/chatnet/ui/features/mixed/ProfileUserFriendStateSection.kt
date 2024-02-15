@@ -27,7 +27,10 @@ import at.htlhl.chatnet.data.CurrentTab
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.PersonType
+import at.htlhl.chatnet.util.firebase.changeFriendStateForPerson
+import at.htlhl.chatnet.util.firebase.changeFriendStateForUser
 import at.htlhl.chatnet.util.firebase.saveChatRoom
+import at.htlhl.chatnet.util.firebase.updateChatRoomTab
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 
 @Composable
@@ -92,17 +95,19 @@ fun ProfileUserFriendStateSection(
                                                 tab = CurrentTab.CHATS
                                             )
                                         } else {
-                                            sharedViewModel.updateChatRoom(
-                                                tab = "chats",
+                                            updateChatRoomTab(
+                                                newTab = CurrentTab.CHATS,
                                                 chatRoomId = filteredChats[0].chatRoomID
                                             )
                                         }
-                                        sharedViewModel.saveFriendForFriend(
-                                            person = publicUser,
+                                        changeFriendStateForPerson(
+                                            userID = userData.id,
+                                            personID = publicUser.id,
                                             status = "accepted"
                                         )
-                                        sharedViewModel.saveFriendForUser(
-                                            person = publicUser,
+                                        changeFriendStateForUser(
+                                            userID=userData.id,
+                                            personID = publicUser.id,
                                             status = "accepted"
                                         )
                                     }
@@ -118,12 +123,14 @@ fun ProfileUserFriendStateSection(
                                     }
 
                                     else -> {
-                                        sharedViewModel.saveFriendForFriend(
-                                            person = publicUser,
+                                        changeFriendStateForPerson(
+                                            userID = userData.id,
+                                            personID = publicUser.id,
                                             status = "pending"
                                         )
-                                        sharedViewModel.saveFriendForUser(
-                                            person = publicUser,
+                                        changeFriendStateForUser(
+                                            userID = userData.id,
+                                            personID = publicUser.id,
                                             status = "requested"
                                         )
                                     }

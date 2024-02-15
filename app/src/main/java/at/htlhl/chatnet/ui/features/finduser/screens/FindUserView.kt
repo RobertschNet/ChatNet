@@ -28,7 +28,10 @@ import at.htlhl.chatnet.ui.features.finduser.components.FindUserTopSearchBar
 import at.htlhl.chatnet.ui.features.finduser.components.FindUserBackLayerContent
 import at.htlhl.chatnet.ui.features.finduser.components.FindUserFrontLayerContent
 import at.htlhl.chatnet.ui.features.finduser.viewmodels.FindUserViewModel
+import at.htlhl.chatnet.util.firebase.changeFriendStateForPerson
+import at.htlhl.chatnet.util.firebase.changeFriendStateForUser
 import at.htlhl.chatnet.util.firebase.saveChatRoom
+import at.htlhl.chatnet.util.firebase.updateChatRoomTab
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import kotlinx.coroutines.launch
 
@@ -118,26 +121,30 @@ class FindUserView {
                                     tab = CurrentTab.CHATS
                                 )
                             } else {
-                                sharedViewModel.updateChatRoom(
-                                    tab = "chats",
+                                updateChatRoomTab(
+                                    newTab = CurrentTab.CHATS,
                                     chatRoomId = filteredChats[0].chatRoomID
                                 )
                             }
-                            sharedViewModel.saveFriendForFriend(
-                                person = clickedPerson,
+                            changeFriendStateForPerson(
+                                userID = userData.id,
+                                personID = clickedPerson.id,
                                 status = "accepted"
                             )
-                            sharedViewModel.saveFriendForUser(
-                                person = clickedPerson,
+                            changeFriendStateForUser(
+                                userID = userData.id,
+                                personID = clickedPerson.id,
                                 status = "accepted"
                             )
                         } else {
-                            sharedViewModel.saveFriendForFriend(
-                                person = clickedPerson,
+                            changeFriendStateForPerson(
+                                userID = userData.id,
+                                personID = clickedPerson.id,
                                 status = "pending"
                             )
-                            sharedViewModel.saveFriendForUser(
-                                person = clickedPerson,
+                            changeFriendStateForUser(
+                                userID = userData.id,
+                                personID = clickedPerson.id,
                                 status = "requested"
                             )
                         }
@@ -168,26 +175,30 @@ class FindUserView {
                                     tab = CurrentTab.CHATS
                                 )
                             } else {
-                                sharedViewModel.updateChatRoom(
-                                    tab = "chats",
+                                updateChatRoomTab(
+                                    newTab = CurrentTab.CHATS,
                                     chatRoomId = filteredChats[0].chatRoomID
                                 )
                             }
-                            sharedViewModel.saveFriendForFriend(
-                                person = clickedPerson,
+                            changeFriendStateForPerson(
+                                userID = userData.id,
+                                personID = clickedPerson.id,
                                 status = "accepted"
                             )
-                            sharedViewModel.saveFriendForUser(
-                                person = clickedPerson,
+                            changeFriendStateForUser(
+                                userID = userData.id,
+                                personID = clickedPerson.id,
                                 status = "accepted"
                             )
                         } else {
-                            sharedViewModel.saveFriendForFriend(
-                                person = clickedPerson,
+                            changeFriendStateForPerson(
+                                userID = userData.id,
+                                personID = clickedPerson.id,
                                 status = "pending"
                             )
-                            sharedViewModel.saveFriendForUser(
-                                person = clickedPerson,
+                            changeFriendStateForUser(
+                                userID = userData.id,
+                                personID = clickedPerson.id,
                                 status = "requested"
                             )
                         }

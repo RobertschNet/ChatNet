@@ -131,8 +131,8 @@ class DropInView {
             topBar = {
                 TabsTopBar(tab = CurrentTab.DROPIN, dropInState = dropInState, onActionClicked = {
                     changeDropInStateDialog = true
-                }, onUpdateSearchValue = { updatedText ->
-                    sharedViewModel.updateSearchValue(updatedText)
+                }, onUpdateSearchValue = { updatedSearchValue ->
+                    sharedViewModel.updateSearchValue(newSearchValue = updatedSearchValue)
                 })
             },
             content = { paddingValues ->

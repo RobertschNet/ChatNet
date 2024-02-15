@@ -114,8 +114,8 @@ fun FindUserFrontLayerContent(
                     deleteAble = false,
                     personType = PersonType.SEARCHED_PERSON,
                     searchedText = searchedText,
-                    onPersonClicked = {
-                        onPersonClicked(it)
+                    onPersonClicked = {clickedPerson ->
+                        onPersonClicked(clickedPerson)
                     },
                     onFriendActionClicked = { clickedPerson, _ ->
                         onFriendActionClicked(clickedPerson, false)
