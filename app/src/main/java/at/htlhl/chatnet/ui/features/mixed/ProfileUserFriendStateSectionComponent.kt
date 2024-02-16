@@ -27,19 +27,18 @@ import at.htlhl.chatnet.data.CurrentTab
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.PersonType
+import at.htlhl.chatnet.util.firebase.cancelFriendRequest
 import at.htlhl.chatnet.util.firebase.changeFriendStateForPerson
 import at.htlhl.chatnet.util.firebase.changeFriendStateForUser
 import at.htlhl.chatnet.util.firebase.saveChatRoom
 import at.htlhl.chatnet.util.firebase.updateChatRoomTab
-import at.htlhl.chatnet.viewmodels.SharedViewModel
 
 @Composable
-fun ProfileUserFriendStateSection(
+fun ProfileUserFriendStateSectionComponent(
     userData: FirebaseUser,
     chatData: List<FirebaseChat>,
     publicUser: FirebaseUser,
     friendState: PersonType?,
-    sharedViewModel: SharedViewModel,
     onRemoveFriendAction: () -> Unit
 ) {
     Card(
@@ -51,9 +50,7 @@ fun ProfileUserFriendStateSection(
         backgroundColor = MaterialTheme.colorScheme.background
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
                 Spacer(modifier = Modifier.height(7.5f.dp))
@@ -75,18 +72,17 @@ fun ProfileUserFriendStateSection(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Button(
-                            shape = RoundedCornerShape(25.dp),
+                        Button(shape = RoundedCornerShape(25.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF00A0E8),
-                                contentColor = Color.White
+                                containerColor = Color(0xFF00A0E8), contentColor = Color.White
                             ),
                             onClick = {
                                 when (friendState) {
                                     PersonType.PENDING_PERSON -> {
                                         val filteredChats = chatData.filter { chat ->
-                                            chat.members.contains(publicUser.id) && chat.members
-                                                .contains(sharedViewModel.auth.currentUser?.uid)
+                                            chat.members.contains(publicUser.id) && chat.members.contains(
+                                                    userData.id
+                                                )
                                         }
                                         if (filteredChats.isEmpty()) {
                                             saveChatRoom(
@@ -106,19 +102,19 @@ fun ProfileUserFriendStateSection(
                                             status = "accepted"
                                         )
                                         changeFriendStateForUser(
-                                            userID=userData.id,
+                                            userID = userData.id,
                                             personID = publicUser.id,
                                             status = "accepted"
                                         )
                                     }
 
                                     PersonType.ACCEPTED_PERSON -> {
-                                        onRemoveFriendAction.invoke()
+                                        onRemoveFriendAction()
                                     }
 
                                     PersonType.REQUESTED_PERSON -> {
-                                        sharedViewModel.cancelFriendRequest(
-                                            person = publicUser
+                                        cancelFriendRequest(
+                                            userID = userData.id, person = publicUser
                                         )
                                     }
 
@@ -135,8 +131,7 @@ fun ProfileUserFriendStateSection(
                                         )
                                     }
                                 }
-                            }
-                        ) {
+                            }) {
                             Text(
                                 text = if (friendState == PersonType.PENDING_PERSON) "Accept Request" else if (friendState == PersonType.ACCEPTED_PERSON) "Remove Friend" else if (friendState == PersonType.REQUESTED_PERSON) "Cancel Request" else "Add Friend",
                                 fontSize = 14.sp,

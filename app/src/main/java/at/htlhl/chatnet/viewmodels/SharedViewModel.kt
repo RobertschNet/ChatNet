@@ -1,22 +1,16 @@
 package at.htlhl.chatnet.viewmodels
 
-import android.content.ContentValues
-import android.content.Context
 import android.graphics.Bitmap
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import android.provider.MediaStore
 import android.util.Log
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseFriend
-import at.htlhl.chatnet.data.FirebaseMessage
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.InternalMessageInstance
@@ -26,21 +20,16 @@ import at.htlhl.chatnet.navigation.Screens
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentChange
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
 import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import okhttp3.Call
@@ -82,8 +71,7 @@ class SharedViewModel : ViewModel() {
     val chatMateResponseState = mutableStateOf(ChatMateResponseState.Success)
     var previousRandChatUsersList = mutableStateOf<List<FirebaseUser>>(emptyList())
     private val publicUser = MutableStateFlow(FirebaseUser())
-    val publicUserFlow: StateFlow<FirebaseUser> get() = publicUser
-
+    val publicUserData: StateFlow<FirebaseUser> get() = publicUser
 
     private val _friend = MutableStateFlow(InternalChatInstance())
     val friend: StateFlow<InternalChatInstance> get() = _friend
@@ -91,12 +79,14 @@ class SharedViewModel : ViewModel() {
     val dropInState = mutableStateOf(false)
     val nearbyDropInUsersList = mutableStateOf<List<LocationUserInstance>>(emptyList())
     val completeDropInNearbyUserList = MutableStateFlow<List<InternalChatInstance>>(emptyList())
+    private val _bitmap = MutableStateFlow(Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888))
+    val bitmap = _bitmap.asStateFlow()
 
     val searchValue = mutableStateOf("")
     val text = mutableStateOf("")
     val randState = mutableStateOf(false)
     val isConnected = mutableStateOf(false)
-    val imagePosition = mutableIntStateOf(0)
+    val imageStartPosition = mutableIntStateOf(0)
     val imageList = mutableStateOf<List<InternalMessageInstance>>(emptyList())
 
     fun updateFriend(newFriend: InternalChatInstance, onComplete: () -> Unit = {}) {
@@ -131,17 +121,13 @@ class SharedViewModel : ViewModel() {
         onComplete()
     }
 
+    fun updatePhotoBitmap(newBitmap: Bitmap) {
+        _bitmap.value = newBitmap
+    }
+
     private fun getUserDocumentRef() = firebaseInstance.collection(USER_COLLECTION)
 
     private fun getChatDocumentRef() = firebaseInstance.collection(CHATS_COLLECTION)
-
-
-    private val _bitmaps = MutableStateFlow(Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888))
-    val bitmaps = _bitmaps.asStateFlow()
-
-    fun onTakePhoto(bitmap: Bitmap) {
-        _bitmaps.value = bitmap
-    }
 
     /**
      * This section contains the logic for the Firebase communication,
@@ -292,21 +278,6 @@ class SharedViewModel : ViewModel() {
         sortDataChats {}
     }
 
-    fun deleteFriendFromFriendList(friend: FirebaseUser) {
-        val friendSubCollectionRef =
-            getUserDocumentRef().document(auth.currentUser!!.uid).collection(FRIENDS_COLLECTION)
-        friendSubCollectionRef.document(friend.id).delete().addOnSuccessListener {
-            val userSubCollectionRef =
-                getUserDocumentRef().document(friend.id).collection(FRIENDS_COLLECTION)
-            userSubCollectionRef.document(auth.currentUser!!.uid).delete().addOnSuccessListener {
-                sortDataChats { }
-            }.addOnFailureListener { exception ->
-                exception.printStackTrace()
-            }
-        }.addOnFailureListener { exception ->
-            exception.printStackTrace()
-        }
-    }
 
     private val _completeChatList = MutableStateFlow<List<InternalChatInstance>>(emptyList())
     val completeChatList: StateFlow<List<InternalChatInstance>> get() = _completeChatList
@@ -344,7 +315,7 @@ class SharedViewModel : ViewModel() {
             chatRoomID = chat.chatRoomID)
     }
 
-    private fun sortDataChats(onComplete: () -> Unit) {
+    fun sortDataChats(onComplete: () -> Unit) {
         Log.println(Log.INFO, "Was triggered", _friendListData.value.toString())
         val updatedPersonList: List<InternalChatInstance> = _friendListData.value.map { person ->
             val matchingChat = _chatData.value.find { chat ->
@@ -353,16 +324,13 @@ class SharedViewModel : ViewModel() {
             val internalChatInstance = createInternalChatInstance(matchingChat ?: FirebaseChat())
 
             internalChatInstance.copy(personList = person)
-
         }
-
         val finalPersonList =
             updatedPersonList.filter { person -> person.personList.statusFriend == PersonType.ACCEPTED_PERSON }
         val sortedPersonList =
             finalPersonList.sortedWith(compareByDescending<InternalChatInstance> { it.pinChat }.thenByDescending { it.timestampMessage })
         _completeChatList.value = sortedPersonList
         sortDataDropIn { onComplete.invoke() }
-
     }
 
     private fun sortDataChatMate(onComplete: () -> Unit) {
@@ -424,7 +392,6 @@ class SharedViewModel : ViewModel() {
 
     private fun fetchUser(friend: String, onComplete: (FirebaseUser?) -> Unit) {
         val userDocumentRef = FirebaseFirestore.getInstance().collection("users").document(friend)
-
         // Add a SnapshotListener to get real-time updates
         userDocumentRef.addSnapshotListener { documentSnapshot, exception ->
             if (exception != null) {
@@ -450,7 +417,6 @@ class SharedViewModel : ViewModel() {
             }
         }
     }
-
 
     private fun isChatInstanceValid(chatInstance: InternalChatInstance): Boolean {
         return chatInstance.personList.id.isNotBlank() && chatInstance.chatRoomID.isNotBlank()
@@ -549,62 +515,6 @@ class SharedViewModel : ViewModel() {
             }
         return true
     }
-
-
-    fun deleteMessage(
-        documentId: String,
-        messageId: String,
-    ) {
-        getChatDocumentRef().document(documentId).collection("/$MESSAGES_COLLECTION")
-            .document(messageId).delete().addOnSuccessListener {}
-            .addOnFailureListener { exception ->
-                exception.printStackTrace()
-            }
-    }
-
-
-    fun changeMessageVisibility(
-        documentId: String, messageId: String
-    ) {
-        getChatDocumentRef().document(documentId).collection("/$MESSAGES_COLLECTION")
-            .document(messageId).update(
-                "visible", FieldValue.arrayRemove(auth.currentUser?.uid.toString())
-            ).addOnSuccessListener {
-                // Handle success
-            }.addOnFailureListener { exception ->
-                exception.printStackTrace()
-            }
-    }
-
-    suspend fun saveMessages(
-        documentId: String?,
-        message: FirebaseMessage,
-        onComplete: () -> Unit = {},
-        onError: (Exception) -> Unit = {}
-    ) {
-        viewModelScope.launch {
-            try {
-                firebaseInstance.collection("$CHATS_COLLECTION/${documentId}/$MESSAGES_COLLECTION")
-                    .add(message).await()
-                onComplete.invoke()
-                sendNotification(message)
-            } catch (e: Exception) {
-                onError.invoke(e)
-            }
-        }
-    }
-
-    /**
-     * This section contains the logic for the Firebase communication, used for searching for users,
-     * in the SearchView.
-     */
-
-
-    /**
-     * This section contains the logic for the Firebase communication,
-     * used for the users account settings.
-     */
-
 
     private val _user = MutableStateFlow(FirebaseUser())
     val user: StateFlow<FirebaseUser> get() = _user
@@ -712,29 +622,6 @@ class SharedViewModel : ViewModel() {
             }
         })
     }
-
-
-    private fun sendNotification(data: FirebaseMessage) {
-        val url = "https://sendnotification-ie4mphraqq-uc.a.run.app/sendNotifications"
-        val client = OkHttpClient.Builder().connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS).writeTimeout(30, TimeUnit.SECONDS).build()
-
-        val requestBody = FormBody.Builder().add("uid", auth.currentUser?.uid.toString())
-            .add("other", friend.value.personList.id).add("content", data.text).build()
-
-        val request = Request.Builder().url(url).post(requestBody).build()
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                // Handle failure
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-
-            }
-        })
-    }
-
 
     fun resetRandChat() {
         val url = "https://randchat-ie4mphraqq-uc.a.run.app/randChat"
@@ -922,140 +809,6 @@ class SharedViewModel : ViewModel() {
             }
     }
 
-    fun saveBitmapToGallery(
-        bitmap: Bitmap, displayName: String, context: Context, onSaved: () -> Unit
-    ): Uri? {
-        val chatNetFolderName = "ChatNet"
-        val contentValues = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
-            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/$chatNetFolderName")
-        }
-        val contentResolver = context.contentResolver
-        val uri =
-            contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-        try {
-            uri?.let { imageUri ->
-                contentResolver.openOutputStream(imageUri)?.use { outputStream ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                    outputStream.flush()
-                    onSaved.invoke()
-                }
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
-            return null
-        }
-        return uri
-    }
-
-    fun fetchFriendsFriends(
-        friend: FirebaseUser, onSuccess: (List<FirebaseUser>) -> Unit
-    ) = CoroutineScope(Dispatchers.IO).launch {
-        try {
-            val randomFriend = friend.id
-            val friendQuerySnapshot =
-                getUserDocumentRef().document(randomFriend).collection(FRIENDS_COLLECTION).get()
-                    .await()
-
-            val personListData = mutableListOf<FirebaseUser>()
-            val subCollectionData = friendQuerySnapshot.toObjects(FirebaseFriend::class.java)
-
-            subCollectionData.forEach { friend ->
-                try {
-                    val userDocumentSnapshot =
-                        getUserDocumentRef().document(friend.id).get().await()
-                    val data = userDocumentSnapshot?.toObject(FirebaseUser::class.java)
-                    if (data != null) {
-                        val finalData = FirebaseUser(
-                            image = data.image,
-                            username = data.username,
-                            id = data.id,
-                            online = data.online,
-                            email = data.email,
-                            color = data.color,
-                            blocked = data.blocked,
-                            connected = data.connected,
-                            pinned = data.pinned,
-                            muted = data.muted,
-                            statusFriend = when (friend.status) {
-                                "accepted" -> {
-                                    PersonType.ACCEPTED_PERSON
-                                }
-
-                                "pending" -> {
-                                    PersonType.PENDING_PERSON
-                                }
-
-                                "requested" -> {
-                                    PersonType.REQUESTED_PERSON
-                                }
-
-                                else -> {
-                                    PersonType.EMPTY_PERSON
-                                }
-                            },
-                            tags = data.tags
-                        )
-                        personListData.add(finalData)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-            val filteredList =
-                personListData.filter { it.id != auth.currentUser?.uid.toString() && it.statusFriend == PersonType.ACCEPTED_PERSON }
-            onSuccess(filteredList)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-
-    fun changeMediaVisibility(userContext: Boolean, isMedia: Boolean) {
-        val chatRef =
-            getChatDocumentRef().document(friend.value.chatRoomID).collection(MESSAGES_COLLECTION)
-        chatRef.get().addOnSuccessListener { querySnapshot ->
-            for (document in querySnapshot.documents) {
-                if (isMedia) {
-                    val images = document.get("images") as List<*>?
-                    if (images != null && images.isNotEmpty()) {
-                        handleVisibility(userContext, chatRef, document)
-                    }
-                } else {
-                    val text = document.getString("text")
-                    if (!text.isNullOrBlank()) {
-                        handleVisibility(userContext, chatRef, document)
-                    }
-                }
-            }
-        }.addOnFailureListener { exception ->
-            exception.printStackTrace()
-        }
-    }
-
-    private fun handleVisibility(
-        userContext: Boolean, chatRef: CollectionReference, document: DocumentSnapshot
-    ) {
-        val sender = document.get("visible") as List<*>
-        if (auth.currentUser?.uid.toString() in sender) {
-            val updatedVisible = sender.toMutableList()
-            if (userContext) {
-                updatedVisible.remove(auth.currentUser?.uid.toString())
-            } else {
-                chatRef.document(document.id).delete().addOnSuccessListener {}
-                    .addOnFailureListener { exception ->
-                        exception.printStackTrace()
-                    }
-                return
-            }
-            chatRef.document(document.id).update("visible", updatedVisible).addOnSuccessListener {}
-                .addOnFailureListener { exception ->
-                    exception.printStackTrace()
-                }
-        }
-    }
-
     // Needed due to performance issues
     suspend fun markMessagesAsRead() {
         val chatRef =
@@ -1076,20 +829,6 @@ class SharedViewModel : ViewModel() {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-        }
-    }
-
-
-    fun cancelFriendRequest(person: FirebaseUser) {
-        val userRef = getUserDocumentRef().document(auth.currentUser?.uid.toString())
-        val friendRef = getUserDocumentRef().document(person.id)
-        userRef.collection(FRIENDS_COLLECTION).document(person.id).delete().addOnSuccessListener {
-            friendRef.collection(FRIENDS_COLLECTION).document(auth.currentUser?.uid.toString())
-                .delete().addOnSuccessListener {}.addOnFailureListener { exception ->
-                    exception.printStackTrace()
-                }
-        }.addOnFailureListener { exception ->
-            exception.printStackTrace()
         }
     }
 }

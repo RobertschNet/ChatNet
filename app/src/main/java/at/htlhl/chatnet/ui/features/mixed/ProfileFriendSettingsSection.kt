@@ -33,8 +33,8 @@ import coil.compose.SubcomposeAsyncImage
 @Composable
 fun ProfileFriendSettingsSection(
     isChatMateChat: Boolean,
-    user: FirebaseUser,
-    friend: InternalChatInstance,
+    userData: FirebaseUser,
+    friendData: InternalChatInstance,
     onBlockAction: () -> Unit,
     onRemoveUserAction: () -> Unit,
 ) {
@@ -71,7 +71,7 @@ fun ProfileFriendSettingsSection(
                     Spacer(modifier = Modifier.width(25.dp))
                     SubcomposeAsyncImage(
                         contentScale = ContentScale.Crop,
-                        colorFilter = ColorFilter.tint(if (user.blocked.contains(friend.personList.id)) MaterialTheme.colorScheme.primary else Color.Red),
+                        colorFilter = ColorFilter.tint(if (userData.blocked.contains(friendData.personList.id)) MaterialTheme.colorScheme.primary else Color.Red),
                         model = R.drawable.person_block_svgrepo_com,
                         modifier = Modifier.size(30.dp),
                         contentDescription = null
@@ -80,10 +80,10 @@ fun ProfileFriendSettingsSection(
                     Text(
                         textAlign = TextAlign.Center,
                         overflow = TextOverflow.Ellipsis,
-                        text = if (user.blocked.contains(friend.personList.id)) "Unblock ${friend.personList.username["mixedcase"]}" else "Block ${friend.personList.username["mixedcase"]}",
+                        text = if (userData.blocked.contains(friendData.personList.id)) "Unblock ${friendData.personList.username["mixedcase"]}" else "Block ${friendData.personList.username["mixedcase"]}",
                         fontSize = 16.sp,
                         fontFamily = FontFamily.SansSerif,
-                        color = if (user.blocked.contains(friend.personList.id)) MaterialTheme.colorScheme.primary else Color.Red,
+                        color = if (userData.blocked.contains(friendData.personList.id)) MaterialTheme.colorScheme.primary else Color.Red,
                     )
                     Spacer(modifier = Modifier.width(25.dp))
                 }
@@ -109,7 +109,7 @@ fun ProfileFriendSettingsSection(
                 Text(
                     textAlign = TextAlign.Center,
                     overflow = TextOverflow.Ellipsis,
-                    text = "Remove ${friend.personList.username["mixedcase"]}",
+                    text = "Remove ${friendData.personList.username["mixedcase"]}",
                     fontSize = 16.sp,
                     fontFamily = FontFamily.SansSerif,
                     color = Color.Red,

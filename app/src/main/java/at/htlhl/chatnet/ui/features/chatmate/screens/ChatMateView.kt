@@ -147,7 +147,7 @@ class ChatMateView {
                 onDismiss = { action ->
                     when (action) {
                         INFO -> {
-                            navController.navigate(Screens.ProfileInfoScreen.route)
+                            navController.navigate(Screens.UserSheetScreen.route)
                         }
 
                         MESSAGE -> {

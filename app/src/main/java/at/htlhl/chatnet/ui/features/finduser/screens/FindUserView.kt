@@ -30,6 +30,7 @@ import at.htlhl.chatnet.ui.features.finduser.components.FindUserFrontLayerConten
 import at.htlhl.chatnet.ui.features.finduser.viewmodels.FindUserViewModel
 import at.htlhl.chatnet.util.firebase.changeFriendStateForPerson
 import at.htlhl.chatnet.util.firebase.changeFriendStateForUser
+import at.htlhl.chatnet.util.firebase.removeFriendFromFriendsList
 import at.htlhl.chatnet.util.firebase.saveChatRoom
 import at.htlhl.chatnet.util.firebase.updateChatRoomTab
 import at.htlhl.chatnet.viewmodels.SharedViewModel
@@ -103,10 +104,16 @@ class FindUserView {
                     searchedText = searchedText,
                     onPersonClicked = { clickedPerson ->
                         sharedViewModel.updatePublicUser(clickedPerson)
-                        navController.navigate(Screens.PublicProfileScreen.route)
+                        navController.navigate(Screens.PublicUserSheetScreen.route)
                     },
                     onDenyFriendRequestClicked = { clickedPerson ->
-                        sharedViewModel.deleteFriendFromFriendList(clickedPerson)
+                        removeFriendFromFriendsList(
+                            userData = userData,
+                            friendData =clickedPerson,
+                            onSuccess = {
+                                sharedViewModel.sortDataChats {}
+                            }
+                    )
                     },
                     onFriendActionClicked = { clickedPerson, addFriend ->
                         if (addFriend) {
@@ -160,7 +167,7 @@ class FindUserView {
                     searchedText = searchedText,
                     onPersonClicked = { clickedPerson ->
                         sharedViewModel.updatePublicUser(clickedPerson)
-                        navController.navigate(Screens.PublicProfileScreen.route)
+                        navController.navigate(Screens.PublicUserSheetScreen.route)
                     },
                     onFriendActionClicked = { clickedPerson, addFriend ->
                         if (addFriend) {
@@ -204,7 +211,13 @@ class FindUserView {
                         }
                     },
                     onDenyFriendRequestClicked = { clickedPerson ->
-                        sharedViewModel.deleteFriendFromFriendList(clickedPerson)
+                        removeFriendFromFriendsList(
+                            userData = userData,
+                            friendData = clickedPerson,
+                            onSuccess = {
+                                sharedViewModel.sortDataChats {}
+                            }
+                        )
                     },
                 )
             }

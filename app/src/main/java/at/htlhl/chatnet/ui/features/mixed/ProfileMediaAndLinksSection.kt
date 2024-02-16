@@ -32,18 +32,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.InternalMessageInstance
-import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 
 @Composable
 fun ProfileMediaAndLinksSection(
     imageList: List<InternalMessageInstance>,
-    navController: NavController,
-    sharedViewModel: SharedViewModel
+    onImageClicked: (Int) -> Unit,
+    onOpenImageViewClicked: () -> Unit,
 ) {
     Card(
         modifier = Modifier
@@ -56,8 +53,7 @@ fun ProfileMediaAndLinksSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(130.dp),
-            verticalAlignment = Alignment.Top
+                .height(130.dp), verticalAlignment = Alignment.Top
         ) {
             Column {
                 Spacer(modifier = Modifier.height(7.5f.dp))
@@ -78,11 +74,9 @@ fun ProfileMediaAndLinksSection(
                             .weight(1f)
                     )
                     Text(
-                        modifier = Modifier
-                            .clickable {
-                                sharedViewModel.imagePosition.intValue = 0
-                                navController.navigate(Screens.ImageViewScreen.route)
-                            },
+                        modifier = Modifier.clickable {
+                            onOpenImageViewClicked()
+                        },
                         textAlign = TextAlign.Center,
                         fontFamily = FontFamily.SansSerif,
                         fontWeight = FontWeight.Normal,
@@ -113,49 +107,42 @@ fun ProfileMediaAndLinksSection(
                     Spacer(modifier = Modifier.width(10.dp))
                 }
                 Spacer(modifier = Modifier.height(2.5f.dp))
-                LazyRow(
-                    verticalAlignment = Alignment.CenterVertically,
-                    content = {
-                        item {
-                            Spacer(modifier = Modifier.width(5.dp))
-                        }
-                        items(imageList.size) {
-                            SubcomposeAsyncImage(
-                                modifier = Modifier
-                                    .clickable {
-                                        sharedViewModel.imagePosition.intValue = it
-                                        navController.navigate(Screens.ImageViewScreen.route)
-                                    }
-                                    .height(100.dp)
-                                    .width(100.dp)
-                                    .padding(5.dp)
-                                    .border(
-                                        width = 2.dp,
-                                        color = Color.White,
-                                    )
-                                    .clip(RoundedCornerShape(16.dp)),
-                                model = imageList[it].images[0],
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop
+                LazyRow(verticalAlignment = Alignment.CenterVertically, content = {
+                    item {
+                        Spacer(modifier = Modifier.width(5.dp))
+                    }
+                    items(imageList.size) {
+                        SubcomposeAsyncImage(modifier = Modifier
+                            .clickable {
+                                onImageClicked(it)
+                            }
+                            .height(100.dp)
+                            .width(100.dp)
+                            .padding(5.dp)
+                            .border(
+                                width = 2.dp,
+                                color = Color.White,
                             )
-                        }
-                        if (imageList.isNotEmpty()) {
-                            item {
-                                IconButton(onClick = {
-                                    sharedViewModel.imagePosition.intValue = 0
-                                    navController.navigate(Screens.ImageViewScreen.route)
-                                }) {
-                                    SubcomposeAsyncImage(
-                                        model = R.drawable.arrow_right_svgrepo_com,
-                                        contentDescription = null,
-                                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.secondary),
-                                        modifier = Modifier.size(30.dp)
-                                    )
-                                }
+                            .clip(RoundedCornerShape(16.dp)),
+                            model = imageList[it].images[0],
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop)
+                    }
+                    if (imageList.isNotEmpty()) {
+                        item {
+                            IconButton(onClick = {
+                                onOpenImageViewClicked()
+                            }) {
+                                SubcomposeAsyncImage(
+                                    model = R.drawable.arrow_right_svgrepo_com,
+                                    contentDescription = null,
+                                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.secondary),
+                                    modifier = Modifier.size(30.dp)
+                                )
                             }
                         }
                     }
-                )
+                })
             }
         }
     }

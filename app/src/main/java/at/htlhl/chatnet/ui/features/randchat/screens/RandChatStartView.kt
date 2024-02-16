@@ -36,6 +36,7 @@ import at.htlhl.chatnet.ui.features.randchat.components.RandChatUserOverviewComp
 import at.htlhl.chatnet.ui.features.randchat.viewmodels.RandChatViewModel
 import at.htlhl.chatnet.util.firebase.changeFriendStateForPerson
 import at.htlhl.chatnet.util.firebase.changeFriendStateForUser
+import at.htlhl.chatnet.util.firebase.removeFriendFromFriendsList
 import at.htlhl.chatnet.util.firebase.saveChatRoom
 import at.htlhl.chatnet.util.firebase.updateChatRoomTab
 import at.htlhl.chatnet.util.getPersonTagsList
@@ -73,10 +74,13 @@ class RandChatStartView {
         Scaffold(backgroundColor = MaterialTheme.colorScheme.background,
             modifier = Modifier.fillMaxSize(),
             topBar = {
-                TabsTopBar(tab = CurrentTab.RANDCHAT, dropInState = dropInState, onActionClicked = {
-                }, onUpdateSearchValue = { updatedSearchValue ->
-                    sharedViewModel.updateSearchValue(newSearchValue = updatedSearchValue)
-                })
+                TabsTopBar(
+                    tab = CurrentTab.RANDCHAT,
+                    dropInState = dropInState,
+                    onActionClicked = {},
+                    onUpdateSearchValue = { updatedSearchValue ->
+                        sharedViewModel.updateSearchValue(newSearchValue = updatedSearchValue)
+                    })
             },
             content = { paddingValues ->
                 Column(
@@ -128,10 +132,9 @@ class RandChatStartView {
                                 searchedText = searchedValue,
                                 personType = if (previousUserExistsInFriendList == null) PersonType.SEARCHED_PERSON else if (previousUserExistsInFriendList.statusFriend == PersonType.PENDING_PERSON) PersonType.PENDING_PERSON else PersonType.ACCEPTED_PERSON,
                                 onPersonClicked = { clickedPerson ->
-                                    sharedViewModel.updatePublicUser(
-                                        newFriend = clickedPerson,
+                                    sharedViewModel.updatePublicUser(newFriend = clickedPerson,
                                         onComplete = {
-                                            navController.navigate(Screens.PublicProfileScreen.route)
+                                            navController.navigate(Screens.PublicUserSheetScreen.route)
                                         })
                                 },
                                 onFriendActionClicked = { clickedPerson, add ->
@@ -171,13 +174,17 @@ class RandChatStartView {
                                         )
                                         changeFriendStateForUser(
                                             userID = userData.id,
-                                            personID= clickedPerson.id,
+                                            personID = clickedPerson.id,
                                             status = "requested"
                                         )
                                     }
                                 },
                                 onDenyFriendRequestClicked = { clickedPerson ->
-                                    sharedViewModel.deleteFriendFromFriendList(friend = clickedPerson)
+                                    removeFriendFromFriendsList(userData = userData,
+                                        friendData = clickedPerson,
+                                        onSuccess = {
+                                            sharedViewModel.sortDataChats {}
+                                        })
                                 })
                         }
                     }

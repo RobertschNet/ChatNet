@@ -60,6 +60,8 @@ import at.htlhl.chatnet.ui.features.mixed.ChatViewMessageComponent
 import at.htlhl.chatnet.ui.features.mixed.ChatViewTopBar
 import at.htlhl.chatnet.ui.features.mixed.InputField
 import at.htlhl.chatnet.util.copyToClipboard
+import at.htlhl.chatnet.util.firebase.changeMessageVisibility
+import at.htlhl.chatnet.util.firebase.deleteMessage
 import at.htlhl.chatnet.util.firebase.updateBlockedUserList
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
@@ -226,6 +228,7 @@ class RandChatView {
             ChatViewContentList(sharedViewModel = sharedViewModel,
                 chatMateChat = chatMateChat,
                 messages = filteredMessages,
+                userData = userData,
                 lazyListState = lazyListState,
                 chatRoomId = chatRoomId,
                 onChatMateResponseState = { message ->
@@ -263,6 +266,7 @@ class RandChatView {
     @Composable
     fun ChatViewContentList(
         sharedViewModel: SharedViewModel,
+        userData: FirebaseUser,
         chatMateChat: Boolean,
         messages: List<InternalMessageInstance>,
         lazyListState: LazyListState,
@@ -306,6 +310,7 @@ class RandChatView {
                     MessageItem(
                         sharedViewModel = sharedViewModel,
                         chatMateChat = chatMateChat,
+                        userData= userData,
                         previousMessage = previousMessageIndex,
                         nextMessage = nextMessageIndex,
                         message = InternalMessageInstance(
@@ -332,6 +337,7 @@ class RandChatView {
     @Composable
     fun MessageItem(
         sharedViewModel: SharedViewModel,
+        userData: FirebaseUser,
         chatMateChat: Boolean,
         message: InternalMessageInstance,
         previousMessage: InternalMessageInstance?,
@@ -371,9 +377,12 @@ class RandChatView {
         if (deleteDialog) {
             DeleteMessageDialog(isUser = isUser) { value ->
                 if (value == "delete") {
-                    sharedViewModel.deleteMessage(chatRoomId, message.id)
+                    deleteMessage(chatRoomID = chatRoomId, messageID = message.id)
                 } else if (value == "change") {
-                    sharedViewModel.changeMessageVisibility(chatRoomId, message.id)
+                    changeMessageVisibility(
+                        userID = userData.id,
+                        chatRoomID = chatRoomId, messageId = message.id
+                    )
                 }
                 deleteDialog = false
             }

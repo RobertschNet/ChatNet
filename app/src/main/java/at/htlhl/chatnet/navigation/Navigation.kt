@@ -15,20 +15,20 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
-import at.htlhl.chatnet.ui.views.CameraPhotoView
-import at.htlhl.chatnet.ui.views.CameraView
+import at.htlhl.chatnet.ui.features.camera.screens.CameraPhotoView
+import at.htlhl.chatnet.ui.features.camera.screens.CameraView
 import at.htlhl.chatnet.ui.features.chatmate.screens.ChatMateView
 import at.htlhl.chatnet.ui.features.chat.ChatView
 import at.htlhl.chatnet.ui.features.chats.screens.ChatsView
 import at.htlhl.chatnet.ui.features.dropin.screens.DropInView
 import at.htlhl.chatnet.ui.features.finduser.screens.FindUserView
 import at.htlhl.chatnet.ui.features.login_register.screens.ForgotPasswordView
-import at.htlhl.chatnet.ui.views.ImageView
+import at.htlhl.chatnet.ui.features.images.screens.ImageView
 import at.htlhl.chatnet.ui.features.login_register.screens.LoginView
-import at.htlhl.chatnet.ui.views.ProfileInfoView
-import at.htlhl.chatnet.ui.views.ProfilePictureView
+import at.htlhl.chatnet.ui.features.usersheet.screens.UserSheetView
+import at.htlhl.chatnet.ui.features.profilepicture.screens.ProfilePictureView
 import at.htlhl.chatnet.ui.features.profile.screens.ProfileView
-import at.htlhl.chatnet.ui.views.PublicProfileView
+import at.htlhl.chatnet.ui.features.usersheet.screens.PublicUserSheetView
 import at.htlhl.chatnet.ui.features.randchat.screens.RandChatStartView
 import at.htlhl.chatnet.ui.features.randchat.screens.RandChatView
 import at.htlhl.chatnet.ui.features.login_register.screens.RegisterView
@@ -59,7 +59,7 @@ fun Navigation(
             composable("CameraViewScreen",
                 enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
                 exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
-                CameraView().CameraView(navController, sharedViewModel, context)
+                CameraView().CameraView(navController, sharedViewModel)
             }
             composable("CameraPhotoScreen",
                 enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
@@ -198,11 +198,11 @@ fun Navigation(
                 onBottomBarDisabled.invoke(true)
                 RandChatStartView().RandChatStartScreen(navController, sharedViewModel)
             }
-            composable("ProfileInfoScreen",
+            composable("UserSheetScreen",
                 enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
                 exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
                 onBottomBarDisabled.invoke(false)
-                ProfileInfoView().ProfileInfoScreen(sharedViewModel, navController)
+                UserSheetView().UserSheetScreen(sharedViewModel, navController)
             }
             composable("ImageViewScreen",
                 enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
@@ -215,11 +215,11 @@ fun Navigation(
                 onBottomBarDisabled.invoke(false)
                 TagSelectView().TagSelectScreen(sharedViewModel,navController)
             }
-            composable("PublicProfileScreen",
+            composable("PublicUserSheetScreen",
                 enterTransition = { fadeIn(animationSpec = tween(durationMillis = 0)) },
                 exitTransition = { fadeOut(animationSpec = tween(durationMillis = 0)) }) {
                 onBottomBarDisabled.invoke(false)
-                PublicProfileView().PublicProfileScreen(sharedViewModel, navController)
+                PublicUserSheetView().PublicUserSheetScreen(sharedViewModel, navController)
             }
         }
     }

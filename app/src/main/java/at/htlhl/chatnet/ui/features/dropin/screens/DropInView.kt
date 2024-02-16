@@ -267,7 +267,7 @@ class DropInView {
                                     userID = userData.id, messages = it.messages
                                 )
                             }?.let { sharedViewModel.updateImageList(it) }
-                            navController.navigate(Screens.ProfileInfoScreen.route)
+                            navController.navigate(Screens.UserSheetScreen.route)
                         }
 
                         BLOCK -> {

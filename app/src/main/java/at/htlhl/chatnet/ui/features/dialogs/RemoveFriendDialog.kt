@@ -27,11 +27,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
 @Composable
-fun DeleteFriendDialog(
-    onClose: (String) -> Unit = {}
+fun RemoveFriendDialog(
+    onRemoveFriendPressed: (Boolean) -> Unit = {}
 ) {
     Dialog(
-        onDismissRequest = { onClose.invoke("closed") },
+        onDismissRequest = { onRemoveFriendPressed(false) },
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
     ) {
         Column(
@@ -72,7 +72,7 @@ fun DeleteFriendDialog(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onClose.invoke("deleted") }
+                    .clickable { onRemoveFriendPressed(true) }
             ) {
                 Text(
                     text = "Delete Friend",
@@ -91,7 +91,7 @@ fun DeleteFriendDialog(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onClose.invoke("closed") }
+                    .clickable { onRemoveFriendPressed(false) }
             ) {
                 Text(
                     text = "Cancel",

@@ -55,6 +55,8 @@ import at.htlhl.chatnet.ui.features.mixed.ChatViewMessageComponent
 import at.htlhl.chatnet.ui.features.mixed.ChatViewTopBar
 import at.htlhl.chatnet.ui.features.mixed.InputField
 import at.htlhl.chatnet.util.copyToClipboard
+import at.htlhl.chatnet.util.firebase.changeMessageVisibility
+import at.htlhl.chatnet.util.firebase.deleteMessage
 import at.htlhl.chatnet.util.firebase.updateBlockedUserList
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
@@ -123,7 +125,7 @@ class ChatView {
 
                             "profile" -> {
                                 sharedViewModel.imageList.value = createImageList(filteredMessages)
-                                navController.navigate(Screens.ProfileInfoScreen.route)
+                                navController.navigate(Screens.UserSheetScreen.route)
                             }
 
                             else -> {
@@ -171,6 +173,7 @@ class ChatView {
                 ChatViewContentList(sharedViewModel = sharedViewModel,
                     paddingValues = it,
                     chatMateChat = chatMateChat,
+                    userData = userData,
                     messages = filteredMessages,
                     lazyListState = lazyListState,
                     chatRoomId = chatRoomId,
@@ -221,6 +224,7 @@ class ChatView {
     @Composable
     fun ChatViewContentList(
         sharedViewModel: SharedViewModel,
+        userData: FirebaseUser,
         paddingValues: PaddingValues,
         navController: NavController,
         chatMateChat: Boolean,
@@ -294,6 +298,7 @@ class ChatView {
                     val nextMessageIndex = messages.getOrNull(messageIndex - 1)
                     MessageItem(sharedViewModel = sharedViewModel,
                         chatMateChat = chatMateChat,
+                        userData =userData,
                         previousMessage = previousMessageIndex,
                         nextMessage = nextMessageIndex,
                         message = InternalMessageInstance(
@@ -309,7 +314,7 @@ class ChatView {
                         chatRoomId = chatRoomId,
                         onClick = { image ->
                             sharedViewModel.imageList.value = createImageList(messages)
-                            sharedViewModel.imagePosition.intValue =
+                            sharedViewModel.imageStartPosition.intValue =
                                 sharedViewModel.imageList.value.find { it.images[0] == image }
                                     ?.let { sharedViewModel.imageList.value.indexOf(it) } ?: 0
                             navController.navigate(Screens.ImageViewScreen.route)
@@ -323,6 +328,7 @@ class ChatView {
     @Composable
     fun MessageItem(
         sharedViewModel: SharedViewModel,
+        userData:FirebaseUser,
         chatMateChat: Boolean,
         message: InternalMessageInstance,
         previousMessage: InternalMessageInstance?,
@@ -365,9 +371,12 @@ class ChatView {
         if (deleteDialog) {
             DeleteMessageDialog(isUser = isUser) { value ->
                 if (value == "delete") {
-                    sharedViewModel.deleteMessage(chatRoomId, message.id)
+                    deleteMessage(chatRoomID = chatRoomId, messageID = message.id)
                 } else if (value == "change") {
-                    sharedViewModel.changeMessageVisibility(chatRoomId, message.id)
+                    changeMessageVisibility(
+                        userID = userData.id,
+                        chatRoomID = chatRoomId, messageId = message.id
+                    )
                 }
                 deleteDialog = false
             }

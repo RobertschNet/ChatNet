@@ -72,6 +72,8 @@ import at.htlhl.chatnet.data.addImageUploadList
 import at.htlhl.chatnet.data.getImageUploadList
 import at.htlhl.chatnet.data.removeImageUploadList
 import at.htlhl.chatnet.data.removeItemFromUploadList
+import at.htlhl.chatnet.util.cloudfunctions.sendPushNotificationToPartner
+import at.htlhl.chatnet.util.firebase.saveMessage
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.Firebase
@@ -106,8 +108,7 @@ fun InputField(
                         sharedViewModel.friend.value.chatRoomID,
                         uris.map { uri -> uri })
                 }
-            }
-        )
+            })
 
     val cameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -144,8 +145,7 @@ fun InputField(
         backgroundColor = MaterialTheme.colorScheme.background,
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Bottom
+            modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Bottom
         ) {
             if (getImageUploadList(chatPartner.chatRoomID).isNotEmpty()) {
                 LazyRow(
@@ -176,8 +176,7 @@ fun InputField(
                                     val currentItem =
                                         getImageUploadList(chatPartner.chatRoomID)[index]
                                     removeItemFromUploadList(
-                                        chatPartner.chatRoomID,
-                                        currentItem
+                                        chatPartner.chatRoomID, currentItem
                                     )
                                 }
                                 .align(Alignment.TopEnd)) {
@@ -227,11 +226,14 @@ fun InputField(
                     keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = {
                         if (!isLoading) {
-                            onSentPressed(sharedViewModel, chatPartner, chatMateChat, context, text,
+                            onSentPressed(sharedViewModel,
+                                chatPartner,
+                                chatMateChat,
+                                context,
+                                text,
                                 { onSentWhileBlocked.invoke() },
                                 { isLoading = it },
-                                { text = "" }
-                            )
+                                { text = "" })
                         }
                     }),
                     value = text,
@@ -299,8 +301,7 @@ fun InputField(
                                 if (text.isEmpty()) {
                                     IconButton(onClick = {
                                         if (chatMateChat) createToast(
-                                            true,
-                                            context
+                                            true, context
                                         ) else {
                                             if (checkAndRequestPermission(
                                                     context,
@@ -395,10 +396,8 @@ fun InputField(
                                                 text,
                                                 { onSentWhileBlocked.invoke() },
                                                 { isLoading = it },
-                                                { text = "" }
-                                            )
-                                        }
-                                    )
+                                                { text = "" })
+                                        })
                                 } else {
                                     IconButton(onClick = {
                                         if (chatMateChat) {
@@ -443,9 +442,7 @@ fun InputField(
 fun createToast(camera: Boolean, context: Context) {
     Log.println(Log.INFO, "Camera", "Permission denied")
     Toast.makeText(
-        context,
-        if (camera) "Camera not available" else "Gallery not available",
-        Toast.LENGTH_SHORT
+        context, if (camera) "Camera not available" else "Gallery not available", Toast.LENGTH_SHORT
     ).show()
 }
 
@@ -475,25 +472,21 @@ private fun convertBitmapToWebP(bitmap: Bitmap): ByteArray {
 }
 
 private fun uploadWebPImage(
-    webpByteArray: ByteArray,
-    onUploadSuccess: (List<String>) -> Unit,
-    onUploadError: () -> Unit
+    webpByteArray: ByteArray, onUploadSuccess: (List<String>) -> Unit, onUploadError: () -> Unit
 ) {
     val storage = Firebase.storage
     val storageRef = storage.reference
     val webpImageRef = storageRef.child("chats/${Timestamp.now().seconds}.webp")
 
-    webpImageRef.putBytes(webpByteArray)
-        .addOnSuccessListener {
-            webpImageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-                onUploadSuccess.invoke(listOf(downloadUrl.toString()))
-            }.addOnFailureListener {
-                onUploadError.invoke()
-            }
-        }
-        .addOnFailureListener {
+    webpImageRef.putBytes(webpByteArray).addOnSuccessListener {
+        webpImageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
+            onUploadSuccess.invoke(listOf(downloadUrl.toString()))
+        }.addOnFailureListener {
             onUploadError.invoke()
         }
+    }.addOnFailureListener {
+        onUploadError.invoke()
+    }
 }
 
 fun uploadMessage(
@@ -506,55 +499,56 @@ fun uploadMessage(
     Log.println(Log.INFO, "Message", "Message sending")
     Log.println(Log.INFO, "Message", sharedViewModel.friend.value.chatRoomID)
     runBlocking {
-        sharedViewModel.saveMessages(
-            documentId = sharedViewModel.friend.value.chatRoomID,
-            message = FirebaseMessage(
-                sender = sharedViewModel.auth.currentUser?.uid.toString(),
-                text = text,
-                timestamp = Timestamp.now(),
-                read = false,
-                images = images,
-                visible =
-                listOf(
-                    sharedViewModel.friend.value.personList.id,
-                    sharedViewModel.auth.currentUser?.uid.toString(),
-                )
-            ),
-            {
-                onSuccess.invoke(true)
-                Log.println(Log.INFO, "Message", "Message sent")
-            },
-            {
-                onSuccess.invoke(false)
-                Log.println(Log.INFO, "Message", "Message not sent")
-            }
+        val message = FirebaseMessage(
+            sender = sharedViewModel.auth.currentUser?.uid.toString(),
+            text = text,
+            timestamp = Timestamp.now(),
+            read = false,
+            images = images,
+            visible = listOf(
+                sharedViewModel.friend.value.personList.id,
+                sharedViewModel.auth.currentUser?.uid.toString(),
+            )
         )
+        saveMessage(chatRoomID = sharedViewModel.friend.value.chatRoomID, message = message, {
+            onSuccess.invoke(true)
+            sendPushNotificationToPartner(
+                userID = sharedViewModel.auth.currentUser?.uid.toString(),
+                friendID = sharedViewModel.friend.value.personList.id,
+                message = message
+            )
+        }, {
+            onSuccess.invoke(false)
+        })
     }
     //TODO: ChatMate loading when offline
     if (chatMateChat) {
         sharedViewModel.chatMateResponseState.value = ChatMateResponseState.Loading
         sharedViewModel.sendDataToServer(text) {
             runBlocking {
-                sharedViewModel.saveMessages(
-                    documentId = sharedViewModel.friend.value.chatRoomID,
-                    message = FirebaseMessage(
-                        sender = "chatmate",
-                        text = it,
-                        timestamp = Timestamp.now(),
-                        read = false,
-                        images = arrayListOf(),
-                        visible =
-                        listOf(
-                            sharedViewModel.auth.currentUser?.uid.toString(),
-                        )
-                    ),
+                val message = FirebaseMessage(
+                    sender = "chatmate",
+                    text = it,
+                    timestamp = Timestamp.now(),
+                    read = false,
+                    images = arrayListOf(),
+                    visible = listOf(
+                        sharedViewModel.auth.currentUser?.uid.toString(),
+                    )
+                )
+                saveMessage(chatRoomID = sharedViewModel.friend.value.chatRoomID,
+                    message = message,
                     {
+                        sendPushNotificationToPartner(
+                            userID = sharedViewModel.auth.currentUser?.uid.toString(),
+                            friendID = sharedViewModel.friend.value.personList.id,
+                            message = message
+                        )
                         onSuccess.invoke(true)
                     },
                     {
                         onSuccess.invoke(false)
-                    }
-                )
+                    })
             }
         }
     }
@@ -582,31 +576,23 @@ fun onSentPressed(
                 }
             } else {
                 isLoading.invoke(true)
-                uploadImage(
-                    context,
-                    getImageUploadList(chatPartner.chatRoomID),
-                    { success ->
-                        removeImageUploadList(chatPartner.chatRoomID)
-                        uploadMessage(
-                            chatMateChat,
-                            sharedViewModel,
-                            text,
-                            success
-                        ) {
-                            isLoading.invoke(false)
-                            if (it) {
-                                removeImageUploadList(chatPartner.chatRoomID)
-                                onSuccess.invoke()
-                            } else {
-                                //TODO Show error message
-                            }
-                        }
-                    },
-                    {
+                uploadImage(context, getImageUploadList(chatPartner.chatRoomID), { success ->
+                    removeImageUploadList(chatPartner.chatRoomID)
+                    uploadMessage(
+                        chatMateChat, sharedViewModel, text, success
+                    ) {
                         isLoading.invoke(false)
-                        //TODO Show error message
+                        if (it) {
+                            removeImageUploadList(chatPartner.chatRoomID)
+                            onSuccess.invoke()
+                        } else {
+                            //TODO Show error message
+                        }
                     }
-                )
+                }, {
+                    isLoading.invoke(false)
+                    //TODO Show error message
+                })
             }
         }
     } else {
@@ -616,9 +602,7 @@ fun onSentPressed(
 }
 
 private fun checkAndRequestPermission(
-    context: Context,
-    permission: String,
-    launcher: ManagedActivityResultLauncher<String, Boolean>
+    context: Context, permission: String, launcher: ManagedActivityResultLauncher<String, Boolean>
 ): Boolean {
     val permissionCheckResult = ContextCompat.checkSelfPermission(context, permission)
     return if (permissionCheckResult == PackageManager.PERMISSION_GRANTED) {

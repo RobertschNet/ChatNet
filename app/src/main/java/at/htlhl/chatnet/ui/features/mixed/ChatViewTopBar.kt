@@ -191,7 +191,7 @@ fun ChatViewTopBar(
                     )
                 }
                 IconButton(onClick = {
-                    navController.navigate(Screens.ProfileInfoScreen.route)
+                    navController.navigate(Screens.UserSheetScreen.route)
                 }) {
                     SubcomposeAsyncImage(
                         model = R.drawable.info_svgrepo_com,

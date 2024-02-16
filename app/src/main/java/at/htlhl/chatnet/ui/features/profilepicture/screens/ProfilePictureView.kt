@@ -1,4 +1,4 @@
-package at.htlhl.chatnet.ui.views
+package at.htlhl.chatnet.ui.features.profilepicture.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.FirebaseUser
-import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
@@ -33,7 +32,7 @@ class ProfilePictureView {
     fun ProfilePictureViewScreen(sharedViewModel: SharedViewModel, navController: NavController) {
         val systemUiController = rememberSystemUiController()
         systemUiController.setStatusBarColor(color = Color.Black, darkIcons = false)
-        val userDataState by sharedViewModel.publicUserFlow.collectAsState(initial = FirebaseUser())
+        val userDataState by sharedViewModel.publicUserData.collectAsState(initial = FirebaseUser())
         val userData: FirebaseUser = userDataState
         Box(
             Modifier

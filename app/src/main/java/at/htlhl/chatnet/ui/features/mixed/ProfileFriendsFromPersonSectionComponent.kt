@@ -31,9 +31,9 @@ import at.htlhl.chatnet.util.getPersonTagsList
 import coil.compose.SubcomposeAsyncImage
 
 @Composable
-fun ProfileFriendsFromFriendsSection(
-    friendsFromFriendsList: List<FirebaseUser>,
-    friendsFromFriendsListIsLoading: Boolean,
+fun ProfileFriendsFromPersonSectionComponent(
+    friendsFromPersonList: List<FirebaseUser>,
+    friendsFromPersonListIsLoading: Boolean,
     onUserClicked: (FirebaseUser) -> Unit,
 ) {
     Card(
@@ -64,12 +64,12 @@ fun ProfileFriendsFromFriendsSection(
                 Spacer(modifier = Modifier.height(2.5f.dp))
                 Column(content = {
                     Spacer(modifier = Modifier.height(5.dp))
-                    if (friendsFromFriendsListIsLoading && friendsFromFriendsList.isEmpty()) {
+                    if (friendsFromPersonListIsLoading && friendsFromPersonList.isEmpty()) {
                         for (i in 0..3) {
                             LoadingUserElement(false)
                         }
                     }
-                    friendsFromFriendsList.forEach {
+                    friendsFromPersonList.forEach {
                         val filteredTags = getPersonTagsList(personData = it)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

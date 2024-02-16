@@ -29,17 +29,16 @@ import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.util.firebase.updateMuteFriendStatus
 import at.htlhl.chatnet.util.firebase.updatePinChatStatus
-import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 
 @Composable
 fun ProfileChatSettingsSection(
     isChatMateChat: Boolean,
-    sharedViewModel: SharedViewModel,
-    friend: InternalChatInstance,
-    user: FirebaseUser,
+    friendData: InternalChatInstance,
+    userData: FirebaseUser,
     onDeleteAllMedia: () -> Unit,
     onDeleteAllMessages: () -> Unit,
+    onUpdateFriend: (InternalChatInstance) -> Unit,
 ) {
     Card(
         modifier = Modifier
@@ -66,18 +65,18 @@ fun ProfileChatSettingsSection(
                     modifier = Modifier
                         .height(50.dp)
                         .clickable {
-                            if (user.muted.contains(friend.personList.id)) {
+                            if (userData.muted.contains(friendData.personList.id)) {
                                 updateMuteFriendStatus(
-                                    userData = user,
-                                    friendData = friend.personList,
+                                    userData = userData,
+                                    friendData = friendData.personList,
                                     isAlreadyMuted = true)
-                                sharedViewModel.updateFriend(friend)
+                                onUpdateFriend(friendData)
                             } else {
                                 updateMuteFriendStatus(
-                                    userData = user,
-                                    friendData = friend.personList,
+                                    userData = userData,
+                                    friendData = friendData.personList,
                                     isAlreadyMuted = false)
-                                sharedViewModel.updateFriend(friend)
+                                onUpdateFriend(friendData)
                             }
                         }
                         .fillMaxWidth(),
@@ -87,7 +86,7 @@ fun ProfileChatSettingsSection(
                     SubcomposeAsyncImage(
                         contentScale = ContentScale.Crop,
                         colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
-                        model = if (user.muted.contains(friend.personList.id)) R.drawable.speaker_svgrepo_com else R.drawable.speaker_none_svgrepo_com,
+                        model = if (userData.muted.contains(friendData.personList.id)) R.drawable.speaker_svgrepo_com else R.drawable.speaker_none_svgrepo_com,
                         modifier = Modifier.size(30.dp),
                         contentDescription = null
                     )
@@ -96,7 +95,7 @@ fun ProfileChatSettingsSection(
                         textAlign = TextAlign.Center,
                         overflow = TextOverflow.Ellipsis,
                         fontFamily = FontFamily.SansSerif,
-                        text = if (user.muted.contains(friend.personList.id)) "Unmute ${friend.personList.username["mixedcase"]}" else "Mute ${friend.personList.username["mixedcase"]}",
+                        text = if (userData.muted.contains(friendData.personList.id)) "Unmute ${friendData.personList.username["mixedcase"]}" else "Mute ${friendData.personList.username["mixedcase"]}",
                         fontSize = 16.sp,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -107,38 +106,39 @@ fun ProfileChatSettingsSection(
                 modifier = Modifier
                     .height(50.dp)
                     .clickable {
-                        if (friend.pinChat) {
+                        if (friendData.pinChat) {
                             updatePinChatStatus(
-                                userData = user,
-                                friend = friend,
+                                userData = userData,
+                                friend = friendData,
                                 isAlreadyPinned = true
                             )
-                            sharedViewModel.updateFriend(
+                            onUpdateFriend(
                                 InternalChatInstance(
-                                    personList = friend.personList,
-                                    timestampMessage = friend.timestampMessage,
-                                    lastMessage = friend.lastMessage,
+                                    personList = friendData.personList,
+                                    timestampMessage = friendData.timestampMessage,
+                                    lastMessage = friendData.lastMessage,
                                     pinChat = false,
-                                    read = friend.read,
-                                    markedAsUnread = friend.markedAsUnread,
-                                    chatRoomID = friend.chatRoomID
+                                    read = friendData.read,
+                                    markedAsUnread = friendData.markedAsUnread,
+                                    chatRoomID = friendData.chatRoomID
                                 )
                             )
+
                         } else {
                             updatePinChatStatus(
-                                userData = user,
-                                friend = friend,
+                                userData = userData,
+                                friend = friendData,
                                 isAlreadyPinned = false
                             )
-                            sharedViewModel.updateFriend(
+                            onUpdateFriend(
                                 InternalChatInstance(
-                                    friend.personList,
-                                    timestampMessage = friend.timestampMessage,
-                                    lastMessage = friend.lastMessage,
+                                    friendData.personList,
+                                    timestampMessage = friendData.timestampMessage,
+                                    lastMessage = friendData.lastMessage,
                                     pinChat = true,
-                                    read = friend.read,
-                                    markedAsUnread = friend.markedAsUnread,
-                                    chatRoomID = friend.chatRoomID
+                                    read = friendData.read,
+                                    markedAsUnread = friendData.markedAsUnread,
+                                    chatRoomID = friendData.chatRoomID
                                 )
                             )
                         }
@@ -150,7 +150,7 @@ fun ProfileChatSettingsSection(
                 SubcomposeAsyncImage(
                     contentScale = ContentScale.Crop,
                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
-                    model = if (friend.pinChat) R.drawable.pin_off_svgrepo_com else R.drawable.pin_svgrepo_com,
+                    model = if (friendData.pinChat) R.drawable.pin_off_svgrepo_com else R.drawable.pin_svgrepo_com,
                     modifier = Modifier.size(30.dp),
                     contentDescription = null
                 )
@@ -158,7 +158,7 @@ fun ProfileChatSettingsSection(
                 Text(
                     textAlign = TextAlign.Center,
                     overflow = TextOverflow.Ellipsis,
-                    text = if (friend.pinChat) "Unpin Chat" else "Pin Chat",
+                    text = if (friendData.pinChat) "Unpin Chat" else "Pin Chat",
                     fontSize = 16.sp,
                     fontFamily = FontFamily.SansSerif,
                     color = MaterialTheme.colorScheme.primary,
