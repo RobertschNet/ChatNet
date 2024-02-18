@@ -72,7 +72,7 @@ class ChatMateView {
 
         val completeChatMateListState by sharedViewModel.completeChatMateList.collectAsState()
         val friendDataState by sharedViewModel.friend.collectAsState()
-        val userDataState by sharedViewModel.user.collectAsState()
+        val userDataState by sharedViewModel.userData.collectAsState()
         val chatDataState by sharedViewModel.chatData.collectAsState()
 
         val completeChatMateChatsList: List<InternalChatInstance> = completeChatMateListState

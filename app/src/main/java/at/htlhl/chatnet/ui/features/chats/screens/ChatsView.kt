@@ -87,7 +87,7 @@ class ChatsView {
                 FirebaseChat()
             )
         )
-        val userDataState by sharedViewModel.user.collectAsState(initial = FirebaseUser())
+        val userDataState by sharedViewModel.userData.collectAsState(initial = FirebaseUser())
         val friendListDataState by sharedViewModel.friendListData.collectAsState(
             initial = arrayListOf(
                 FirebaseUser()

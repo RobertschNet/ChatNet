@@ -6,27 +6,25 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.LaunchedEffect
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.navigation.compose.rememberNavController
-import at.htlhl.chatnet.navigation.NavigationBarLayout
+import at.htlhl.chatnet.navigation.NavigationBottomBarLayout
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.services.DropInUpdateService
 import at.htlhl.chatnet.ui.theme.ChatNetTheme
+import at.htlhl.chatnet.util.cloudfunctions.resetRandChatPairedUser
+import at.htlhl.chatnet.util.cloudfunctions.updateUsersFCMToken
 import at.htlhl.chatnet.util.preLoadImages
 import at.htlhl.chatnet.viewmodels.SharedViewModel
-import com.google.firebase.messaging.FirebaseMessaging
 
 
 class MainActivity : ComponentActivity() {
@@ -34,7 +32,6 @@ class MainActivity : ComponentActivity() {
     private var dropInUpdateService: DropInUpdateService? = null
     private val viewModel by viewModels<SharedViewModel>()
 
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
@@ -48,36 +45,25 @@ class MainActivity : ComponentActivity() {
             val navController = rememberNavController()
             ChatNetTheme {
                 if (viewModel.auth.currentUser != null) {
-                    NavigationBarLayout(
+                    NavigationBottomBarLayout(
                         navController = navController,
-                        startView = Screens.MainFlow.route,
-                        viewModel = viewModel,
-                        context = applicationContext
+                        startDestination = Screens.MainFlow.route,
+                        viewModel = viewModel
                     )
                 } else {
-                    NavigationBarLayout(
+                    NavigationBottomBarLayout(
                         navController = navController,
-                        startView = Screens.LoginFlow.route,
-                        viewModel = viewModel,
-                        context = applicationContext
+                        startDestination = Screens.LoginFlow.route,
+                        viewModel = viewModel
                     )
                 }
-                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                        if (task.isSuccessful) {
-                            val token = task.result
-                            Log.d("FCM Token", "Token: $token")
-                            viewModel.sendDeviceToken(token)
-                        } else {
-                            Log.e("FCM Token", "Failed to get token", task.exception)
-                        }
-                    }
+                updateUsersFCMToken(auth = viewModel.auth)
                 LaunchedEffect(Unit) {
                     if (viewModel.auth.currentUser != null) {
-                        Log.println(Log.INFO, "User", "User is logged in!!!!!!!!!")
                         viewModel.updateOnlineStatus(true)
                         viewModel.getUserData {
                             preLoadImages(
-                                context = applicationContext, imageUrls = viewModel.user.value.image
+                                context = applicationContext, imageUrls = viewModel.userData.value.image
                             )
                         }
                         viewModel.fetchFriendsFromUser {
@@ -104,7 +90,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
             if (checkFineLocationPermission()) {
-                manageDropInServiceStatus(viewModel, serviceIntent)
+                manageDropInServiceStatus(viewModel = viewModel, serviceIntent = serviceIntent)
             } else {
                 requestFineLocationPermissionLauncher.launch(
                     Manifest.permission.ACCESS_FINE_LOCATION
@@ -121,7 +107,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        viewModel.resetRandChat()
+        resetRandChatPairedUser(auth = viewModel.auth)
         viewModel.updateOnlineStatus(false)
     }
 
@@ -142,7 +128,7 @@ class MainActivity : ComponentActivity() {
             startService(serviceIntent)
             serviceConnection = object : ServiceConnection {
                 override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                    val binder = service as DropInUpdateService.YourBinder
+                    val binder = service as DropInUpdateService.LocationBinder
                     dropInUpdateService = binder.getService()
                     dropInUpdateService?.nearbyDropInUsersList?.observe(this@MainActivity) { nearbyUsers ->
                         viewModel.updateNearbyDropInUsersList(newNearbyUsers = nearbyUsers)
@@ -167,10 +153,10 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
                 manageDropInServiceStatus(
-                    viewModel, Intent(this, DropInUpdateService::class.java)
+                    viewModel = viewModel, serviceIntent = Intent(this, DropInUpdateService::class.java)
                 )
             } else {
-                // Fine location permission denied, handle accordingly (e.g., show a message)
+                viewModel.updateDropInState(newState = false)
             }
         }
 }

@@ -54,26 +54,25 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.ChatMateResponseState
+import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
-import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.ui.theme.shimmerEffect
-import at.htlhl.chatnet.viewmodels.SharedViewModel
 import coil.compose.SubcomposeAsyncImage
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ChatViewTopBar(
-    navController: NavController,
-    chatPartner: InternalChatInstance,
-    sharedViewModel: SharedViewModel,
-    onClick: (String) -> Unit,
-    onNavigate:(Boolean) -> Unit
+    userData: FirebaseUser,
+    chatMateResponseState: ChatMateResponseState,
+    friendData: InternalChatInstance,
+    onUpdateSearchValue: (String) -> Unit,
+    onTopBarUserElementClicked: (Boolean) -> Unit,
+    onNavigateBetweenSearchedValues: (Boolean) -> Unit
 ) {
     var offsetState by remember { mutableStateOf(Offset(0f, 0f)) }
-    val isSearchMode = remember { mutableStateOf(false) }
+    var isSearchMode by remember { mutableStateOf(false) }
     val offset by animateOffsetAsState(targetValue = offsetState, label = "")
     TopAppBar(
         backgroundColor = MaterialTheme.colorScheme.background,
@@ -81,13 +80,13 @@ fun ChatViewTopBar(
         modifier = Modifier
             .fillMaxWidth(),
     ) {
-        if (!isSearchMode.value) {
+        if (!isSearchMode) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxSize()
             ) {
-                IconButton(onClick = { onClick.invoke("return") }) {
+                IconButton(onClick = { onTopBarUserElementClicked(false) }) {
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
                         tint = MaterialTheme.colorScheme.primary,
@@ -102,13 +101,13 @@ fun ChatViewTopBar(
                         .fillMaxWidth()
                         .clip(CircleShape)
                         .clickable {
-                            onClick.invoke("profile")
+                            onTopBarUserElementClicked(true)
                         }
                         .weight(1f)) {
-                    if (!chatPartner.personList.blocked.contains(sharedViewModel.auth.currentUser?.uid.toString())) {
+                    if (!friendData.personList.blocked.contains(userData.id)) {
                         SubcomposeAsyncImage(
                             contentDescription = null,
-                            model = chatPartner.personList.image,
+                            model = friendData.personList.image,
                             modifier = Modifier
                                 .clip(CircleShape)
                                 .size(45.dp)
@@ -125,12 +124,12 @@ fun ChatViewTopBar(
                             contentScale = ContentScale.Crop,
                         )
                     }
-                    if (chatPartner.personList.id == "ChatMate") {
+                    if (friendData.personList.id == "ChatMate") {
                         Column(
                             modifier = Modifier.offset(y = -offset.y.dp)
                         ) {
                             Text(
-                                text = chatPartner.personList.username["mixedcase"].toString(),
+                                text = friendData.personList.username["mixedcase"].toString(),
                                 color = MaterialTheme.colorScheme.primary,
                                 fontSize = 22.sp,
                                 fontFamily = FontFamily.SansSerif,
@@ -139,7 +138,7 @@ fun ChatViewTopBar(
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.padding(start = 5.dp)
                             )
-                            if (sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
+                            if (chatMateResponseState == ChatMateResponseState.Loading) {
                                 Text(
                                     text = "thinking...",
                                     color = MaterialTheme.colorScheme.secondary,
@@ -151,7 +150,7 @@ fun ChatViewTopBar(
                     } else {
                         Column {
                             Text(
-                                text = chatPartner.personList.username["mixedcase"].toString(),
+                                text = friendData.personList.username["mixedcase"].toString(),
                                 color = MaterialTheme.colorScheme.primary,
                                 fontSize = 22.sp,
                                 fontFamily = FontFamily.SansSerif,
@@ -161,7 +160,7 @@ fun ChatViewTopBar(
                                 modifier = Modifier.padding(start = 5.dp)
                             )
                             Text(
-                                text = if (chatPartner.personList.online) "online" else "offline",
+                                text = if (friendData.personList.online) "online" else "offline",
                                 color = MaterialTheme.colorScheme.secondary,
                                 fontSize = 13.sp,
                                 modifier = Modifier.padding(start = 7.dp)
@@ -171,16 +170,16 @@ fun ChatViewTopBar(
 
                     }
                 }
-                LaunchedEffect(sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
+                LaunchedEffect(chatMateResponseState == ChatMateResponseState.Loading) {
                     offsetState =
-                        if (sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
+                        if (chatMateResponseState == ChatMateResponseState.Loading) {
                             Offset(0f, 5f)
                         } else {
                             Offset(0f, 0f)
                         }
                 }
                 IconButton(onClick = {
-                    isSearchMode.value = true
+                    isSearchMode = true
                 }) {
                     SubcomposeAsyncImage(
                         model = R.drawable.search_svgrepo_com_1_,
@@ -191,7 +190,7 @@ fun ChatViewTopBar(
                     )
                 }
                 IconButton(onClick = {
-                    navController.navigate(Screens.UserSheetScreen.route)
+                    onTopBarUserElementClicked(true)
                 }) {
                     SubcomposeAsyncImage(
                         model = R.drawable.info_svgrepo_com,
@@ -216,9 +215,9 @@ fun ChatViewTopBar(
             ) {
                 BasicTextField(
                     value = text,
-                    onValueChange = {
-                        setText(it)
-                        sharedViewModel.searchValue.value = it
+                    onValueChange = { changedText ->
+                        setText(changedText)
+                        onUpdateSearchValue(changedText)
                     },
                     interactionSource = interactionSource,
                     keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
@@ -254,8 +253,8 @@ fun ChatViewTopBar(
                         ) {
                             IconButton(
                                 onClick = {
-                                    isSearchMode.value = false
-                                    sharedViewModel.searchValue.value = ""
+                                    isSearchMode = false
+                                    onUpdateSearchValue("")
                                 },
                             ) {
                                 SubcomposeAsyncImage(
@@ -276,7 +275,8 @@ fun ChatViewTopBar(
                                     .size(25.dp)
                                     .clickable {
                                         keyboardController?.hide()
-                                        onNavigate.invoke(false)},
+                                        onNavigateBetweenSearchedValues.invoke(false)
+                                    },
                                 colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                             )
                             Spacer(modifier = Modifier.width(5.dp))
@@ -287,7 +287,8 @@ fun ChatViewTopBar(
                                     .size(25.dp)
                                     .clickable {
                                         keyboardController?.hide()
-                                        onNavigate.invoke(true) },
+                                        onNavigateBetweenSearchedValues.invoke(true)
+                                    },
                                 colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                             )
                         }
@@ -295,11 +296,11 @@ fun ChatViewTopBar(
                 )
             }
             DisposableEffect(Unit) {
-                if (isSearchMode.value) {
+                if (isSearchMode) {
                     keyboardController?.show()
                     focusRequester.requestFocus()
                 }
-                onDispose { sharedViewModel.searchValue.value = "" }
+                onDispose { onUpdateSearchValue("") }
             }
         }
     }

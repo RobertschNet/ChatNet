@@ -52,7 +52,7 @@ class FindUserView {
         val chatDataState by sharedViewModel.chatData.collectAsState()
         val suggestedFriendsListState by sharedViewModel.friendRandomFriendsListData.collectAsState()
         val friendListDataState by sharedViewModel.friendListData.collectAsState()
-        val userDataState by sharedViewModel.user.collectAsState()
+        val userDataState by sharedViewModel.userData.collectAsState()
 
         val chatData: List<FirebaseChat> = chatDataState
         val suggestedFriendsList: List<FirebaseUser> = suggestedFriendsListState
@@ -111,7 +111,7 @@ class FindUserView {
                             userData = userData,
                             friendData =clickedPerson,
                             onSuccess = {
-                                sharedViewModel.sortDataChats {}
+                                sharedViewModel.sortDataChats()
                             }
                     )
                     },
@@ -215,7 +215,7 @@ class FindUserView {
                             userData = userData,
                             friendData = clickedPerson,
                             onSuccess = {
-                                sharedViewModel.sortDataChats {}
+                                sharedViewModel.sortDataChats()
                             }
                         )
                     },

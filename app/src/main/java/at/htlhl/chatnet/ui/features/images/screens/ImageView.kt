@@ -49,7 +49,7 @@ class ImageView {
         val pageCount = imageListData.size
 
         val friendDataState by sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
-        val userDataState by sharedViewModel.user.collectAsState()
+        val userDataState by sharedViewModel.userData.collectAsState()
 
         val userData: FirebaseUser = userDataState
         val friendData: InternalChatInstance = friendDataState

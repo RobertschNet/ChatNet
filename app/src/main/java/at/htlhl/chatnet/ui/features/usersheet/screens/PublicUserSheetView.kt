@@ -40,7 +40,7 @@ class PublicUserSheetView {
 
         val publicUserState by sharedViewModel.publicUserData.collectAsState()
         val friendListState by sharedViewModel.friendListData.collectAsState()
-        val userDataState by sharedViewModel.user.collectAsState()
+        val userDataState by sharedViewModel.userData.collectAsState()
         val chatDataState by sharedViewModel.chatData.collectAsState()
 
         val userData: FirebaseUser = userDataState

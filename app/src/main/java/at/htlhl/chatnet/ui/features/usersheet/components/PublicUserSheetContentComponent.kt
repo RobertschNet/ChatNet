@@ -65,7 +65,7 @@ fun PublicUserSheetContentComponent(
                     userData = userData,
                     friendData = publicUser,
                     onSuccess = {
-                        sharedViewModel.sortDataChats {}
+                        sharedViewModel.sortDataChats()
                     }
                 )
                 navController.navigate(Screens.ChatsViewScreen.route) {

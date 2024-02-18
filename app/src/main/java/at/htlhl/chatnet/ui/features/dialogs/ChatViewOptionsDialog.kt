@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
@@ -59,8 +60,9 @@ fun OptionsDialog(offset: Offset?, onClose: (String) -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "Generate",
+                        text="Generate",
                         fontWeight = FontWeight.Normal,
+                        fontFamily = FontFamily.SansSerif,
                         color= MaterialTheme.colorScheme.primary,
                         fontSize = 15.sp,
                         modifier = Modifier.padding(start = 10.dp)
@@ -89,9 +91,10 @@ fun OptionsDialog(offset: Offset?, onClose: (String) -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "Copy",
+                        text="Copy",
                         fontWeight = FontWeight.Normal,
                         fontSize = 15.sp,
+                        fontFamily = FontFamily.SansSerif,
                         color= MaterialTheme.colorScheme.primary,
                         textAlign = TextAlign.Start,
                         modifier = Modifier.padding(start = 10.dp)
@@ -120,8 +123,9 @@ fun OptionsDialog(offset: Offset?, onClose: (String) -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "Delete",
+                        text="Delete",
                         fontWeight = FontWeight.Normal,
+                        fontFamily = FontFamily.SansSerif,
                         fontSize = 15.sp,
                         color = Color.Red,
                         modifier = Modifier.padding(start = 10.dp)

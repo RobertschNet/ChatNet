@@ -94,7 +94,7 @@ class DropInView {
 
         val completeDopInChatListState by sharedViewModel.completeDropInList.collectAsState()
         val completeDropInNearbyUserListState by sharedViewModel.completeDropInNearbyUserList.collectAsState()
-        val userDataState by sharedViewModel.user.collectAsState()
+        val userDataState by sharedViewModel.userData.collectAsState()
         val friendDataState by sharedViewModel.friend.collectAsState()
         val chatDataState by sharedViewModel.chatData.collectAsState()
 

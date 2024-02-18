@@ -1,13 +1,7 @@
 package at.htlhl.chatnet.ui.features.mixed
 
 import android.content.Context
-import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.net.Uri
-import android.util.Log
 import android.widget.Toast
-import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -54,7 +48,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
@@ -62,60 +55,56 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import at.chatnet.R
 import at.htlhl.chatnet.data.ChatMateResponseState
-import at.htlhl.chatnet.data.FirebaseMessage
+import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.InternalChatInstance
 import at.htlhl.chatnet.data.addImageUploadList
 import at.htlhl.chatnet.data.getImageUploadList
-import at.htlhl.chatnet.data.removeImageUploadList
 import at.htlhl.chatnet.data.removeItemFromUploadList
-import at.htlhl.chatnet.util.cloudfunctions.sendPushNotificationToPartner
-import at.htlhl.chatnet.util.firebase.saveMessage
-import at.htlhl.chatnet.viewmodels.SharedViewModel
+import at.htlhl.chatnet.navigation.Screens
+import at.htlhl.chatnet.util.checkAndRequestPermission
+import at.htlhl.chatnet.util.createDisabledToastForInputField
+import at.htlhl.chatnet.util.onMessageSentPressed
 import coil.compose.SubcomposeAsyncImage
-import com.google.firebase.Firebase
-import com.google.firebase.Timestamp
-import com.google.firebase.storage.storage
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-import java.io.ByteArrayOutputStream
 
 @Composable
-fun InputField(
-    chatPartner: InternalChatInstance,
-    onChatMateResponse: String,
-    sharedViewModel: SharedViewModel,
+fun ChatInputFieldComponent(
+    coroutineScope: CoroutineScope,
+    context: Context,
+    userData: FirebaseUser,
+    friendData: InternalChatInstance,
+    chatMateResponseText: String,
+    chatMateResponseState: ChatMateResponseState,
     navController: NavController,
-    chatMateChat: Boolean,
-    onSentWhileBlocked: () -> Unit
+    isChatMateChat: Boolean,
+    onSentWhileBlocked: () -> Unit,
+    onUpdateChatMateResponseState: (ChatMateResponseState) -> Unit,
 ) {
     var badgeCount by remember { mutableIntStateOf(0) }
     var isLoading by rememberSaveable { mutableStateOf(false) }
-    val context = LocalContext.current
     var text by rememberSaveable { mutableStateOf("") }
-    LaunchedEffect(onChatMateResponse) { text = onChatMateResponse }
-    var chatMateResponseText by remember { mutableStateOf("ChatMate is thinking") }
+    LaunchedEffect(chatMateResponseText) { text = chatMateResponseText }
+    var chatMateLoadingText by remember { mutableStateOf("ChatMate is thinking") }
     val chatMatePadding =
-        if (sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) 10.dp else 0.dp
-    val multiplePhotoPickerLauncher =
-        rememberLauncherForActivityResult(contract = ActivityResultContracts.PickMultipleVisualMedia(),
-            onResult = { uris ->
-                if (uris.isNotEmpty()) {
-                    addImageUploadList(
-                        sharedViewModel.friend.value.chatRoomID,
-                        uris.map { uri -> uri })
-                }
-            })
+        if (chatMateResponseState == ChatMateResponseState.Loading) 10.dp else 0.dp
+    val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(),
+        onResult = { uris ->
+            if (uris.isNotEmpty()) {
+                addImageUploadList(friendData.chatRoomID, uris.map { uri -> uri })
+            }
+        })
 
     val cameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
             navController.saveState()
-            navController.navigate("CameraFlow")
+            navController.navigate(Screens.CameraFlow.route)
         } else {
             Toast.makeText(context, "Camera permission denied", Toast.LENGTH_SHORT).show()
         }
@@ -134,10 +123,9 @@ fun InputField(
         }
     }
 
-
     BottomAppBar(
         elevation = 0.dp,
-        modifier = if (getImageUploadList(chatPartner.chatRoomID).isEmpty()) Modifier.height(
+        modifier = if (getImageUploadList(id = friendData.chatRoomID).isEmpty()) Modifier.height(
             70.dp + badgeCount.dp + chatMatePadding
         ) else Modifier.height(
             160.dp + badgeCount.dp + chatMatePadding
@@ -147,13 +135,13 @@ fun InputField(
         Column(
             modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Bottom
         ) {
-            if (getImageUploadList(chatPartner.chatRoomID).isNotEmpty()) {
+            if (getImageUploadList(id = friendData.chatRoomID).isNotEmpty()) {
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 5.dp, end = 5.dp)
                 ) {
-                    items(getImageUploadList(chatPartner.chatRoomID).size) { index ->
+                    items(getImageUploadList(id = friendData.chatRoomID).size) { index ->
                         Box(
                             modifier = Modifier
                                 .size(100.dp)
@@ -161,7 +149,7 @@ fun InputField(
                                 .padding(5.dp)
                         ) {
                             SubcomposeAsyncImage(
-                                model = getImageUploadList(chatPartner.chatRoomID)[index],
+                                model = getImageUploadList(id = friendData.chatRoomID)[index],
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
@@ -174,9 +162,9 @@ fun InputField(
                                 .background(Color.Gray.copy(alpha = 0.5f), CircleShape)
                                 .clickable {
                                     val currentItem =
-                                        getImageUploadList(chatPartner.chatRoomID)[index]
+                                        getImageUploadList(id = friendData.chatRoomID)[index]
                                     removeItemFromUploadList(
-                                        chatPartner.chatRoomID, currentItem
+                                        friendData.chatRoomID, currentItem
                                     )
                                 }
                                 .align(Alignment.TopEnd)) {
@@ -193,20 +181,20 @@ fun InputField(
                     }
                 }
             }
-            if (sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
+            if (chatMateResponseState == ChatMateResponseState.Loading) {
                 isLoading = true
-                LaunchedEffect(sharedViewModel.chatMateResponseState.value == ChatMateResponseState.Loading) {
+                LaunchedEffect(chatMateResponseState) {
                     while (true) {
                         delay(750)
-                        chatMateResponseText = "ChatMate is thinking."
+                        chatMateLoadingText = "ChatMate is thinking."
                         delay(750)
-                        chatMateResponseText = "ChatMate is thinking.."
+                        chatMateLoadingText = "ChatMate is thinking.."
                         delay(750)
-                        chatMateResponseText = "ChatMate is thinking..."
+                        chatMateLoadingText = "ChatMate is thinking..."
                     }
                 }
                 Text(
-                    text = chatMateResponseText,
+                    text = chatMateLoadingText,
                     fontSize = 14.sp,
                     textAlign = TextAlign.Start,
                     color = MaterialTheme.colorScheme.secondary,
@@ -226,14 +214,20 @@ fun InputField(
                     keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = {
                         if (!isLoading) {
-                            onSentPressed(sharedViewModel,
-                                chatPartner,
-                                chatMateChat,
-                                context,
-                                text,
-                                { onSentWhileBlocked.invoke() },
-                                { isLoading = it },
-                                { text = "" })
+                            onMessageSentPressed(coroutineScope = coroutineScope,
+                                userData = userData,
+                                friendData = friendData,
+                                chatMateChat = isChatMateChat,
+                                context = context,
+                                text = text,
+                                onSentWhileBlocked = { onSentWhileBlocked.invoke() },
+                                onIsLoading = { loadingState ->
+                                    isLoading = loadingState
+                                },
+                                onSuccess = { text = "" },
+                                onUpdateChatMateResponseState = { chatMateResponseState ->
+                                    onUpdateChatMateResponseState(chatMateResponseState)
+                                })
                         }
                     }),
                     value = text,
@@ -300,36 +294,38 @@ fun InputField(
                             ) {
                                 if (text.isEmpty()) {
                                     IconButton(onClick = {
-                                        if (chatMateChat) createToast(
-                                            true, context
+                                        if (isChatMateChat) createDisabledToastForInputField(
+                                            isCameraPressed = true, context = context
                                         ) else {
                                             if (checkAndRequestPermission(
-                                                    context,
-                                                    android.Manifest.permission.CAMERA,
-                                                    cameraLauncher
+                                                    context = context,
+                                                    permission = android.Manifest.permission.CAMERA,
+                                                    launcher = cameraLauncher
                                                 )
                                             ) {
                                                 navController.saveState()
-                                                navController.navigate("CameraFlow")
+                                                navController.navigate(Screens.CameraFlow.route)
                                             }
                                         }
                                     }) {
                                         SubcomposeAsyncImage(
                                             model = R.drawable.camera_svgrepo_com_5_,
                                             contentDescription = null,
-                                            colorFilter = ColorFilter.tint(Color.White.copy(alpha = if (chatMateChat) 0.7f else 1f)),
+                                            colorFilter = ColorFilter.tint(Color.White.copy(alpha = if (isChatMateChat) 0.7f else 1f)),
                                             modifier = Modifier.size(24.dp)
                                         )
                                     }
                                 } else {
                                     IconButton(onClick = {
-                                        if (chatMateChat) {
-                                            createToast(false, context)
+                                        if (isChatMateChat) {
+                                            createDisabledToastForInputField(
+                                                isCameraPressed = false, context = context
+                                            )
                                         } else if (!isLoading) {
                                             if (checkAndRequestPermission(
-                                                    context,
-                                                    android.Manifest.permission.READ_MEDIA_IMAGES,
-                                                    mediaLauncher
+                                                    context = context,
+                                                    permission = android.Manifest.permission.READ_MEDIA_IMAGES,
+                                                    launcher = mediaLauncher
                                                 )
                                             ) {
                                                 multiplePhotoPickerLauncher.launch(
@@ -344,7 +340,7 @@ fun InputField(
                                             model = R.drawable.gallery_svgrepo_com,
                                             contentDescription = null,
                                             modifier = Modifier.size(28.dp),
-                                            colorFilter = ColorFilter.tint(Color.White.copy(alpha = if (chatMateChat) 0.7f else 1f)),
+                                            colorFilter = ColorFilter.tint(Color.White.copy(alpha = if (isChatMateChat) 0.7f else 1f)),
                                         )
                                     }
                                 }
@@ -369,7 +365,7 @@ fun InputField(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(if (text.isEmpty() && getImageUploadList(chatPartner.chatRoomID).isEmpty()) 6.dp else 12.dp),
+                                .padding(if (text.isEmpty() && getImageUploadList(id = friendData.chatRoomID).isEmpty()) 6.dp else 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.End,
                         ) {
@@ -382,31 +378,41 @@ fun InputField(
                                         .padding(end = 2.dp)
                                 )
                             } else {
-                                if (text.isNotEmpty() || getImageUploadList(chatPartner.chatRoomID).isNotEmpty()) {
+                                if (text.isNotEmpty() || getImageUploadList(id = friendData.chatRoomID).isNotEmpty()) {
                                     Text(text = "Send",
                                         fontSize = 18.sp,
                                         fontFamily = FontFamily.SansSerif,
                                         color = Color(0xFF00A0E8),
                                         fontWeight = Bold,
                                         modifier = Modifier.clickable {
-                                            onSentPressed(sharedViewModel,
-                                                chatPartner,
-                                                chatMateChat,
-                                                context,
-                                                text,
-                                                { onSentWhileBlocked.invoke() },
-                                                { isLoading = it },
-                                                { text = "" })
+                                            onMessageSentPressed(coroutineScope = coroutineScope,
+                                                userData = userData,
+                                                friendData = friendData,
+                                                chatMateChat = isChatMateChat,
+                                                context = context,
+                                                text = text,
+                                                onSentWhileBlocked = { onSentWhileBlocked.invoke() },
+                                                onIsLoading = { loadingState ->
+                                                    isLoading = loadingState
+                                                },
+                                                onSuccess = { text = "" },
+                                                onUpdateChatMateResponseState = { chatMateResponseState ->
+                                                    onUpdateChatMateResponseState(
+                                                        chatMateResponseState
+                                                    )
+                                                })
                                         })
                                 } else {
                                     IconButton(onClick = {
-                                        if (chatMateChat) {
-                                            createToast(false, context)
+                                        if (isChatMateChat) {
+                                            createDisabledToastForInputField(
+                                                isCameraPressed = false, context = context
+                                            )
                                         } else {
                                             if (checkAndRequestPermission(
-                                                    context,
-                                                    android.Manifest.permission.READ_MEDIA_IMAGES,
-                                                    mediaLauncher
+                                                    context = context,
+                                                    permission = android.Manifest.permission.READ_MEDIA_IMAGES,
+                                                    launcher = mediaLauncher
                                                 )
                                             ) {
                                                 multiplePhotoPickerLauncher.launch(
@@ -422,7 +428,7 @@ fun InputField(
                                             contentDescription = null,
                                             colorFilter = ColorFilter.tint(
                                                 MaterialTheme.colorScheme.primary.copy(
-                                                    alpha = if (chatMateChat) 0.7f else 1f
+                                                    alpha = if (isChatMateChat) 0.7f else 1f
                                                 )
                                             ),
                                             modifier = Modifier.size(30.dp)
@@ -436,180 +442,5 @@ fun InputField(
             }
             Spacer(modifier = Modifier.height(10.dp))
         }
-    }
-}
-
-fun createToast(camera: Boolean, context: Context) {
-    Log.println(Log.INFO, "Camera", "Permission denied")
-    Toast.makeText(
-        context, if (camera) "Camera not available" else "Gallery not available", Toast.LENGTH_SHORT
-    ).show()
-}
-
-fun uploadImage(
-    context: Context,
-    selectedImageUris: List<Uri>,
-    onUploadSuccess: (List<String>) -> Unit,
-    onUploadError: () -> Unit
-) {
-    val list = arrayListOf<String>()
-    selectedImageUris.forEach { imageUri ->
-        val inputStream = context.contentResolver.openInputStream(imageUri)
-        val bitmap = BitmapFactory.decodeStream(inputStream)
-        val webpByteArray = convertBitmapToWebP(bitmap)
-        uploadWebPImage(webpByteArray, {
-            list.addAll(it)
-            if (list.size == selectedImageUris.size) onUploadSuccess.invoke(list)
-        }, onUploadError)
-    }
-}
-
-@Suppress("DEPRECATION")
-private fun convertBitmapToWebP(bitmap: Bitmap): ByteArray {
-    val outputStream = ByteArrayOutputStream()
-    bitmap.compress(Bitmap.CompressFormat.WEBP, 50, outputStream)
-    return outputStream.toByteArray()
-}
-
-private fun uploadWebPImage(
-    webpByteArray: ByteArray, onUploadSuccess: (List<String>) -> Unit, onUploadError: () -> Unit
-) {
-    val storage = Firebase.storage
-    val storageRef = storage.reference
-    val webpImageRef = storageRef.child("chats/${Timestamp.now().seconds}.webp")
-
-    webpImageRef.putBytes(webpByteArray).addOnSuccessListener {
-        webpImageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-            onUploadSuccess.invoke(listOf(downloadUrl.toString()))
-        }.addOnFailureListener {
-            onUploadError.invoke()
-        }
-    }.addOnFailureListener {
-        onUploadError.invoke()
-    }
-}
-
-fun uploadMessage(
-    chatMateChat: Boolean,
-    sharedViewModel: SharedViewModel,
-    text: String,
-    images: List<String> = arrayListOf(),
-    onSuccess: (Boolean) -> Unit
-) {
-    Log.println(Log.INFO, "Message", "Message sending")
-    Log.println(Log.INFO, "Message", sharedViewModel.friend.value.chatRoomID)
-    runBlocking {
-        val message = FirebaseMessage(
-            sender = sharedViewModel.auth.currentUser?.uid.toString(),
-            text = text,
-            timestamp = Timestamp.now(),
-            read = false,
-            images = images,
-            visible = listOf(
-                sharedViewModel.friend.value.personList.id,
-                sharedViewModel.auth.currentUser?.uid.toString(),
-            )
-        )
-        saveMessage(chatRoomID = sharedViewModel.friend.value.chatRoomID, message = message, {
-            onSuccess.invoke(true)
-            sendPushNotificationToPartner(
-                userID = sharedViewModel.auth.currentUser?.uid.toString(),
-                friendID = sharedViewModel.friend.value.personList.id,
-                message = message
-            )
-        }, {
-            onSuccess.invoke(false)
-        })
-    }
-    //TODO: ChatMate loading when offline
-    if (chatMateChat) {
-        sharedViewModel.chatMateResponseState.value = ChatMateResponseState.Loading
-        sharedViewModel.sendDataToServer(text) {
-            runBlocking {
-                val message = FirebaseMessage(
-                    sender = "chatmate",
-                    text = it,
-                    timestamp = Timestamp.now(),
-                    read = false,
-                    images = arrayListOf(),
-                    visible = listOf(
-                        sharedViewModel.auth.currentUser?.uid.toString(),
-                    )
-                )
-                saveMessage(chatRoomID = sharedViewModel.friend.value.chatRoomID,
-                    message = message,
-                    {
-                        sendPushNotificationToPartner(
-                            userID = sharedViewModel.auth.currentUser?.uid.toString(),
-                            friendID = sharedViewModel.friend.value.personList.id,
-                            message = message
-                        )
-                        onSuccess.invoke(true)
-                    },
-                    {
-                        onSuccess.invoke(false)
-                    })
-            }
-        }
-    }
-}
-
-fun onSentPressed(
-    sharedViewModel: SharedViewModel,
-    chatPartner: InternalChatInstance,
-    chatMateChat: Boolean,
-    context: Context,
-    text: String,
-    onSentWhileBlocked: () -> Unit,
-    isLoading: (Boolean) -> Unit,
-    onSuccess: () -> Unit
-) {
-    if (!sharedViewModel.user.value.blocked.contains(chatPartner.personList.id)) {
-        if (text.isNotEmpty() || getImageUploadList(chatPartner.chatRoomID).isNotEmpty()) {
-            if (getImageUploadList(chatPartner.chatRoomID).isEmpty()) {
-                uploadMessage(chatMateChat, sharedViewModel, text) {
-                    if (it) {
-                        onSuccess.invoke()
-                    } else {
-                        //TODO Show error message
-                    }
-                }
-            } else {
-                isLoading.invoke(true)
-                uploadImage(context, getImageUploadList(chatPartner.chatRoomID), { success ->
-                    removeImageUploadList(chatPartner.chatRoomID)
-                    uploadMessage(
-                        chatMateChat, sharedViewModel, text, success
-                    ) {
-                        isLoading.invoke(false)
-                        if (it) {
-                            removeImageUploadList(chatPartner.chatRoomID)
-                            onSuccess.invoke()
-                        } else {
-                            //TODO Show error message
-                        }
-                    }
-                }, {
-                    isLoading.invoke(false)
-                    //TODO Show error message
-                })
-            }
-        }
-    } else {
-        onSentWhileBlocked.invoke()
-    }
-
-}
-
-private fun checkAndRequestPermission(
-    context: Context, permission: String, launcher: ManagedActivityResultLauncher<String, Boolean>
-): Boolean {
-    val permissionCheckResult = ContextCompat.checkSelfPermission(context, permission)
-    return if (permissionCheckResult == PackageManager.PERMISSION_GRANTED) {
-        true
-    } else {
-        // Request a permission
-        launcher.launch(permission)
-        false
     }
 }

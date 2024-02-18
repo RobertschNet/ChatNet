@@ -52,57 +52,57 @@ Provider = Password
 - [x] Error Handling for Login/Registration
 
 ### 2. Chats
-- [ ] Muted Funktionalität implementieren
-- [ ] DarkMode gestalten
-- [ ] Icons ändern
-- [ ] Empty ChatsList Graphik anzeigen
-- [ ] Suchen überarbeiten
+- [x] Muted Funktionalität implementieren
+- [x] DarkMode gestalten
+- [x] Icons ändern
+- [x] Empty ChatsList Graphik anzeigen
+- [x] Suchen überarbeiten
 
 ### 3. Chat
-- [ ] Bilder zentral cropen
-- [ ] Bilder ausrichtung im vorhinein bestimmen
-- [ ] Suchen von Nachrichten überarbeiten
-- [ ] DarkMode gestalten
-- [ ] offline Image Handling implementieren
+- [x] Bilder zentral cropen
+- [x] Bilder ausrichtung im vorhinein bestimmen
+- [x] Suchen von Nachrichten überarbeiten
+- [x] DarkMode gestalten
+- [x] offline Image Handling implementieren
 
 ### 4. Drop in
-- [ ] Design noch leicht überarbeiten
-- [ ] DarkMode designen
-- [ ] Muted Funktionalität implementieren
-- [ ] Leere Benutzer in Kontakt Liste visuell anzeigen
-- [ ] DropIn Icons ändern
-- [ ] Suchen Funktionalität hinzufügen
+- [x] Design noch leicht überarbeiten
+- [x] DarkMode designen
+- [x] Muted Funktionalität implementieren
+- [x] Leere Benutzer in Kontakt Liste visuell anzeigen
+- [x] DropIn Icons ändern
+- [x] Suchen Funktionalität hinzufügen
 
 ### 5. RandChat
-- [ ] Komplett neu designen
-- [ ] Auf Fehler und Probleme überprüfen
-- [ ] DarkMode designen
+- [x] Komplett neu designen
+- [x] Auf Fehler und Probleme überprüfen
+- [x] DarkMode designen
 
 ### 6. ChatMate
-- [ ] DarkMode implementieren
-- [ ] Icons überarbeiten
-- [ ] offline Handling hinzufügen
+- [x] DarkMode implementieren
+- [x] Icons überarbeiten
+- [x] offline Handling hinzufügen
 
 ### 7. Profile
-- [ ] Tags hinzufügen
-- [ ] DarkMode hinzufügen
-- [ ] DropIn einstellung hinzufügen
-- [ ] Delete Account Funktionalität erstellen
+- [x] Tags hinzufügen
+- [x] DarkMode hinzufügen
+- [x] DropIn einstellung hinzufügen
+- [x] Delete Account Funktionalität erstellen
 
 ### 8. Camera
-- [ ] EingabeFeld senden Funktionalität überarbeiten
-- [ ] EingabeFeld designen
+- [x] EingabeFeld senden Funktionalität überarbeiten
+- [x] EingabeFeld designen
 
 ### 9. Freunde
-- [ ] Design leicht anpassen
-- [ ] DarkMode designen
-- [ ] Tags hinzufügen
+- [x] Design leicht anpassen
+- [x] DarkMode designen
+- [x] Tags hinzufügen
 
 ### 10. ProfileInfoView
-- [ ] Design überarbeiten
-- [ ] DarkMode designen
-- [ ] Tags hinzufügen
+- [x] Design überarbeiten
+- [x] DarkMode designen
+- [x] Tags hinzufügen
 
 ### 11. Generell
-- [ ] Push Notifications implementieren
-- [ ] Öffentliche Benutzer Profil erstellen
+- [x] Push Notifications implementieren
+- [x] Öffentliche Benutzer Profil erstellen

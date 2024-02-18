@@ -4,6 +4,7 @@ sealed class Screens(val route: String) {
     object ChatsViewScreen : Screens("ChatsViewScreen")
     object CameraViewScreen : Screens("CameraViewScreen")
     object CameraPhotoScreen : Screens("CameraPhotoScreen")
+    object CameraFlow : Screens("CameraFlow")
     object DropInScreen : Screens("DropInScreen")
     object ChatViewScreen : Screens("ChatViewScreen")
     object ChatMateScreen : Screens("ChatMateScreen")

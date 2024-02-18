@@ -94,7 +94,7 @@ class RegisterWithGoggleView {
                                 sharedViewModel.getUserData {
                                     loadImage(
                                         context = context,
-                                        imageUrl = sharedViewModel.user.value.image
+                                        imageUrl = sharedViewModel.userData.value.image
                                     )
                                 }
                                 sharedViewModel.fetchFriendsFromUser {

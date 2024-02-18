@@ -5,7 +5,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
-import at.htlhl.chatnet.ui.features.mixed.findAllOccurrences
 import java.util.Locale
 
 fun highlightSearchedText(content: String, searchedText: String): AnnotatedString {
@@ -15,7 +14,6 @@ fun highlightSearchedText(content: String, searchedText: String): AnnotatedStrin
     } else {
         emptyList()
     }
-
     return buildAnnotatedString {
         var lastIndex = 0
         occurrences.forEach { ottoIndex ->
@@ -32,4 +30,14 @@ fun highlightSearchedText(content: String, searchedText: String): AnnotatedStrin
             append(content.substring(lastIndex))
         }
     }
+}
+
+fun findAllOccurrences(main: String, sub: String): List<Int> {
+    val indices = mutableListOf<Int>()
+    var lastIndex = main.indexOf(sub, 0)
+    while (lastIndex != -1) {
+        indices.add(lastIndex)
+        lastIndex = main.indexOf(sub, lastIndex + sub.length)
+    }
+    return indices
 }

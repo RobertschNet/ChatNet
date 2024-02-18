@@ -30,11 +30,11 @@ import at.htlhl.chatnet.data.InternalChatInstance
 
 @Composable
 fun UnblockToMessageDialog(
-    chatPartner: InternalChatInstance,
-    onClose: (String) -> Unit = {}
+    friendData: InternalChatInstance,
+    onUnblockUserPressed: (Boolean) -> Unit = {}
 ) {
     Dialog(
-        onDismissRequest = { onClose.invoke("closed") },
+        onDismissRequest = { onUnblockUserPressed(false) },
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
     ) {
         Column(
@@ -46,7 +46,7 @@ fun UnblockToMessageDialog(
         ) {
             Spacer(modifier = Modifier.height(5.dp))
             Text(
-                text = "Unblock ${chatPartner.personList.username["mixedcase"]}?",
+                text = "Unblock ${friendData.personList.username["mixedcase"]}?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 overflow = TextOverflow.Ellipsis,
@@ -54,7 +54,7 @@ fun UnblockToMessageDialog(
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                text = "In order to send a message to ${chatPartner.personList.username["mixedcase"]} you have to unblock him first.",
+                text = "In order to send a message to ${friendData.personList.username["mixedcase"]} you have to unblock him first.",
                 fontWeight = FontWeight.Light,
                 color = MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center,
@@ -75,7 +75,7 @@ fun UnblockToMessageDialog(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onClose.invoke("unblock") }
+                    .clickable { onUnblockUserPressed(true) }
             ) {
                 Text(
                     text = "Unblock User",
@@ -94,7 +94,7 @@ fun UnblockToMessageDialog(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onClose.invoke("closed") }
+                    .clickable { onUnblockUserPressed(false) }
             ) {
                 Text(
                     text = "Cancel",

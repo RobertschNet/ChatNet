@@ -1,7 +1,6 @@
 package at.htlhl.chatnet.ui.features.mixed
 
 import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -34,56 +33,56 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.chatnet.R
 import at.htlhl.chatnet.data.InternalMessageInstance
 import at.htlhl.chatnet.ui.theme.shimmerEffect
-import at.htlhl.chatnet.viewmodels.SharedViewModel
+import at.htlhl.chatnet.util.formatDateOfMessage
+import at.htlhl.chatnet.util.highlightSearchedText
+import at.htlhl.chatnet.util.isDateSeparatorNeeded
+import at.htlhl.chatnet.util.isMessageDateNeeded
+import at.htlhl.chatnet.util.isMessageTopPaddingNeeded
 import coil.compose.SubcomposeAsyncImage
-import com.google.firebase.Timestamp
-import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Calendar
-import java.util.Locale
 
-@RequiresApi(Build.VERSION_CODES.S)
 @Composable
 fun ChatViewMessageComponent(
-    sharedViewModel: SharedViewModel,
-    isUser: Boolean,
+    userID: String,
     message: InternalMessageInstance,
     chatMateChat: Boolean,
-    onLongPress: () -> Unit,
+    searchedValue: String,
+    onOpenActionMenuClicked: () -> Unit,
     previousMessage: InternalMessageInstance?,
     nextMessage: InternalMessageInstance?,
-    onClick: (String) -> Unit
+    onImageClicked: (String) -> Unit
 ) {
-    val formatter = DateTimeFormatter.ofPattern("HH:mm")
-    val searchValue = sharedViewModel.searchValue.value
+    val isFromUser = message.sender == userID
     var imageHeight by remember { mutableStateOf(true) }
-    val formattedTime = message.timestamp.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalTime().format(formatter)
-    val backgroundColor = if (isUser) {
+    var formattedTime = message.timestamp.toDate().toString().substring(11, 16)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val formatter = DateTimeFormatter.ofPattern("HH:mm")
+        formattedTime =
+            message.timestamp.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalTime()
+                .format(formatter)
+    }
+    val backgroundColor = if (isFromUser) {
         if (isSystemInDarkTheme()) Color(0xFF00A0E8) else Color(0xFF00A0E8)
     } else {
         if (isSystemInDarkTheme()) Color(0xFF141419) else Color(0xFFFFFDFD)
     }
-    val alignment = if (isUser) Arrangement.End else Arrangement.Start
-    if (isDateNeeded(message, nextMessage)) {
+    val alignment = if (isFromUser) Arrangement.End else Arrangement.Start
+    if (isMessageDateNeeded(message, nextMessage)) {
         Row(
             horizontalArrangement = alignment,
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (isUser) {
+            if (isFromUser) {
                 if (!chatMateChat) {
                     SubcomposeAsyncImage(
                         model = if (message.isFromCache) R.drawable.clock_svgrepo_com else if (message.read) R.drawable.eye_1_svgrepo_com else R.drawable.eye_hide_1_svgrepo_com,
@@ -123,7 +122,7 @@ fun ChatViewMessageComponent(
                 modifier = Modifier.align(CenterHorizontally)
             ) {
                 Text(
-                    text = formatDateForSeparator(message.timestamp),
+                    text = formatDateOfMessage(timestamp = message.timestamp),
                     maxLines = 1,
                     modifier = Modifier.padding(6.dp),
                     fontSize = 12.sp,
@@ -144,16 +143,16 @@ fun ChatViewMessageComponent(
                     shape = RoundedCornerShape(18.dp),
                     modifier = Modifier
                         .padding(
-                            start = if (isUser) 90.dp else 10.dp,
-                            end = if (isUser) 10.dp else 90.dp,
-                            top = if (isTopPaddingNeeded(
-                                    message, previousMessage
+                            start = if (isFromUser) 90.dp else 10.dp,
+                            end = if (isFromUser) 10.dp else 90.dp,
+                            top = if (isMessageTopPaddingNeeded(
+                                    currentMessage = message, previousMessage = previousMessage
                                 )
                             ) 20.dp else 5.dp,
                         )
                         .pointerInput(Unit) {
                             detectTapGestures(onLongPress = {
-                                onLongPress.invoke()
+                                onOpenActionMenuClicked()
                             })
                         }) {
                     if (message.images.size >= 4) {
@@ -170,16 +169,16 @@ fun ChatViewMessageComponent(
                                         .padding(top = 4.dp, bottom = 2.dp)
                                 ) {
                                     SubcomposeAsyncImage(model = message.images[0],
-                                        alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
+                                        alignment = if (isFromUser) Alignment.CenterEnd else Alignment.CenterStart,
                                         contentDescription = null,
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier
                                             .padding(end = 2.dp, start = 4.dp)
                                             .pointerInput(Unit) {
                                                 detectTapGestures(onLongPress = {
-                                                    onLongPress.invoke()
+                                                    onOpenActionMenuClicked()
                                                 }, onTap = {
-                                                    onClick.invoke(message.images[0])
+                                                    onImageClicked(message.images[0])
                                                 })
                                             }
                                             .clip(RoundedCornerShape(18.dp))
@@ -187,16 +186,16 @@ fun ChatViewMessageComponent(
                                             .width(130.dp)
                                             .shimmerEffect())
                                     SubcomposeAsyncImage(model = message.images[1],
-                                        alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
+                                        alignment = if (isFromUser) Alignment.CenterEnd else Alignment.CenterStart,
                                         contentDescription = null,
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier
                                             .padding(end = 4.dp)
                                             .pointerInput(Unit) {
                                                 detectTapGestures(onLongPress = {
-                                                    onLongPress.invoke()
+                                                    onOpenActionMenuClicked()
                                                 }, onTap = {
-                                                    onClick.invoke(message.images[1])
+                                                    onImageClicked(message.images[1])
                                                 })
                                             }
                                             .clip(RoundedCornerShape(18.dp))
@@ -210,16 +209,16 @@ fun ChatViewMessageComponent(
                                         .padding(bottom = if (message.text.isEmpty()) 4.dp else 2.dp)
                                 ) {
                                     SubcomposeAsyncImage(model = message.images[2],
-                                        alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
+                                        alignment = if (isFromUser) Alignment.CenterEnd else Alignment.CenterStart,
                                         contentDescription = null,
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier
                                             .padding(end = 2.dp, start = 4.dp)
                                             .pointerInput(Unit) {
                                                 detectTapGestures(onLongPress = {
-                                                    onLongPress.invoke()
+                                                    onOpenActionMenuClicked()
                                                 }, onTap = {
-                                                    onClick.invoke(message.images[2])
+                                                    onImageClicked(message.images[2])
                                                 })
                                             }
                                             .clip(RoundedCornerShape(18.dp))
@@ -237,9 +236,9 @@ fun ChatViewMessageComponent(
                                             )
                                             .pointerInput(Unit) {
                                                 detectTapGestures(onLongPress = {
-                                                    onLongPress.invoke()
+                                                    onOpenActionMenuClicked()
                                                 }, onTap = {
-                                                    onClick.invoke(message.images[3])
+                                                    onImageClicked(message.images[3])
                                                 })
                                             }
                                             .clip(RoundedCornerShape(18.dp))
@@ -247,7 +246,7 @@ fun ChatViewMessageComponent(
                                         ) {
                                             SubcomposeAsyncImage(
                                                 model = message.images[3],
-                                                alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
+                                                alignment = if (isFromUser) Alignment.CenterEnd else Alignment.CenterStart,
                                                 contentDescription = null,
                                                 contentScale = ContentScale.Crop,
                                                 modifier = Modifier
@@ -267,16 +266,16 @@ fun ChatViewMessageComponent(
                                         }
                                     } else {
                                         SubcomposeAsyncImage(model = message.images[3],
-                                            alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
+                                            alignment = if (isFromUser) Alignment.CenterEnd else Alignment.CenterStart,
                                             contentDescription = null,
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier
                                                 .padding(end = 4.dp)
                                                 .pointerInput(Unit) {
                                                     detectTapGestures(onLongPress = {
-                                                        onLongPress.invoke()
+                                                        onOpenActionMenuClicked()
                                                     }, onTap = {
-                                                        onClick.invoke(message.images[3])
+                                                        onImageClicked(message.images[3])
                                                     })
                                                 }
                                                 .clip(RoundedCornerShape(18.dp))
@@ -289,7 +288,7 @@ fun ChatViewMessageComponent(
                                     Text(
                                         text = message.text,
                                         fontFamily = FontFamily.SansSerif,
-                                        color = if (isUser) Color.White else MaterialTheme.colorScheme.primary,
+                                        color = if (isFromUser) Color.White else MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.padding(
                                             bottom = 9.dp, start = 14.dp, end = 14.dp
                                         )
@@ -312,15 +311,15 @@ fun ChatViewMessageComponent(
                                                 imageAsset.result.drawable.intrinsicWidth.toFloat() / imageAsset.result.drawable.intrinsicHeight.toFloat()
                                             imageHeight = aspectRatio <= 1
                                         },
-                                        alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
+                                        alignment = if (isFromUser) Alignment.CenterEnd else Alignment.CenterStart,
                                         contentDescription = null,
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier
                                             .pointerInput(Unit) {
                                                 detectTapGestures(onLongPress = {
-                                                    onLongPress.invoke()
+                                                    onOpenActionMenuClicked()
                                                 }, onTap = {
-                                                    onClick.invoke(image)
+                                                    onImageClicked(image)
                                                 })
                                             }
                                             .clip(RoundedCornerShape(18.dp))
@@ -334,7 +333,7 @@ fun ChatViewMessageComponent(
                                 if (message.text.isNotEmpty()) {
                                     Text(
                                         text = message.text,
-                                        color = if (isUser) Color.White else MaterialTheme.colorScheme.primary,
+                                        color = if (isFromUser) Color.White else MaterialTheme.colorScheme.primary,
                                         fontFamily = FontFamily.SansSerif,
                                         modifier = Modifier.padding(
                                             top = 4.dp, bottom = 4.dp, start = 10.dp, end = 10.dp
@@ -361,13 +360,16 @@ fun ChatViewMessageComponent(
                     modifier = Modifier
                         .widthIn(min = 100.dp)
                         .padding(
-                            start = if (isUser) 80.dp else 10.dp,
-                            end = if (isUser) 10.dp else 80.dp,
-                            top = if (isTopPaddingNeeded(message, previousMessage)) 20.dp else 5.dp,
+                            start = if (isFromUser) 80.dp else 10.dp,
+                            end = if (isFromUser) 10.dp else 80.dp,
+                            top = if (isMessageTopPaddingNeeded(
+                                    currentMessage = message, previousMessage = previousMessage
+                                )
+                            ) 20.dp else 5.dp,
                         )
                         .pointerInput(Unit) {
                             detectTapGestures(onLongPress = {
-                                onLongPress.invoke()
+                                onOpenActionMenuClicked()
                             })
                         }
                         .background(backgroundColor, shape = RoundedCornerShape(18.dp)),
@@ -410,139 +412,18 @@ fun ChatViewMessageComponent(
                         lines.append(currentLine)
                     }
                     Text(
-                        text = buildAnnotatedStringWithColorHighlight(
-                            lines.toString(), searchValue
+                        text = highlightSearchedText(
+                            content = lines.toString(), searchedText = searchedValue
                         ),
                         fontSize = 14.sp,
                         modifier = Modifier
                             .padding(12.dp)
                             .background(backgroundColor, shape = RoundedCornerShape(18.dp)),
                         textAlign = TextAlign.Start,
-                        color = if (isUser) Color.White else MaterialTheme.colorScheme.primary
+                        color = if (isFromUser) Color.White else MaterialTheme.colorScheme.primary
                     )
                 }
             }
-        }
-    }
-}
-
-
-private fun isDateSeparatorNeeded(
-    currentMessage: InternalMessageInstance, previousMessage: InternalMessageInstance?
-): Boolean {
-    if (previousMessage == null) {
-        return true
-    }
-
-    val currentCalendar = Calendar.getInstance().apply {
-        timeInMillis = currentMessage.timestamp.toDate().time
-    }
-
-    val previousCalendar = Calendar.getInstance().apply {
-        timeInMillis = previousMessage.timestamp.toDate().time
-    }
-
-    return currentCalendar.get(Calendar.YEAR) != previousCalendar.get(Calendar.YEAR) || currentCalendar.get(
-        Calendar.DAY_OF_YEAR
-    ) != previousCalendar.get(Calendar.DAY_OF_YEAR)
-
-}
-
-
-@RequiresApi(Build.VERSION_CODES.O)
-private fun formatDateForSeparator(timestamp: Timestamp): String {
-    val currentInstant = Instant.now()
-    val currentZone = ZoneId.systemDefault()
-    val messageInstant = timestamp.toDate().toInstant()
-
-    return when {
-        messageInstant.atZone(currentZone).toLocalDate() == currentInstant.atZone(currentZone)
-            .toLocalDate() -> "Today"
-
-        messageInstant.atZone(currentZone).toLocalDate() == currentInstant.atZone(currentZone)
-            .toLocalDate().minusDays(1) -> "Yesterday"
-
-        else -> {
-            val formatter = DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale.ENGLISH)
-            formatter.format(messageInstant.atZone(currentZone))
-        }
-    }
-}
-
-
-private fun isTopPaddingNeeded(
-    currentMessage: InternalMessageInstance,
-    previousMessage: InternalMessageInstance?,
-): Boolean {
-    if (previousMessage == null) {
-        return true
-    }
-
-    val currentCalendar = Calendar.getInstance().apply {
-        timeInMillis = currentMessage.timestamp.toDate().time
-    }
-
-    val previousCalender = Calendar.getInstance().apply {
-        timeInMillis = previousMessage.timestamp.toDate().time
-    }
-
-    return currentCalendar.get(Calendar.MINUTE) != previousCalender.get(Calendar.MINUTE)
-}
-
-private fun isDateNeeded(
-    currentMessage: InternalMessageInstance,
-    nextMessage: InternalMessageInstance?,
-): Boolean {
-    if (nextMessage == null) {
-        return true
-    }
-    if (nextMessage.sender != currentMessage.sender) {
-        return true
-    }
-
-    val currentCalendar = Calendar.getInstance().apply {
-        timeInMillis = currentMessage.timestamp.toDate().time
-    }
-
-    val nextCalendar = Calendar.getInstance().apply {
-        timeInMillis = nextMessage.timestamp.toDate().time
-    }
-    return currentCalendar.get(Calendar.MINUTE) != nextCalendar.get(Calendar.MINUTE)
-}
-
-
-fun findAllOccurrences(main: String, sub: String): List<Int> {
-    val indices = mutableListOf<Int>()
-    var lastIndex = main.indexOf(sub, 0)
-    while (lastIndex != -1) {
-        indices.add(lastIndex)
-        lastIndex = main.indexOf(sub, lastIndex + sub.length)
-    }
-    return indices
-}
-
-fun buildAnnotatedStringWithColorHighlight(content: String, text: String): AnnotatedString {
-    val lowercase = text.lowercase(Locale.getDefault())
-    val occurrences = if (text.isNotEmpty()) {
-        findAllOccurrences(content.lowercase(Locale.getDefault()), lowercase)
-    } else {
-        emptyList()
-    }
-
-    return buildAnnotatedString {
-        var lastIndex = 0
-        occurrences.forEach { ottoIndex ->
-            append(content.substring(lastIndex, ottoIndex))
-            if (text.isNotEmpty()) {
-                withStyle(style = SpanStyle(background = Color.Yellow, color = Color.Black)) {
-                    val ottoLength = text.length
-                    append(content.substring(ottoIndex, ottoIndex + ottoLength))
-                }
-            }
-            lastIndex = ottoIndex + text.length
-        }
-        if (lastIndex < content.length) {
-            append(content.substring(lastIndex))
         }
     }
 }

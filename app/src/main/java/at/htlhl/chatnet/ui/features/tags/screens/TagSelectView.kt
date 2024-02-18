@@ -52,7 +52,7 @@ class TagSelectView {
     @Composable
     fun TagSelectScreen(sharedViewModel: SharedViewModel, navController: NavController) {
         val tagSelectViewModel = viewModel<TagSelectViewModel>()
-        val userDataState by sharedViewModel.user.collectAsState()
+        val userDataState by sharedViewModel.userData.collectAsState()
         val userData: FirebaseUser = userDataState
         val filteredTags = getPersonTagsList(personData = userData)
         val selectedTagsList = filteredTags.filter { tag -> tag.category != TagCategoryState.EMPTY }

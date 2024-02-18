@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Geocoder
-import android.location.Location
 import android.os.Binder
 import android.os.Handler
 import android.os.IBinder
@@ -31,41 +30,41 @@ import java.io.IOException
 import java.util.Locale
 
 class DropInUpdateService : Service() {
-    private val locationScanInterval = 30000L // 60 second
+    private val locationScanInterval = 30000L // 30 seconds
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationCallback: LocationCallback
     val auth: FirebaseAuth = Firebase.auth
-    private var lastKnownLocation: Location? = null
     val nearbyDropInUsersList = MutableLiveData<List<LocationUserInstance>>()
 
+    @Suppress("DEPRECATION")
     override fun onCreate() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        locationRequest = LocationRequest.create()
-            .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-            .setInterval(locationScanInterval)
+        locationRequest =
+            LocationRequest.create().setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+                .setInterval(locationScanInterval)
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 super.onLocationResult(locationResult)
                 locationResult.lastLocation?.let { location ->
                     val latitude = location.latitude
                     val longitude = location.longitude
-                    val hash =
-                        GeoFireUtils.getGeoHashForLocation(GeoLocation(latitude, longitude))
+                    val hash = GeoFireUtils.getGeoHashForLocation(GeoLocation(latitude, longitude))
                     val updates: MutableMap<String, Any> = mutableMapOf(
                         "geohash" to hash,
                         "lat" to latitude,
                         "lng" to longitude,
                     )
-                    sendLocation(updates, auth)
-                    fetchLocation(latitude, longitude)
+                    sendLocation(documentId = updates, auth = auth)
+                    fetchLocation(latitude = latitude, longitude = longitude)
                 }
             }
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun getCityName(context: Context, latitude: Double, longitude: Double): String {
         val geocoder = Geocoder(context, Locale.getDefault())
         try {
@@ -83,9 +82,7 @@ class DropInUpdateService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        println(intent.toString())
         if (intent?.action == "STOP_LOCATION_SERVICE") {
-            println("Stopping the location service.")
             removeLocationUpdates()
             stopSelf()
             super.onDestroy()
@@ -112,14 +109,11 @@ class DropInUpdateService : Service() {
 
     private fun requestLocationUpdates() {
         if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
+                this, Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             fusedLocationClient.requestLocationUpdates(
-                locationRequest,
-                locationCallback,
-                null
+                locationRequest, locationCallback, null
             )
         }
     }
@@ -128,19 +122,11 @@ class DropInUpdateService : Service() {
         fusedLocationClient.removeLocationUpdates(locationCallback)
     }
 
-    private fun isLocationDifferent(newLocation: Location): Boolean {
-        return lastKnownLocation == null || newLocation.distanceTo(lastKnownLocation!!) > MIN_DISTANCE_THRESHOLD
-    }
-
-    companion object {
-        private const val MIN_DISTANCE_THRESHOLD = 1.0
-    }
-
     override fun onBind(intent: Intent?): IBinder {
-        return YourBinder()
+        return LocationBinder()
     }
 
-    inner class YourBinder : Binder() {
+    inner class LocationBinder : Binder() {
         fun getService(): DropInUpdateService = this@DropInUpdateService
     }
 
@@ -151,41 +137,35 @@ class DropInUpdateService : Service() {
         )
         FirebaseFirestore.getInstance().document("users/${auth.currentUser?.uid}")
             .update("location", location)
-            .addOnSuccessListener {
-                println("Location sent successfully.")
-            }.addOnFailureListener { exception ->
-                exception.printStackTrace()
-            }
     }
 
+    @Suppress("UNCHECKED_CAST")
     fun fetchLocation(latitude: Double, longitude: Double) {
         val center = GeoLocation(latitude, longitude)
-        FirebaseFirestore.getInstance().collection("users")
-            .whereEqualTo("online", true)
-            .get()
+        val usersCollection = FirebaseFirestore.getInstance().collection("users")
+
+        usersCollection.whereEqualTo("online", true).get()
             .addOnSuccessListener { snapshot ->
-                val matchingDocs: MutableList<Map<String, Any>> = ArrayList()
-                for (doc in snapshot.documents) {
-                    val location = doc.get("location") as? Map<*, *>
-                    if (location != null) {
-                        doc.data?.let { it1 -> matchingDocs.add(it1) }
+                val matchingDocs = snapshot.documents
+                    .mapNotNull { doc ->
+                        val location = doc["location"] as? Map<*, *>
+                        location?.let { doc.data }
                     }
-                }
-                val sortedUsers = matchingDocs.sortedBy {
-                    val location = it["location"] as? Map<*, *>
+
+                val sortedUsers = matchingDocs.sortedBy { user ->
+                    val location = user["location"] as? Map<*, *>
                     val geolocation = location?.get("geopoint") as? GeoPoint
-                    val docLocation =
-                        GeoLocation(geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
+                    val docLocation = GeoLocation(geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
                     GeoFireUtils.getDistanceBetween(docLocation, center)
                 }
-                val top5ClosestUsers = sortedUsers.take(5)
-                val personList = top5ClosestUsers.map { dataMap ->
+
+                val top10ClosestUsers = sortedUsers.take(10)
+                val personList = top10ClosestUsers.map { dataMap ->
                     val location = dataMap["location"] as? Map<*, *>
                     val geolocation = location?.get("geopoint") as? GeoPoint
-                    val docLocation =
-                        GeoLocation(geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
+                    val docLocation = GeoLocation(geolocation?.latitude ?: 0.0, geolocation?.longitude ?: 0.0)
                     val distanceInM = GeoFireUtils.getDistanceBetween(docLocation, center)
-                    val formattedDistance = String.format("%.2f", distanceInM)
+                    val formattedDistance = distanceInM.toInt().toString()
 
                     LocationUserInstance(
                         id = dataMap["id"].toString(),
@@ -194,26 +174,50 @@ class DropInUpdateService : Service() {
                         online = dataMap["online"] as? Boolean ?: false,
                         blocked = dataMap["blocked"] as? List<String> ?: emptyList(),
                         muted = dataMap["muted"] as? List<String> ?: emptyList(),
-                        location = if (getCityName(
-                                applicationContext,
-                                geolocation?.latitude ?: 0.0,
-                                geolocation?.longitude ?: 0.0
-                            ) != getCityName(applicationContext, latitude, longitude)
-                        ) {
-                            getCityName(
-                                applicationContext,
-                                geolocation?.latitude ?: 0.0,
-                                geolocation?.longitude ?: 0.0
-                            )
-                        } else if (auth.currentUser?.uid == dataMap["id"].toString()) {
-                            getCityName(applicationContext, latitude, longitude)
-                        } else {
-                            "$formattedDistance m away"
-                        }
+                        location = getLocation(
+                            dataMap = dataMap,
+                            formattedDistance = formattedDistance,
+                            geolocation = geolocation,
+                            center = center
+                        )
                     )
-
                 }
+
                 nearbyDropInUsersList.postValue(personList)
             }
     }
+
+    private fun getLocation(
+        dataMap: Map<String, Any>,
+        formattedDistance: String,
+        geolocation: GeoPoint?,
+        center: GeoLocation
+    ): String {
+        return when {
+            getCityName(
+                context = applicationContext,
+                latitude = geolocation?.latitude ?: 0.0,
+                longitude = geolocation?.longitude ?: 0.0
+            ) !=
+                    getCityName(
+                        context = applicationContext,
+                        latitude = center.latitude,
+                        longitude = center.longitude
+                    ) ->
+                getCityName(
+                    context = applicationContext,
+                    latitude = geolocation?.latitude ?: 0.0,
+                    longitude = geolocation?.longitude ?: 0.0
+                )
+            auth.currentUser?.uid == dataMap["id"].toString() ->
+                getCityName(
+                    context = applicationContext,
+                    latitude = center.latitude,
+                    longitude = center.longitude
+                )
+            else ->
+                "$formattedDistance m away"
+        }
+    }
+
 }

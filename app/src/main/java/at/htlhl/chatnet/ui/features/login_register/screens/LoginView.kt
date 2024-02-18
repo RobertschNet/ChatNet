@@ -89,7 +89,7 @@ class LoginView {
                                                 sharedViewModel.getUserData {
                                                     loadImage(
                                                         context = context,
-                                                        imageUrl = sharedViewModel.user.value.image
+                                                        imageUrl = sharedViewModel.userData.value.image
                                                     )
                                                 }
                                                 sharedViewModel.fetchFriendsFromUser {
@@ -193,7 +193,7 @@ class LoginView {
                                             sharedViewModel.getUserData {
                                                 loadImage(
                                                     context = context,
-                                                    imageUrl = sharedViewModel.user.value.image
+                                                    imageUrl = sharedViewModel.userData.value.image
                                                 )
                                             }
                                             sharedViewModel.fetchFriendsFromUser {

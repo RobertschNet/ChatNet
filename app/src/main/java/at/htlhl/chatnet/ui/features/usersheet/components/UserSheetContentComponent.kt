@@ -114,7 +114,7 @@ fun UserSheetContentComponent(
                         userData = userData,
                         friendData = friendData.personList,
                         onSuccess = {
-                            sharedViewModel.sortDataChats {}
+                            sharedViewModel.sortDataChats()
                         })
                 }
                 if (navController.previousBackStackEntry?.destination?.route != Screens.ChatViewScreen.route) {

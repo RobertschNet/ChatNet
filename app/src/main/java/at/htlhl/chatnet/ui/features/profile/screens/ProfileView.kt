@@ -65,7 +65,7 @@ class ProfileView {
         systemUiController.setStatusBarColor(
             color = MaterialTheme.colorScheme.background, darkIcons = !isSystemInDarkTheme()
         )
-        val userDataState by sharedViewModel.user.collectAsState()
+        val userDataState by sharedViewModel.userData.collectAsState()
         val userData: FirebaseUser = userDataState
         val context = LocalContext.current
         val filteredTags = getPersonTagsList(personData = userData)

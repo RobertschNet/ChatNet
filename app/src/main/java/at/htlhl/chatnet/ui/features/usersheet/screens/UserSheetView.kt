@@ -42,7 +42,7 @@ class UserSheetView {
         val friendDataState by sharedViewModel.friend.collectAsState()
         val chatDataState by sharedViewModel.chatData.collectAsState()
         val friendListDataState by sharedViewModel.friendListData.collectAsState()
-        val userDataState by sharedViewModel.user.collectAsState()
+        val userDataState by sharedViewModel.userData.collectAsState()
 
         val friendData: InternalChatInstance = friendDataState
         val chatData: List<FirebaseChat> = chatDataState

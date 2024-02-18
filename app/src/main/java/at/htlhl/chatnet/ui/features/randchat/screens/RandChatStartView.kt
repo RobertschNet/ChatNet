@@ -34,6 +34,7 @@ import at.htlhl.chatnet.ui.features.finduser.components.FindUserPersonComponent
 import at.htlhl.chatnet.ui.features.mixed.TabsTopBar
 import at.htlhl.chatnet.ui.features.randchat.components.RandChatUserOverviewComponent
 import at.htlhl.chatnet.ui.features.randchat.viewmodels.RandChatViewModel
+import at.htlhl.chatnet.util.cloudfunctions.requestRandChatPairingPartner
 import at.htlhl.chatnet.util.firebase.changeFriendStateForPerson
 import at.htlhl.chatnet.util.firebase.changeFriendStateForUser
 import at.htlhl.chatnet.util.firebase.removeFriendFromFriendsList
@@ -58,7 +59,7 @@ class RandChatStartView {
         val dropInState by sharedViewModel.dropInState
 
         val friendListDataState by sharedViewModel.friendListData.collectAsState()
-        val userDataState by sharedViewModel.user.collectAsState()
+        val userDataState by sharedViewModel.userData.collectAsState()
         val chatDataState by sharedViewModel.chatData.collectAsState()
 
         val friendListData: List<FirebaseUser> = friendListDataState
@@ -74,8 +75,7 @@ class RandChatStartView {
         Scaffold(backgroundColor = MaterialTheme.colorScheme.background,
             modifier = Modifier.fillMaxSize(),
             topBar = {
-                TabsTopBar(
-                    tab = CurrentTab.RANDCHAT,
+                TabsTopBar(tab = CurrentTab.RANDCHAT,
                     dropInState = dropInState,
                     onActionClicked = {},
                     onUpdateSearchValue = { updatedSearchValue ->
@@ -96,11 +96,14 @@ class RandChatStartView {
                         },
                         onStartRandChatPressed = {
                             if (!userData.connected) {
-                                sharedViewModel.getRandChat(
-                                    sharedViewModel = sharedViewModel,
-                                    state = false,
+                                requestRandChatPairingPartner(userID = userData.id,
+                                    requestState = false,
                                     navController = navController,
-                                )
+                                    onSuccess = { partnerID ->
+                                        sharedViewModel.fetchRandChatPairedUser(
+                                            partnerID = partnerID,
+                                        )
+                                    })
                             }
                             navController.navigate(Screens.RandChatScreen.route)
                         })
@@ -132,7 +135,8 @@ class RandChatStartView {
                                 searchedText = searchedValue,
                                 personType = if (previousUserExistsInFriendList == null) PersonType.SEARCHED_PERSON else if (previousUserExistsInFriendList.statusFriend == PersonType.PENDING_PERSON) PersonType.PENDING_PERSON else PersonType.ACCEPTED_PERSON,
                                 onPersonClicked = { clickedPerson ->
-                                    sharedViewModel.updatePublicUser(newFriend = clickedPerson,
+                                    sharedViewModel.updatePublicUser(
+                                        newFriend = clickedPerson,
                                         onComplete = {
                                             navController.navigate(Screens.PublicUserSheetScreen.route)
                                         })
@@ -183,7 +187,7 @@ class RandChatStartView {
                                     removeFriendFromFriendsList(userData = userData,
                                         friendData = clickedPerson,
                                         onSuccess = {
-                                            sharedViewModel.sortDataChats {}
+                                            sharedViewModel.sortDataChats()
                                         })
                                 })
                         }
