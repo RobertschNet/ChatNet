@@ -75,7 +75,7 @@ Provider = Password
 
 ### 5. RandChat
 - [x] Komplett neu designen
-- [x] Auf Fehler und Probleme überprüfen
+- [ ] Auf Fehler und Probleme überprüfen
 - [x] DarkMode designen
 
 ### 6. ChatMate
@@ -87,7 +87,7 @@ Provider = Password
 - [x] Tags hinzufügen
 - [x] DarkMode hinzufügen
 - [x] DropIn einstellung hinzufügen
-- [x] Delete Account Funktionalität erstellen
+- [ ] Delete Account Funktionalität erstellen
 
 ### 8. Camera
 - [x] EingabeFeld senden Funktionalität überarbeiten
@@ -105,4 +105,5 @@ Provider = Password
 
 ### 11. Generell
 - [x] Push Notifications implementieren
+- [ ] Push Notifications überarbeiten
 - [x] Öffentliche Benutzer Profil erstellen
