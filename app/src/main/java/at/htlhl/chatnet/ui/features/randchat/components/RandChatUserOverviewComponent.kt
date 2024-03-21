@@ -1,6 +1,7 @@
 package at.htlhl.chatnet.ui.features.randchat.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -9,6 +10,7 @@ import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -28,32 +30,35 @@ fun RandChatUserOverviewComponent(
     onUserProfilePictureClicked: () -> Unit,
     onStartRandChatPressed: () -> Unit,
 ) {
-    Spacer(modifier = Modifier.height(20.dp))
-    SubcomposeAsyncImage(model = userData.image,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier
-            .size(120.dp)
-            .clip(CircleShape)
-            .clickable {
-                onUserProfilePictureClicked()
-            }
-            .shimmerEffect())
-    Spacer(modifier = Modifier.height(5.dp))
-    Text(
-        text = userData.username["mixedcase"].toString(),
-        color = MaterialTheme.colorScheme.primary,
-        fontFamily = FontFamily.SansSerif,
-        fontSize = 20.sp,
-        fontWeight = FontWeight.Medium
-    )
-    Spacer(modifier = Modifier.height(10.dp))
-    RandChatUserTagElementsComponent(tags = filteredUserTags)
-    Spacer(modifier = Modifier.height(10.dp))
-    Button(shape = CircleShape, onClick = {
-        onStartRandChatPressed()
-    }) {
-        Text(text = if (!userData.connected) "Start RandChat" else "Continue to Chat with User")
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Spacer(modifier = Modifier.height(20.dp))
+        SubcomposeAsyncImage(model = userData.image,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(120.dp)
+                .clip(CircleShape)
+                .clickable {
+                    onUserProfilePictureClicked()
+                }
+                .shimmerEffect())
+        Spacer(modifier = Modifier.height(5.dp))
+        Text(
+            text = userData.username["mixedcase"].toString(),
+            color = MaterialTheme.colorScheme.primary,
+            fontFamily = FontFamily.SansSerif,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        RandChatUserTagElementsComponent(tags = filteredUserTags)
+        Spacer(modifier = Modifier.height(10.dp))
+        Button(shape = CircleShape, onClick = {
+            onStartRandChatPressed()
+        }) {
+            Text(text = if (!userData.connected) "Start RandChat" else "Continue to Chat with User")
+        }
+        Spacer(modifier = Modifier.height(20.dp))
     }
-    Spacer(modifier = Modifier.height(20.dp))
+
 }

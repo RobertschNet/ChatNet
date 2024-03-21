@@ -305,10 +305,11 @@ fun ChatViewMessageComponent(
                         ) {
                             Column(modifier = Modifier.padding(5.dp)) {
                                 message.images.forEachIndexed { index, image ->
-                                    SubcomposeAsyncImage(model = image,
-                                        onSuccess = { imageAsset ->
-                                            val aspectRatio =
-                                                imageAsset.result.drawable.intrinsicWidth.toFloat() / imageAsset.result.drawable.intrinsicHeight.toFloat()
+                                    SubcomposeAsyncImage(
+                                        model = image,
+                                        onSuccess = {
+                                            imageAsset ->
+                                            val aspectRatio = imageAsset.result.drawable.intrinsicWidth.toFloat() / imageAsset.result.drawable.intrinsicHeight.toFloat()
                                             imageHeight = aspectRatio <= 1
                                         },
                                         alignment = if (isFromUser) Alignment.CenterEnd else Alignment.CenterStart,

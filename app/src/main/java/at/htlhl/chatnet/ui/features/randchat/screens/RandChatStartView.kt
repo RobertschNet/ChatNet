@@ -85,7 +85,6 @@ class RandChatStartView {
             content = { paddingValues ->
                 Column(
                     modifier = Modifier.padding(top = paddingValues.calculateTopPadding()),
-                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     RandChatUserOverviewComponent(userData = userData,
                         filteredUserTags = filteredUserTags,
@@ -152,11 +151,11 @@ class RandChatStartView {
                                             saveChatRoom(
                                                 userID = userData.id,
                                                 friendID = clickedPerson.id,
-                                                tab = CurrentTab.CHATS
+                                                tab = CurrentTab.CHATS.name.lowercase(),
                                             )
                                         } else {
                                             updateChatRoomTab(
-                                                newTab = CurrentTab.CHATS,
+                                                newTab = CurrentTab.CHATS.name.lowercase(),
                                                 chatRoomId = filteredChats[0].chatRoomID
                                             )
                                         }

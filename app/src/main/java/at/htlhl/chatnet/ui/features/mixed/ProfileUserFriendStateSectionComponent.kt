@@ -88,11 +88,11 @@ fun ProfileUserFriendStateSectionComponent(
                                             saveChatRoom(
                                                 userID = userData.id,
                                                 friendID = publicUser.id,
-                                                tab = CurrentTab.CHATS
+                                                tab = CurrentTab.CHATS.name.lowercase()
                                             )
                                         } else {
                                             updateChatRoomTab(
-                                                newTab = CurrentTab.CHATS,
+                                                newTab = CurrentTab.CHATS.name.lowercase(),
                                                 chatRoomId = filteredChats[0].chatRoomID
                                             )
                                         }

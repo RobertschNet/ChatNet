@@ -20,6 +20,7 @@ class LoginRegisterViewModel : ViewModel() {
         val userData = hashMapOf(
             "blocked" to emptyList<String>(),
             "pinned" to emptyList<String>(),
+            "tags" to emptyList<String>(),
             "color" to "blue",
             "connected" to false,
             "muted" to emptyList<String>(),

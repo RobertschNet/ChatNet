@@ -181,7 +181,7 @@ class DropInView {
                                                     saveChatRoom(
                                                         userID = userData.id,
                                                         friendID = matchingNearbyUser.personList.id,
-                                                        tab = CurrentTab.DROPIN,
+                                                        tab = CurrentTab.DROPIN.name.lowercase(),
                                                         onChatCreated = { newChatChatRoomID ->
                                                             sharedViewModel.updateFriend(newFriend = InternalChatInstance().copy(
                                                                 personList = matchingNearbyUser.personList,

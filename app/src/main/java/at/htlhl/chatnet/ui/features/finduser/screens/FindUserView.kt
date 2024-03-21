@@ -24,9 +24,9 @@ import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseUser
 import at.htlhl.chatnet.data.PersonType
 import at.htlhl.chatnet.navigation.Screens
-import at.htlhl.chatnet.ui.features.finduser.components.FindUserTopSearchBar
 import at.htlhl.chatnet.ui.features.finduser.components.FindUserBackLayerContent
 import at.htlhl.chatnet.ui.features.finduser.components.FindUserFrontLayerContent
+import at.htlhl.chatnet.ui.features.finduser.components.FindUserTopSearchBar
 import at.htlhl.chatnet.ui.features.finduser.viewmodels.FindUserViewModel
 import at.htlhl.chatnet.util.firebase.changeFriendStateForPerson
 import at.htlhl.chatnet.util.firebase.changeFriendStateForUser
@@ -57,7 +57,7 @@ class FindUserView {
         val chatData: List<FirebaseChat> = chatDataState
         val suggestedFriendsList: List<FirebaseUser> = suggestedFriendsListState
         val friendListData: List<FirebaseUser> = friendListDataState
-        val userData:FirebaseUser = userDataState
+        val userData: FirebaseUser = userDataState
 
         val pendingFriendsList =
             friendListData.filter { friend -> friend.statusFriend == PersonType.PENDING_PERSON }
@@ -109,11 +109,11 @@ class FindUserView {
                     onDenyFriendRequestClicked = { clickedPerson ->
                         removeFriendFromFriendsList(
                             userData = userData,
-                            friendData =clickedPerson,
+                            friendData = clickedPerson,
                             onSuccess = {
                                 sharedViewModel.sortDataChats()
                             }
-                    )
+                        )
                     },
                     onFriendActionClicked = { clickedPerson, addFriend ->
                         if (addFriend) {
@@ -125,11 +125,11 @@ class FindUserView {
                                 saveChatRoom(
                                     userID = userData.id,
                                     friendID = clickedPerson.id,
-                                    tab = CurrentTab.CHATS
+                                    tab = CurrentTab.CHATS.name.lowercase()
                                 )
                             } else {
                                 updateChatRoomTab(
-                                    newTab = CurrentTab.CHATS,
+                                    newTab = CurrentTab.CHATS.name.lowercase(),
                                     chatRoomId = filteredChats[0].chatRoomID
                                 )
                             }
@@ -179,11 +179,11 @@ class FindUserView {
                                 saveChatRoom(
                                     userID = userData.id,
                                     friendID = clickedPerson.id,
-                                    tab = CurrentTab.CHATS
+                                    tab = CurrentTab.CHATS.name.lowercase()
                                 )
                             } else {
                                 updateChatRoomTab(
-                                    newTab = CurrentTab.CHATS,
+                                    newTab = CurrentTab.CHATS.name.lowercase(),
                                     chatRoomId = filteredChats[0].chatRoomID
                                 )
                             }

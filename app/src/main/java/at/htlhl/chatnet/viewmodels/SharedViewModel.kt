@@ -122,11 +122,15 @@ class SharedViewModel : ViewModel() {
         imageList.value = newImageList
         onComplete()
     }
+
     fun updateImageStartPosition(newImageStartPosition: Int, onComplete: () -> Unit = {}) {
         imageStartPosition.intValue = newImageStartPosition
         onComplete()
     }
-    fun updateChatMateResponseState(newChatMateResponseState: ChatMateResponseState, onComplete: () -> Unit = {}) {
+
+    fun updateChatMateResponseState(
+        newChatMateResponseState: ChatMateResponseState, onComplete: () -> Unit = {}
+    ) {
         chatMateResponseState.value = newChatMateResponseState
         onComplete()
     }
@@ -135,6 +139,7 @@ class SharedViewModel : ViewModel() {
         dropInState.value = newState
         onComplete()
     }
+
     fun updateRandState(newState: Boolean, onComplete: () -> Unit = {}) {
         randState.value = newState
         onComplete()
@@ -376,7 +381,7 @@ class SharedViewModel : ViewModel() {
             ?: InternalMessageInstance()
 
         return InternalChatInstance(personList = FirebaseUser(blocked = emptyList(),
-            image = "https://firebasestorage.googleapis.com/v0/b/chatnet-97f9a.appspot.com/o/images%2FDALL%C2%B7E%202023-09-17%2014.29.57%20-%20Profile%20picture%20for%20an%20AI-Asistent%2C%20digital%20art.png?alt=media&token=f41b85e7-8012-4d5d-87f0-e4bdd7f55030",
+            image = "https://firebasestorage.googleapis.com/v0/b/chatnet-97f9a.appspot.com/o/assets%2FChatmate_image.png?alt=media&token=747812db-b49c-4d8d-8a5a-03e39293bf9c",
             username = mapOf("lowercase" to "chatmate", "mixedcase" to "ChatMate"),
             online = false,
             id = chat.members.find { it != auth.currentUser?.uid.toString() } ?: "",
@@ -649,6 +654,9 @@ class SharedViewModel : ViewModel() {
 
     // Needed due to performance issues
     suspend fun markMessagesAsRead() {
+        if (friend.value.chatRoomID.isEmpty()) {
+            return
+        }
         val chatRef =
             FirebaseFirestore.getInstance().collection("chats").document(friend.value.chatRoomID)
                 .collection("messages")

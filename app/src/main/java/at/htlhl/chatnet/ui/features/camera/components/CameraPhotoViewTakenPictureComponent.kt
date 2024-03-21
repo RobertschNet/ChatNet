@@ -1,7 +1,6 @@
 package at.htlhl.chatnet.ui.features.camera.components
 
 import android.graphics.Bitmap
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -25,11 +24,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import com.google.firebase.Timestamp
 
 @Composable
 fun CameraPhotoViewTakenPictureComponent(
-    paddingValues:PaddingValues,
+    paddingValues: PaddingValues,
     bitmap: Bitmap,
     onSaveImageToGalleryClicked: () -> Unit,
     onRetakePhotoClicked: () -> Unit,
