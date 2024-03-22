@@ -7,6 +7,8 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -66,11 +69,13 @@ import at.htlhl.chatnet.data.removeItemFromUploadList
 import at.htlhl.chatnet.navigation.Screens
 import at.htlhl.chatnet.util.checkAndRequestPermission
 import at.htlhl.chatnet.util.createDisabledToastForInputField
+import at.htlhl.chatnet.util.firebase.changeTypingStatus
 import at.htlhl.chatnet.util.onMessageSentPressed
 import coil.compose.SubcomposeAsyncImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ChatInputFieldComponent(
     coroutineScope: CoroutineScope,
@@ -87,17 +92,19 @@ fun ChatInputFieldComponent(
     var badgeCount by remember { mutableIntStateOf(0) }
     var isLoading by rememberSaveable { mutableStateOf(false) }
     var text by rememberSaveable { mutableStateOf("") }
+    val interactionSource = remember { MutableInteractionSource() }
+
     LaunchedEffect(chatMateResponseText) { text = chatMateResponseText }
     var chatMateLoadingText by remember { mutableStateOf("ChatMate is thinking") }
     val chatMatePadding =
         if (chatMateResponseState == ChatMateResponseState.Loading) 10.dp else 0.dp
-    val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(),
-        onResult = { uris ->
-            if (uris.isNotEmpty()) {
-                addImageUploadList(friendData.chatRoomID, uris.map { uri -> uri })
-            }
-        })
+    val multiplePhotoPickerLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.PickMultipleVisualMedia(),
+            onResult = { uris ->
+                if (uris.isNotEmpty()) {
+                    addImageUploadList(friendData.chatRoomID, uris.map { uri -> uri })
+                }
+            })
 
     val cameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -122,7 +129,6 @@ fun ChatInputFieldComponent(
             Toast.makeText(context, "Gallery permission denied", Toast.LENGTH_SHORT).show()
         }
     }
-
     BottomAppBar(
         elevation = 0.dp,
         modifier = if (getImageUploadList(id = friendData.chatRoomID).isEmpty()) Modifier.height(
@@ -180,6 +186,11 @@ fun ChatInputFieldComponent(
                         }
                     }
                 }
+            }
+            if (!interactionSource.collectIsFocusedAsState().value && userData.typing.isNotEmpty()) {
+                changeTypingStatus(
+                    userId = userData.id, isTyping = false, chatRoomId = friendData.chatRoomID
+                )
             }
             if (chatMateResponseState == ChatMateResponseState.Loading) {
                 isLoading = true
@@ -251,6 +262,7 @@ fun ChatInputFieldComponent(
                         }
                     },
                     maxLines = 4,
+                    interactionSource = interactionSource,
                     cursorBrush = Brush.linearGradient(
                         listOf(
                             Color(0xFF00A0E8), Color(0xFF00A0E8), Color(
@@ -258,7 +270,14 @@ fun ChatInputFieldComponent(
                             )
                         ), Offset.Zero, Offset.Infinite, TileMode.Repeated
                     ),
-                    onValueChange = { text = it },
+                    onValueChange = {
+                        text = it
+                        changeTypingStatus(
+                            userId = userData.id,
+                            isTyping = true,
+                            chatRoomId = friendData.chatRoomID
+                        )
+                    },
                     textStyle = LocalTextStyle.current.copy(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Normal,

@@ -13,12 +13,18 @@ class ChatsViewModel : ViewModel() {
     fun filterFriendsList(
         searchedValue: String, completeChatList: List<InternalChatInstance>
     ): List<InternalChatInstance> {
-        return if (searchedValue != "") completeChatList.filter {
-            it.personList.username["mixedcase"]?.contains(
-                searchedValue, ignoreCase = true
-            ) ?: false || it.lastMessage.text.contains(
-                searchedValue, ignoreCase = true
-            )
-        } else completeChatList
+        if (searchedValue.isEmpty()) {
+            return completeChatList
+        }
+
+        return completeChatList.asSequence().filter { chatInstance ->
+            val usernameContainsSearch =
+                chatInstance.personList.username["mixedcase"]
+                    ?.contains(searchedValue, ignoreCase = true) ?: false
+            val messageContainsSearch =
+                chatInstance.lastMessage.text.contains(searchedValue, ignoreCase = true)
+            usernameContainsSearch || messageContainsSearch
+        }.toList()
     }
+
 }

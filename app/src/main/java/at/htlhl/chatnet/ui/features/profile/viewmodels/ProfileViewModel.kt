@@ -6,6 +6,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
 import java.util.Locale
@@ -30,7 +31,7 @@ class ProfileViewModel : ViewModel() {
             } else {
                 callback(false)
             }
-        }.addOnFailureListener { exception ->
+        }.addOnFailureListener { _ ->
             callback(false)
         }
     }
@@ -38,7 +39,6 @@ class ProfileViewModel : ViewModel() {
     fun logout(context: Context, googleSignInOptions: GoogleSignInOptions) {
         val googleSignInClient = GoogleSignIn.getClient(context, googleSignInOptions)
         googleSignInClient.signOut().addOnCompleteListener {}
-
     }
 
     fun updateUserProfilePicture(imageReference: String, onComplete: (Boolean) -> Unit) {
@@ -67,10 +67,20 @@ class ProfileViewModel : ViewModel() {
     }
 
     fun deleteUserAccount(onSuccess: () -> Unit, onFailure: () -> Unit) {
-        auth.currentUser?.delete()?.addOnSuccessListener {
-            onSuccess()
-        }?.addOnFailureListener {
-            onFailure()
-        }
+        FirebaseFirestore.getInstance().collection("users").document(auth.currentUser!!.uid)
+            .update(
+                mapOf(
+                    "email" to FieldValue.delete(),
+                    "username.lowercase" to FieldValue.delete(),
+                )
+            ).addOnSuccessListener { _ ->
+                auth.currentUser!!.delete().addOnSuccessListener {
+                    onSuccess()
+                }.addOnFailureListener {
+                    onFailure()
+                }
+            }.addOnFailureListener {
+                onFailure()
+            }
     }
 }

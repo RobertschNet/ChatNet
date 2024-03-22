@@ -76,12 +76,9 @@ class ChatsView {
         var showClearChatDialog by remember { mutableStateOf(false) }
         var changeBlockStateDialog by remember { mutableStateOf(false) }
         var modelSheetState by remember { mutableStateOf(false) }
+        var hasPreloadedImages by remember { mutableStateOf(false) }
 
-        val completeChatsListState by sharedViewModel.completeChatList.collectAsState(
-            initial = arrayListOf(
-                InternalChatInstance()
-            )
-        )
+        val completeChatsListState by sharedViewModel.completeChatList.collectAsState()
         val chatDataState by sharedViewModel.chatData.collectAsState(
             initial = arrayListOf(
                 FirebaseChat()
@@ -106,14 +103,16 @@ class ChatsView {
         val filteredFriendsList = chatsViewModel.filterFriendsList(
             searchedValue = searchedValue, completeChatList = completeChatsList
         )
-
-        LaunchedEffect(chatData) {
-            for (chat in chatData) {
-                for (message in chat.messages) {
-                    for (image in message.images) {
-                        preLoadImages(context = context, imageUrls = image)
+        LaunchedEffect(hasPreloadedImages) {
+            if (!hasPreloadedImages) {
+                for (chat in chatData) {
+                    for (message in chat.messages) {
+                        for (image in message.images) {
+                            preLoadImages(context = context, imageUrls = image)
+                        }
                     }
                 }
+                hasPreloadedImages = true
             }
         }
 
@@ -178,8 +177,7 @@ class ChatsView {
                 }
             })
         if (showBigUserImageDialog) {
-            ShowBigUserImageDialog(
-                userData = userData,
+            ShowBigUserImageDialog(userData = userData,
                 friendData = friendData,
                 onDismiss = { action ->
                     when (action) {

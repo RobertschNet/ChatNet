@@ -111,6 +111,9 @@ class FindUserView {
                             userData = userData,
                             friendData = clickedPerson,
                             onSuccess = {
+                                coroutineScope.launch {
+                                    scaffoldState.conceal()
+                                }
                                 sharedViewModel.sortDataChats()
                             }
                         )

@@ -28,6 +28,7 @@ class LoginRegisterViewModel : ViewModel() {
             "id" to auth.currentUser?.uid.toString(),
             "image" to "https://www.w3schools.com/howto/img_avatar2.png",
             "online" to true,
+            "typing" to "",
             "username" to mapOf(
                 "lowercase" to name.lowercase(Locale.ROOT),
                 "mixedcase" to name,

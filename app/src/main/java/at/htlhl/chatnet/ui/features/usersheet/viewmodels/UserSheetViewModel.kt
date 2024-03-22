@@ -40,6 +40,7 @@ class UserSheetViewModel:ViewModel() {
                             username = data.username,
                             id = data.id,
                             online = data.online,
+                            typing = data.typing,
                             email = data.email,
                             color = data.color,
                             blocked = data.blocked,

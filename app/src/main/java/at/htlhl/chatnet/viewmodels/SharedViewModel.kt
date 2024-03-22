@@ -1,9 +1,12 @@
 package at.htlhl.chatnet.viewmodels
 
 import android.graphics.Bitmap
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import at.htlhl.chatnet.data.ChatMateResponseState
 import at.htlhl.chatnet.data.FirebaseChat
 import at.htlhl.chatnet.data.FirebaseFriend
@@ -22,9 +25,11 @@ import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
@@ -55,6 +60,7 @@ class SharedViewModel : ViewModel() {
 
     val auth: FirebaseAuth = Firebase.auth
     var isDataLoaded = mutableStateOf(false)
+    var isDataReady by mutableStateOf(false)
 
     val chatMateResponseState = mutableStateOf(ChatMateResponseState.Success)
     var previousRandChatUsersList = mutableStateOf<List<FirebaseUser>>(emptyList())
@@ -216,6 +222,7 @@ class SharedViewModel : ViewModel() {
                                         username = it.username,
                                         id = it.id,
                                         online = it.online,
+                                        typing = it.typing,
                                         email = it.email,
                                         color = it.color,
                                         blocked = it.blocked,
@@ -272,6 +279,7 @@ class SharedViewModel : ViewModel() {
                 username = person.username,
                 online = person.online,
                 id = person.id,
+                typing = "",
                 tags = listOf()
             ),
                 timestampMessage = matchingChat?.messages?.lastOrNull()?.timestamp
@@ -305,20 +313,41 @@ class SharedViewModel : ViewModel() {
     }
 
     fun sortDataChats() {
-        val updatedPersonList: List<InternalChatInstance> = _friendListData.value.map { person ->
-            val matchingChat = _chatData.value.find { chat ->
-                chat.members.contains(person.id) && chat.tab == "chats"
-            }
+        val friendListData = _friendListData.value
+        val chatData = _chatData.value
+
+        val chatMap = chatData.filter { it.tab == "chats" }
+            .flatMap { chat -> chat.members.map { it to chat } }
+            .toMap()
+
+        val updatedPersonList: List<InternalChatInstance> = friendListData.map { person ->
+            val matchingChat = chatMap[person.id]
             val internalChatInstance = createInternalChatInstance(matchingChat ?: FirebaseChat())
 
             internalChatInstance.copy(personList = person)
         }
-        val finalPersonList =
-            updatedPersonList.filter { person -> person.personList.statusFriend == PersonType.ACCEPTED_PERSON }
-        val sortedPersonList =
-            finalPersonList.sortedWith(compareByDescending<InternalChatInstance> { it.pinChat }.thenByDescending { it.timestampMessage })
+
+        val finalPersonList = updatedPersonList
+            .filter { it.personList.statusFriend == PersonType.ACCEPTED_PERSON }
+
+        val sortedPersonList = finalPersonList.sortedWith(
+            compareByDescending<InternalChatInstance> { it.pinChat }.thenByDescending { it.timestampMessage }
+        )
         _completeChatList.value = sortedPersonList
+        startAppDelayTimer()
         sortDataDropIn()
+    }
+
+    private fun startAppDelayTimer() {
+        if (isDataReady) {
+            return
+        } else {
+            viewModelScope.launch {
+                delay(900)
+                isDataReady = true
+            }
+        }
+
     }
 
     private fun sortDataDropIn() {
@@ -389,6 +418,7 @@ class SharedViewModel : ViewModel() {
             pinned = emptyList(),
             color = "",
             connected = false,
+            typing = "",
             muted = emptyList(),
             statusFriend = PersonType.EMPTY_PERSON,
             tags = listOf("No Tags")),
@@ -583,6 +613,7 @@ class SharedViewModel : ViewModel() {
                                                 connected = data.connected,
                                                 pinned = data.pinned,
                                                 muted = data.muted,
+                                                typing = data.typing,
                                                 statusFriend = when (friend.status) {
                                                     "accepted" -> {
                                                         PersonType.ACCEPTED_PERSON

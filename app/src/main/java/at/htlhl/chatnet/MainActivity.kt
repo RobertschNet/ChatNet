@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         installSplashScreen().apply {
             setKeepOnScreenCondition {
-                viewModel.completeChatList.value.isEmpty() && viewModel.auth.currentUser != null
+            viewModel.auth.currentUser != null && !viewModel.isDataReady
             }
         }
         val serviceIntent = Intent(this, DropInUpdateService::class.java)
@@ -101,6 +101,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        resetRandChatPairedUser(auth = viewModel.auth)
         serviceConnection?.let { unbindService(it) }
         stopService(Intent(this, DropInUpdateService::class.java))
     }

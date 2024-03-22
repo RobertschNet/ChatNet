@@ -160,7 +160,7 @@ fun ChatViewTopBar(
                                 modifier = Modifier.padding(start = 5.dp)
                             )
                             Text(
-                                text = if (friendData.personList.online) "online" else "offline",
+                                text = if (friendData.personList.typing== friendData.chatRoomID) "typing..." else if (friendData.personList.online) "online" else "offline",
                                 color = MaterialTheme.colorScheme.secondary,
                                 fontSize = 13.sp,
                                 modifier = Modifier.padding(start = 7.dp)

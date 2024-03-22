@@ -6,6 +6,7 @@ data class FirebaseUser(
     val image: String, // url of the users profile picture
     val username: Map<String, String>, // username of the user in different cases (lowercase, mixedcase)
     val online: Boolean, // the current status of the user (online, offline)
+    val typing: String, // the id of the chat the user is currently typing something in
     val id: String, // id of the user
     val email: String, // email of the user
     val pinned: List<String>, // list of ids of chats that have been pinned by the user
@@ -20,6 +21,7 @@ data class FirebaseUser(
         "",
         mapOf(),
         false,
+        "",
         "",
         "",
         listOf(),
