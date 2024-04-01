@@ -16,15 +16,15 @@ fun highlightSearchedText(content: String, searchedText: String): AnnotatedStrin
     }
     return buildAnnotatedString {
         var lastIndex = 0
-        occurrences.forEach { ottoIndex ->
-            append(content.substring(lastIndex, ottoIndex))
+        occurrences.forEach { index ->
+            append(content.substring(lastIndex, index))
             if (searchedText.isNotEmpty()) {
                 withStyle(style = SpanStyle(background = Color.Yellow, color = Color.Black)) {
-                    val ottoLength = searchedText.length
-                    append(content.substring(ottoIndex, ottoIndex + ottoLength))
+                    val length = searchedText.length
+                    append(content.substring(index, index + length))
                 }
             }
-            lastIndex = ottoIndex + searchedText.length
+            lastIndex = index + searchedText.length
         }
         if (lastIndex < content.length) {
             append(content.substring(lastIndex))

@@ -15,9 +15,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
@@ -35,14 +37,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -51,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
@@ -75,16 +79,17 @@ import coil.compose.SubcomposeAsyncImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ChatInputFieldComponent(
     coroutineScope: CoroutineScope,
     context: Context,
     userData: FirebaseUser,
     friendData: InternalChatInstance,
+    isRandChat: Boolean,
     chatMateResponseText: String,
     chatMateResponseState: ChatMateResponseState,
     navController: NavController,
+    chatRoomID: String,
     isChatMateChat: Boolean,
     onSentWhileBlocked: () -> Unit,
     onUpdateChatMateResponseState: (ChatMateResponseState) -> Unit,
@@ -92,9 +97,34 @@ fun ChatInputFieldComponent(
     var badgeCount by remember { mutableIntStateOf(0) }
     var isLoading by rememberSaveable { mutableStateOf(false) }
     var text by rememberSaveable { mutableStateOf("") }
+    val isKeyboardOpen by keyboardAsState() // true or false
     val interactionSource = remember { MutableInteractionSource() }
-
     LaunchedEffect(chatMateResponseText) { text = chatMateResponseText }
+    LaunchedEffect(friendData.personList.connected) {
+        if (!friendData.personList.connected && isRandChat) {
+            Toast.makeText(
+                context,
+                "User left\nSwipe right to search for another user",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    if (interactionSource.collectIsFocusedAsState().value) {
+        if (isKeyboardOpen) {
+            changeTypingStatus(
+                userId = userData.id,
+                chatRoomId = chatRoomID,
+                isTyping = true
+            )
+        } else {
+            changeTypingStatus(
+                userId = userData.id,
+                chatRoomId = chatRoomID,
+                isTyping = false
+            )
+        }
+    }
     var chatMateLoadingText by remember { mutableStateOf("ChatMate is thinking") }
     val chatMatePadding =
         if (chatMateResponseState == ChatMateResponseState.Loading) 10.dp else 0.dp
@@ -187,11 +217,6 @@ fun ChatInputFieldComponent(
                     }
                 }
             }
-            if (!interactionSource.collectIsFocusedAsState().value && userData.typing.isNotEmpty()) {
-                changeTypingStatus(
-                    userId = userData.id, isTyping = false, chatRoomId = friendData.chatRoomID
-                )
-            }
             if (chatMateResponseState == ChatMateResponseState.Loading) {
                 isLoading = true
                 LaunchedEffect(chatMateResponseState) {
@@ -222,10 +247,13 @@ fun ChatInputFieldComponent(
                 backgroundColor = if (isSystemInDarkTheme()) Color(0xFF141419) else Color(0xFFF3F4FA)
             ) {
                 BasicTextField(
+                    interactionSource = interactionSource,
                     keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = {
                         if (!isLoading) {
-                            onMessageSentPressed(coroutineScope = coroutineScope,
+                            onMessageSentPressed(
+                                coroutineScope = coroutineScope,
+                                chatRoomID = chatRoomID,
                                 userData = userData,
                                 friendData = friendData,
                                 chatMateChat = isChatMateChat,
@@ -262,7 +290,6 @@ fun ChatInputFieldComponent(
                         }
                     },
                     maxLines = 4,
-                    interactionSource = interactionSource,
                     cursorBrush = Brush.linearGradient(
                         listOf(
                             Color(0xFF00A0E8), Color(0xFF00A0E8), Color(
@@ -272,12 +299,8 @@ fun ChatInputFieldComponent(
                     ),
                     onValueChange = {
                         text = it
-                        changeTypingStatus(
-                            userId = userData.id,
-                            isTyping = true,
-                            chatRoomId = friendData.chatRoomID
-                        )
                     },
+                    enabled = !(isRandChat && !friendData.personList.connected),
                     textStyle = LocalTextStyle.current.copy(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Normal,
@@ -286,6 +309,17 @@ fun ChatInputFieldComponent(
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clickable {
+                            if (!friendData.personList.connected && isRandChat) {
+                                Toast
+                                    .makeText(
+                                        context,
+                                        "User left\nSwipe right to search for another user",
+                                        Toast.LENGTH_SHORT
+                                    )
+                                    .show()
+                            }
+                        }
                         .height(50.dp + badgeCount.dp)
                         .background(
                             if (isSystemInDarkTheme()) Color(0xFF141419) else Color(0xFFF3F4FA),
@@ -405,6 +439,7 @@ fun ChatInputFieldComponent(
                                         fontWeight = Bold,
                                         modifier = Modifier.clickable {
                                             onMessageSentPressed(coroutineScope = coroutineScope,
+                                                chatRoomID = chatRoomID,
                                                 userData = userData,
                                                 friendData = friendData,
                                                 chatMateChat = isChatMateChat,
@@ -462,4 +497,10 @@ fun ChatInputFieldComponent(
             Spacer(modifier = Modifier.height(10.dp))
         }
     }
+}
+
+@Composable
+fun keyboardAsState(): State<Boolean> {
+    val isImeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    return rememberUpdatedState(isImeVisible)
 }

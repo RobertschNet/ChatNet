@@ -15,12 +15,13 @@ import kotlinx.coroutines.launch
 fun uploadSentMessage(
     userData: FirebaseUser,
     friendData: InternalChatInstance,
+    chatRoomID: String,
     coroutineScope: CoroutineScope,
     chatMateChat: Boolean,
     text: String,
     images: List<String> = arrayListOf(),
     onUpdateChatMateResponseState: (ChatMateResponseState) -> Unit,
-    onSuccess: (Boolean) -> Unit
+    onSuccess: (Boolean) -> Unit = {}
 ) {
     val message = FirebaseMessage(
         sender = userData.id,
@@ -34,7 +35,7 @@ fun uploadSentMessage(
         )
     )
     coroutineScope.launch {
-        saveMessage(chatRoomID = friendData.chatRoomID, message = message, {
+        saveMessage(chatRoomID = chatRoomID, message = message, {
             onSuccess(true)
             sendPushNotificationToPartner(
                 userID = userData.id, friendID = friendData.personList.id, message = message

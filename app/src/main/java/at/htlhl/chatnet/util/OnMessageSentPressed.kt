@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 
 fun onMessageSentPressed(
     coroutineScope: CoroutineScope,
+    chatRoomID: String,
     userData:FirebaseUser,
     friendData: InternalChatInstance,
     chatMateChat: Boolean,
@@ -26,21 +27,17 @@ fun onMessageSentPressed(
     if (!userData.blocked.contains(friendData.personList.id)) {
         if (text.isNotEmpty() || getImageUploadList(friendData.chatRoomID).isNotEmpty()) {
             if (getImageUploadList(friendData.chatRoomID).isEmpty()) {
+                onSuccess()
                 uploadSentMessage(
                     userData = userData,
+                    chatRoomID = chatRoomID,
                     friendData = friendData,
                     coroutineScope = coroutineScope,
                     chatMateChat = chatMateChat,
                     text = text, onUpdateChatMateResponseState = { chatMateResponseState ->
                        onUpdateChatMateResponseState(chatMateResponseState)
                     },
-                ) {uploaded->
-                    if (uploaded) {
-                        onSuccess()
-                    } else {
-                        Toast.makeText(context, "Error sending message", Toast.LENGTH_SHORT).show()
-                    }
-                }
+                )
             } else {
                 onIsLoading(true)
                 createImageToUpload(
@@ -50,6 +47,7 @@ fun onMessageSentPressed(
                         removeImageUploadList(id = friendData.chatRoomID)
                         uploadSentMessage(
                             userData = userData,
+                            chatRoomID = chatRoomID,
                             friendData = friendData,
                             coroutineScope = coroutineScope,
                             chatMateChat = chatMateChat,

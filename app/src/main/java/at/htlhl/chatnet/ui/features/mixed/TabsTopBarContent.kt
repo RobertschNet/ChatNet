@@ -8,12 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.outlined.LocationOff
-import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,7 +29,6 @@ import at.chatnet.R
 import at.htlhl.chatnet.data.CurrentTab
 import at.htlhl.chatnet.data.FirebaseUser
 import coil.compose.SubcomposeAsyncImage
-import java.util.Locale
 
 
 @Composable
@@ -78,17 +72,17 @@ fun TabsTopBarContent(
             ) {
                 Box(modifier = Modifier.size(50.dp)) {
                     if (tab == CurrentTab.DROPIN) {
-                        Icon(
-                            imageVector = if (dropInState) Icons.Outlined.LocationOff else Icons.Outlined.LocationOn,
-                            tint = MaterialTheme.colorScheme.primary,
+                        SubcomposeAsyncImage(
+                            model = if (dropInState) R.drawable.placeholder_map_pointer_svgrepo_com else R.drawable.placeholder_maps_and_location_svgrepo_com,
+                            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
                             modifier = Modifier
-                                .size(35.dp)
+                                .size(30.dp)
                                 .align(Alignment.Center),
                             contentDescription = null
                         )
                     } else {
                         SubcomposeAsyncImage(
-                            model = if (tab == CurrentTab.CHATS) R.drawable.add_user_social_svgrepo_com_1_ else if (tab == CurrentTab.CHATMATE) R.drawable.chat_add_svgrepo_com_1_ else Icons.Default.LocationOn,
+                            model = if (tab == CurrentTab.CHATS) R.drawable.add_user_social_svgrepo_com_1_ else R.drawable.add_chat_svgrepo_com,
                             contentDescription = null,
                             modifier = Modifier
                                 .size(35.dp)

@@ -90,7 +90,9 @@ class MainActivity : ComponentActivity() {
                 }
             }
             if (checkFineLocationPermission()) {
-                manageDropInServiceStatus(viewModel = viewModel, serviceIntent = serviceIntent)
+                if (navController.currentBackStackEntry?.destination?.route != Screens.LoginFlow.route) {
+                    manageDropInServiceStatus(viewModel = viewModel, serviceIntent = serviceIntent)
+                }
             } else {
                 requestFineLocationPermissionLauncher.launch(
                     Manifest.permission.ACCESS_FINE_LOCATION

@@ -2,8 +2,10 @@ package at.htlhl.chatnet.util.cloudfunctions
 
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.navigation.NavController
 import at.htlhl.chatnet.navigation.Screens
+import at.htlhl.chatnet.viewmodels.SharedViewModel
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
@@ -20,8 +22,7 @@ fun requestRandChatPairingPartner(
     userID: String,
     requestState: Boolean,
     navController: NavController,
-    onSuccess: (String) -> Unit = {},
-    onFailure: () -> Unit = {}
+    sharedViewModel: SharedViewModel,
 ) {
     val url = "https://randchat-ie4mphraqq-uc.a.run.app/randChat"
     val client = OkHttpClient()
@@ -33,29 +34,30 @@ fun requestRandChatPairingPartner(
 
     client.newCall(request).enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) {
-            onFailure()
         }
 
         override fun onResponse(call: Call, response: Response) {
             if (response.isSuccessful) {
                 val responseBody = response.body?.string()
                 if (responseBody == "{\"partner\":null}" && navController.currentDestination?.route == Screens.RandChatScreen.route) {
+                   Log.println(Log.INFO, "RandChat", "No partner found, retrying in 5 seconds")
                     handler.postDelayed(
                         {
                             requestRandChatPairingPartner(
-                                userID = userID, requestState = false, navController = navController
+                                userID = userID, requestState = false, navController = navController,sharedViewModel = sharedViewModel
                             )
                         }, delayMillis
                     )
                 } else {
-                    val partner =
-                        responseBody?.substringAfter("partner\":\"")?.substringBefore("\"")
-                    if (partner != null) {
-                        onSuccess(partner)
-                    }
+                    val chatID= responseBody?.substringAfter("chatID\":\"")?.substringBefore("\"")
+                    val partner = responseBody?.substringAfter("partner\":\"")?.substringBefore("\"")
+                    Log.println(Log.INFO, "RandChat", "Partner found: $partner")
+                    sharedViewModel.fetchRandChatPairedUser(
+                        partnerID = partner!!,
+                        chatID = chatID!!
+                    )
+
                 }
-            } else {
-                onFailure()
             }
         }
     })

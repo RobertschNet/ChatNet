@@ -1,6 +1,7 @@
 package at.htlhl.chatnet.viewmodels
 
 import android.graphics.Bitmap
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -66,6 +67,8 @@ class SharedViewModel : ViewModel() {
     var previousRandChatUsersList = mutableStateOf<List<FirebaseUser>>(emptyList())
     private val _publicUserData = MutableStateFlow(FirebaseUser())
     val publicUserData: StateFlow<FirebaseUser> get() = _publicUserData
+    private val _currentRandChat = MutableStateFlow(FirebaseChat())
+    val currentRandChat: StateFlow<FirebaseChat> get() = _currentRandChat
 
     private val _friend = MutableStateFlow(InternalChatInstance())
     val friend: StateFlow<InternalChatInstance> get() = _friend
@@ -104,7 +107,12 @@ class SharedViewModel : ViewModel() {
 
     fun updateFriend(newFriend: InternalChatInstance, onComplete: () -> Unit = {}) {
         _friend.value = newFriend
-        onComplete.invoke()
+        onComplete()
+    }
+
+    private fun updateCurrentRandChat(newChat: FirebaseChat, onComplete: () -> Unit = {}) {
+        _currentRandChat.value = newChat
+        onComplete()
     }
 
     fun updateNearbyDropInUsersList(
@@ -315,10 +323,10 @@ class SharedViewModel : ViewModel() {
     fun sortDataChats() {
         val friendListData = _friendListData.value
         val chatData = _chatData.value
-
+        updateCurrentRandChat(chatData.find { it.chatRoomID == _currentRandChat.value.chatRoomID }
+            ?: FirebaseChat())
         val chatMap = chatData.filter { it.tab == "chats" }
-            .flatMap { chat -> chat.members.map { it to chat } }
-            .toMap()
+            .flatMap { chat -> chat.members.map { it to chat } }.toMap()
 
         val updatedPersonList: List<InternalChatInstance> = friendListData.map { person ->
             val matchingChat = chatMap[person.id]
@@ -327,12 +335,11 @@ class SharedViewModel : ViewModel() {
             internalChatInstance.copy(personList = person)
         }
 
-        val finalPersonList = updatedPersonList
-            .filter { it.personList.statusFriend == PersonType.ACCEPTED_PERSON }
+        val finalPersonList =
+            updatedPersonList.filter { it.personList.statusFriend == PersonType.ACCEPTED_PERSON }
 
-        val sortedPersonList = finalPersonList.sortedWith(
-            compareByDescending<InternalChatInstance> { it.pinChat }.thenByDescending { it.timestampMessage }
-        )
+        val sortedPersonList =
+            finalPersonList.sortedWith(compareByDescending<InternalChatInstance> { it.pinChat }.thenByDescending { it.timestampMessage })
         _completeChatList.value = sortedPersonList
         startAppDelayTimer()
         sortDataDropIn()
@@ -655,20 +662,24 @@ class SharedViewModel : ViewModel() {
             }
     }
 
-    fun fetchRandChatPairedUser(partnerID: String, onComplete: () -> Unit = {}) {
-        randState.value = true
+    fun fetchRandChatPairedUser(partnerID: String, chatID: String, onComplete: () -> Unit = {}) {
         FirebaseFirestore.getInstance().collection("users").document(partnerID).get()
             .addOnSuccessListener { documentSnapshot ->
                 if (documentSnapshot.exists()) {
                     val personList = documentSnapshot.toObject(FirebaseUser::class.java)
-                    if (!previousRandChatUsersList.value.contains(personList)) {
+                    if (previousRandChatUsersList.value.none {
+                            it.id == partnerID
+                        }) {
                         previousRandChatUsersList.value += personList!!
                     }
-                    val specificChat = chatData.value.find {
-                        it.tab == "randchat" && it.members.contains(partnerID) && it.members.contains(
-                            auth.currentUser?.uid.toString()
-                        )
-                    }
+
+                    Log.println(
+                        Log.INFO,
+                        "RandChat",
+                        "Room found: ${chatData.value.find { it.chatRoomID == chatID }}"
+                    )
+                    _currentRandChat.value =
+                        chatData.value.find { it.chatRoomID == chatID } ?: FirebaseChat()
                     _friend.value = InternalChatInstance(
                         personList = personList!!,
                         timestampMessage = Timestamp.now(),
@@ -676,8 +687,9 @@ class SharedViewModel : ViewModel() {
                         pinChat = false,
                         read = 0,
                         markedAsUnread = false,
-                        chatRoomID = specificChat?.chatRoomID ?: "",
+                        chatRoomID = chatID,
                     )
+                    randState.value = true
                     onComplete()
                 }
             }

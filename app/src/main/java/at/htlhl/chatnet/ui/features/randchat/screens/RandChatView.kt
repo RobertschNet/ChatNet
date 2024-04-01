@@ -51,27 +51,25 @@ class RandChatView {
         val chatMateResponseState = sharedViewModel.chatMateResponseState.value
         val searchedValue = sharedViewModel.searchValue.value
 
-        val friendDataState by sharedViewModel.friend.collectAsState(initial = InternalChatInstance())
+        val friendDataState by sharedViewModel.friend.collectAsState()
         val userDataState by sharedViewModel.userData.collectAsState()
-        val chatDataState by sharedViewModel.chatData.collectAsState(initial = emptyList())
+        val currentRandChatState by sharedViewModel.currentRandChat.collectAsState()
 
         val friendData: InternalChatInstance = friendDataState
         val userData: FirebaseUser = userDataState
-        val chatData: List<FirebaseChat> = chatDataState
+        val currentRandChat: FirebaseChat = currentRandChatState
 
         if (pageState.currentPage == 1 && !pageState.isScrollInProgress) {
             sharedViewModel.updateRandState(newState = false)
             LaunchedEffect(pageState.currentPage) {
                 coroutineScope.launch { pageState.scrollToPage(0) }
             }
-            requestRandChatPairingPartner(userID = userData.id,
+            requestRandChatPairingPartner(
+                userID = userData.id,
                 requestState = true,
                 navController = navController,
-                onSuccess = { partnerID ->
-                    sharedViewModel.fetchRandChatPairedUser(
-                        partnerID = partnerID
-                    )
-                })
+                sharedViewModel = sharedViewModel,
+            )
         }
         HorizontalPager(
             state = pageState, beyondBoundsPageCount = 1, userScrollEnabled = randState
@@ -91,13 +89,9 @@ class RandChatView {
                                 }
                             }
                         }
-                        val matchingChat = chatData.find { chat ->
-                            chat.chatRoomID == friendData.chatRoomID
-                        }
-                        val chatMateChat = matchingChat?.tab == "chatmate"
-                        val chatRoomId = matchingChat?.chatRoomID ?: ""
+                        val chatRoomId = currentRandChat.chatRoomID
                         val messageListFromMatchingChat: List<InternalMessageInstance> =
-                            matchingChat?.let { chat ->
+                            currentRandChat.let { chat ->
                                 chat.messages.map { message ->
                                     InternalMessageInstance(
                                         isFromCache = message.isFromCache,
@@ -110,7 +104,7 @@ class RandChatView {
                                         visible = message.visible,
                                     )
                                 }
-                            } ?: emptyList()
+                            }
                         val filteredMessages = messageListFromMatchingChat.filter { message ->
                             message.visible.contains(userData.id)
                         }.toMutableList()
@@ -170,7 +164,7 @@ class RandChatView {
                         }, content = { paddingValues ->
                             RandChatContentComponent(paddingValues = paddingValues,
                                 sharedViewModel = sharedViewModel,
-                                chatMateChat = chatMateChat,
+                                chatMateChat = false,
                                 messages = filteredMessages,
                                 userData = userData,
                                 lazyListState = lazyColumnState,
@@ -185,10 +179,12 @@ class RandChatView {
                                 friendData = friendData,
                                 chatMateResponseText = chatMateResponse,
                                 chatMateResponseState = chatMateResponseState,
+                                isRandChat = true,
+                                chatRoomID = currentRandChat.chatRoomID,
                                 coroutineScope = coroutineScope,
                                 context = context,
                                 navController = navController,
-                                isChatMateChat = chatMateChat,
+                                isChatMateChat = false,
                                 onUpdateChatMateResponseState = { chatMateResponseState ->
                                     sharedViewModel.updateChatMateResponseState(
                                         newChatMateResponseState = chatMateResponseState

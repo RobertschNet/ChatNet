@@ -28,8 +28,8 @@ import at.htlhl.chatnet.ui.features.chat.components.ChatViewContentComponent
 import at.htlhl.chatnet.ui.features.chat.viewmodels.ChatViewModel
 import at.htlhl.chatnet.ui.features.dialogs.ChangeBlockStateDialog
 import at.htlhl.chatnet.ui.features.dialogs.UnblockToMessageDialog
-import at.htlhl.chatnet.ui.features.mixed.ChatViewTopBar
 import at.htlhl.chatnet.ui.features.mixed.ChatInputFieldComponent
+import at.htlhl.chatnet.ui.features.mixed.ChatViewTopBar
 import at.htlhl.chatnet.util.firebase.updateBlockedUserList
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
@@ -106,6 +106,7 @@ class ChatView {
                                 navController.navigate(Screens.UserSheetScreen.route)
                             })
                         } else {
+
                             navController.navigateUp()
                         }
                     },
@@ -173,7 +174,9 @@ class ChatView {
                     chatMateResponseState = chatMateResponseState,
                     coroutineScope = coroutineScope,
                     context = context,
+                    isRandChat = false,
                     navController = navController,
+                    chatRoomID = friendData.chatRoomID,
                     isChatMateChat = chatMateChat,
                     onUpdateChatMateResponseState = { chatMateResponseState ->
                         sharedViewModel.updateChatMateResponseState(newChatMateResponseState = chatMateResponseState)

@@ -35,7 +35,7 @@ fun ChatViewContentComponent(
     chatViewModel: ChatViewModel,
     sharedViewModel: SharedViewModel,
     userData: FirebaseUser,
-    context:Context,
+    context: Context,
     friendData: InternalChatInstance,
     paddingValues: PaddingValues,
     imageList: List<InternalMessageInstance>,

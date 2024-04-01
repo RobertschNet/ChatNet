@@ -98,11 +98,8 @@ class RandChatStartView {
                                 requestRandChatPairingPartner(userID = userData.id,
                                     requestState = false,
                                     navController = navController,
-                                    onSuccess = { partnerID ->
-                                        sharedViewModel.fetchRandChatPairedUser(
-                                            partnerID = partnerID,
-                                        )
-                                    })
+                                    sharedViewModel = sharedViewModel,
+                                   )
                             }
                             navController.navigate(Screens.RandChatScreen.route)
                         })

@@ -107,6 +107,7 @@ fun Navigation(
                     delay(50)
                     onBottomBarDisabled.invoke(true)
                 }
+
                 ChatsView().ChatsScreen(navController, sharedViewModel)
             }
             composable(Screens.DropInScreen.route, enterTransition = {
