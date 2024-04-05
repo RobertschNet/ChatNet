@@ -23,6 +23,7 @@ import at.htlhl.chatnet.services.DropInUpdateService
 import at.htlhl.chatnet.ui.theme.ChatNetTheme
 import at.htlhl.chatnet.util.cloudfunctions.resetRandChatPairedUser
 import at.htlhl.chatnet.util.cloudfunctions.updateUsersFCMToken
+import at.htlhl.chatnet.util.firebase.changeTypingStatus
 import at.htlhl.chatnet.util.preLoadImages
 import at.htlhl.chatnet.viewmodels.SharedViewModel
 
@@ -37,7 +38,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         installSplashScreen().apply {
             setKeepOnScreenCondition {
-            viewModel.auth.currentUser != null && !viewModel.isDataReady
+                viewModel.auth.currentUser != null && !viewModel.isDataReady
             }
         }
         val serviceIntent = Intent(this, DropInUpdateService::class.java)
@@ -63,7 +64,8 @@ class MainActivity : ComponentActivity() {
                         viewModel.updateOnlineStatus(true)
                         viewModel.getUserData {
                             preLoadImages(
-                                context = applicationContext, imageUrls = viewModel.userData.value.image
+                                context = applicationContext,
+                                imageUrls = viewModel.userData.value.image
                             )
                         }
                         viewModel.fetchFriendsFromUser {
@@ -104,6 +106,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         resetRandChatPairedUser(auth = viewModel.auth)
+        changeTypingStatus(viewModel.userData.value.id, false, viewModel.friend.value.chatRoomID)
         serviceConnection?.let { unbindService(it) }
         stopService(Intent(this, DropInUpdateService::class.java))
     }
@@ -111,6 +114,7 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         resetRandChatPairedUser(auth = viewModel.auth)
+        changeTypingStatus(viewModel.userData.value.id, false, viewModel.friend.value.chatRoomID)
         viewModel.updateOnlineStatus(false)
     }
 
@@ -156,7 +160,8 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
                 manageDropInServiceStatus(
-                    viewModel = viewModel, serviceIntent = Intent(this, DropInUpdateService::class.java)
+                    viewModel = viewModel,
+                    serviceIntent = Intent(this, DropInUpdateService::class.java)
                 )
             } else {
                 viewModel.updateDropInState(newState = false)

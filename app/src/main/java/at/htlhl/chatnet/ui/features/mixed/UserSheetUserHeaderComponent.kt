@@ -1,5 +1,6 @@
 package at.htlhl.chatnet.ui.features.mixed
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -30,42 +32,59 @@ import coil.compose.SubcomposeAsyncImage
 
 @Composable
 fun UserSheetUserHeaderComponent(
-    friend: FirebaseUser,
+    userData: FirebaseUser,
+    friendData: FirebaseUser,
     onNavigateToChatClicked: () -> Unit,
     onImageClick: () -> Unit
 ) {
-    val friendUserTags = getPersonTagsList(personData = friend)
+    val context = LocalContext.current
+    val friendUserTags = getPersonTagsList(personData = friendData)
     Card(modifier = Modifier.fillMaxWidth(), elevation = 10.dp, backgroundColor = MaterialTheme.colorScheme.background) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            SubcomposeAsyncImage(model = R.drawable.back_svgrepo_com_1_,
+            SubcomposeAsyncImage(
+                model = R.drawable.back_svgrepo_com_1_,
                 contentDescription = null,
                 colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
                 modifier = Modifier
-                    .clickable {
-                        onNavigateToChatClicked()
-                    }
+                    .clickable { onNavigateToChatClicked() }
                     .align(Alignment.TopStart)
                     .padding(10.dp)
-                    .size(30.dp))
+                    .size(30.dp)
+            )
             Column(
                 modifier = Modifier.align(Alignment.Center),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                SubcomposeAsyncImage(
-                    model = friend.image,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .padding(10.dp)
-                        .size(150.dp)
-                        .clickable {
-                            onImageClick()
-                        }
-                        .clip(CircleShape)
-                )
+                if (!friendData.blocked.contains(userData.id)) {
+                    SubcomposeAsyncImage(
+                        model = friendData.image,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .size(150.dp)
+                            .clickable {
+                                onImageClick()
+                            }
+                            .clip(CircleShape)
+                    )
+                }else{
+                    SubcomposeAsyncImage(
+                        model = R.drawable.default_user,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .size(150.dp)
+                            .clickable {
+                               Toast.makeText(context, "User has blocked you", Toast.LENGTH_SHORT).show()
+                            },
+                        contentScale = ContentScale.Crop,
+                        alignment = Alignment.Center,
+                    )
+                }
                 Text(
-                    text = friend.username["mixedcase"].toString(),
+                    text = friendData.username["mixedcase"].toString(),
                     fontSize = 24.sp,
                     color = MaterialTheme.colorScheme.primary,
                     fontFamily = FontFamily.SansSerif,

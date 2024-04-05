@@ -133,10 +133,11 @@ class ChatsView {
                     })
             },
             content = { scaffoldPaddingValues ->
-                if (filteredFriendsList.isEmpty() && isDataLoaded) {
+                if (filteredFriendsList.isEmpty() && isDataLoaded && searchedValue.isEmpty()) {
                     EmptyFriendListContent(onGetStartedClicked = {
                         navController.navigate(Screens.FindUserScreen.route)
-                    })
+                    }
+                    )
                 } else {
                     LazyColumn(
                         Modifier

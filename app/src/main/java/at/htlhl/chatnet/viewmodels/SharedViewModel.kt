@@ -87,8 +87,6 @@ class SharedViewModel : ViewModel() {
     private val _friendListData = MutableStateFlow<List<FirebaseUser>>(emptyList())
     val friendListData: StateFlow<List<FirebaseUser>> get() = _friendListData
 
-    private var friendListDataListener: ListenerRegistration? = null
-
     private val _completeChatList = MutableStateFlow<List<InternalChatInstance>>(emptyList())
     val completeChatList: StateFlow<List<InternalChatInstance>> get() = _completeChatList
 
@@ -185,8 +183,11 @@ class SharedViewModel : ViewModel() {
         previousRandChatUsersList.value = emptyList()
         randState.value = false
         isDataLoaded.value = false
+        snapshotListeners.forEach { it.remove() }
+        snapshotListeners.clear()
     }
 
+    private val snapshotListeners = mutableListOf<ListenerRegistration>()
 
     @Suppress("LABEL_NAME_CLASH")
     fun fetchFriendsFromUser(onComplete: () -> Unit) {
@@ -196,8 +197,7 @@ class SharedViewModel : ViewModel() {
         val subCollectionRef =
             getUserDocumentRef().document(auth.currentUser!!.uid).collection("/$FRIENDS_COLLECTION")
                 .whereNotEqualTo("status", "blocked")
-        friendListDataListener?.remove()
-        friendListDataListener =
+        val friendsListener =
             subCollectionRef.addSnapshotListener { friendQuerySnapshot, friendException ->
                 if (friendException != null) {
                     return@addSnapshotListener
@@ -218,7 +218,7 @@ class SharedViewModel : ViewModel() {
                     var completedCount = 0
                     val totalFriends = subCollectionData.size
                     for (friend in subCollectionData) {
-                        getUserDocumentRef().document(friend.id)
+                        val userListener = getUserDocumentRef().document(friend.id)
                             .addSnapshotListener { userDocumentSnapshot, userException ->
                                 if (userException != null) {
                                     return@addSnapshotListener
@@ -265,9 +265,11 @@ class SharedViewModel : ViewModel() {
                                     _friendListData.value = personListData
                                 }
                             }
+                        snapshotListeners.add(userListener)
                     }
                 }
             }
+        snapshotListeners.add(friendsListener)
     }
 
     private fun filterAndSortNearbyDropInUsers(onComplete: () -> Unit) {
@@ -443,7 +445,7 @@ class SharedViewModel : ViewModel() {
 
     private fun fetchUser(friend: String, onComplete: (FirebaseUser?) -> Unit) {
         val userDocumentRef = FirebaseFirestore.getInstance().collection("users").document(friend)
-        userDocumentRef.addSnapshotListener { documentSnapshot, exception ->
+        val userListener = userDocumentRef.addSnapshotListener { documentSnapshot, exception ->
             if (exception != null) {
                 exception.printStackTrace()
                 onComplete(null)
@@ -464,6 +466,7 @@ class SharedViewModel : ViewModel() {
                 onComplete(null)
             }
         }
+        snapshotListeners.add(userListener)
     }
 
     private fun isChatInstanceValid(chatInstance: InternalChatInstance): Boolean {
@@ -474,82 +477,86 @@ class SharedViewModel : ViewModel() {
     fun fetchChatsWithMessages(): Boolean {
         val chatDataSet = mutableSetOf<FirebaseChat>()
         // Step 1: Listen for changes in the chats collection
-        getChatDocumentRef().whereArrayContains("members", auth.currentUser!!.uid)
-            .addSnapshotListener(MetadataChanges.INCLUDE) { querySnapshot, error ->
-                if (error != null) {
-                    return@addSnapshotListener
-                }
-                if (querySnapshot == null || querySnapshot.isEmpty) {
-                    isDataLoaded.value = true
-                    return@addSnapshotListener
-                }
-                // Step 2: For each change in the chats collection, fetch the messages subCollection
-                querySnapshot.documentChanges.forEach { documentChange ->
-                    // Step 3: Listen for changes in the messages subCollection
-                    val removedDocumentId = documentChange.document.id
-                    val removedChat = chatDataSet.find { it.chatRoomID == removedDocumentId }
-                    if (removedChat != null) {
-                        chatDataSet.remove(removedChat)
+        val chatsListener =
+            getChatDocumentRef().whereArrayContains("members", auth.currentUser!!.uid)
+                .addSnapshotListener(MetadataChanges.INCLUDE) { querySnapshot, error ->
+                    if (error != null) {
+                        return@addSnapshotListener
                     }
-                    _chatData.value = chatDataSet.toList()
-                    if (documentChange.type != DocumentChange.Type.REMOVED) {
-                        val subCollectionRef =
-                            getChatDocumentRef().document(documentChange.document.id)
-                                .collection("/$MESSAGES_COLLECTION")
-                                .orderBy("timestamp", Query.Direction.DESCENDING)
-                        subCollectionRef.addSnapshotListener(MetadataChanges.INCLUDE) { subQuerySnapshot, exception ->
-                            if (exception != null) {
-                                return@addSnapshotListener
-                            }
-                            // Step 4: For each change in the messages subCollection, update the chatDataSet
-                            subQuerySnapshot?.let { subSnapshot ->
-                                val subCollectionData =
-                                    subSnapshot.documents.map { messageDocument ->
-                                        InternalMessageInstance(
-                                            id = messageDocument.id,
-                                            sender = messageDocument.data?.get("sender") as? String
-                                                ?: "",
-                                            images = messageDocument.data?.get("images") as? List<String>
-                                                ?: emptyList(),
-                                            read = messageDocument.data?.get("read") as? Boolean
-                                                ?: false,
-                                            text = messageDocument.data?.get("text") as? String
-                                                ?: "",
-                                            timestamp = messageDocument.data?.get("timestamp") as? Timestamp
-                                                ?: Timestamp.now(),
-                                            visible = messageDocument.data?.get("visible") as? List<String>
-                                                ?: emptyList(),
-                                            isFromCache = if (subQuerySnapshot.metadata.isFromCache) {
-                                                messageDocument.metadata.hasPendingWrites()
-                                            } else {
-                                                false
-                                            }
-                                        )
-                                    }
-                                val chat = FirebaseChat(
-                                    members = documentChange.document.data["members"] as List<String>,
-                                    unread = documentChange.document.data["unread"] as List<String>,
-                                    tab = documentChange.document.data["tab"] as String,
-                                    chatRoomID = documentChange.document.id,
-                                    messages = subCollectionData
-                                )
-                                // Step 5: Update the chatDataSet
-                                val existingChat =
-                                    chatDataSet.find { it.chatRoomID == chat.chatRoomID }
-                                if (existingChat != null) {
-                                    chatDataSet.remove(existingChat)
-                                }
-                                chatDataSet.add(chat)
-                                _chatData.value = chatDataSet.toList()
-                                isDataLoaded.value = true
-                                sortDataChats()
-                            }
+                    if (querySnapshot == null || querySnapshot.isEmpty) {
+                        isDataLoaded.value = true
+                        return@addSnapshotListener
+                    }
+                    // Step 2: For each change in the chats collection, fetch the messages subCollection
+                    querySnapshot.documentChanges.forEach { documentChange ->
+                        // Step 3: Listen for changes in the messages subCollection
+                        val removedDocumentId = documentChange.document.id
+                        val removedChat = chatDataSet.find { it.chatRoomID == removedDocumentId }
+                        if (removedChat != null) {
+                            chatDataSet.remove(removedChat)
                         }
-                    } else {
-                        sortDataChats()
+                        _chatData.value = chatDataSet.toList()
+                        if (documentChange.type != DocumentChange.Type.REMOVED) {
+                            val subCollectionRef =
+                                getChatDocumentRef().document(documentChange.document.id)
+                                    .collection("/$MESSAGES_COLLECTION")
+                                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                            val subListener =
+                                subCollectionRef.addSnapshotListener(MetadataChanges.INCLUDE) { subQuerySnapshot, exception ->
+                                    if (exception != null) {
+                                        return@addSnapshotListener
+                                    }
+                                    // Step 4: For each change in the messages subCollection, update the chatDataSet
+                                    subQuerySnapshot?.let { subSnapshot ->
+                                        val subCollectionData =
+                                            subSnapshot.documents.map { messageDocument ->
+                                                InternalMessageInstance(
+                                                    id = messageDocument.id,
+                                                    sender = messageDocument.data?.get("sender") as? String
+                                                        ?: "",
+                                                    images = messageDocument.data?.get("images") as? List<String>
+                                                        ?: emptyList(),
+                                                    read = messageDocument.data?.get("read") as? Boolean
+                                                        ?: false,
+                                                    text = messageDocument.data?.get("text") as? String
+                                                        ?: "",
+                                                    timestamp = messageDocument.data?.get("timestamp") as? Timestamp
+                                                        ?: Timestamp.now(),
+                                                    visible = messageDocument.data?.get("visible") as? List<String>
+                                                        ?: emptyList(),
+                                                    isFromCache = if (subQuerySnapshot.metadata.isFromCache) {
+                                                        messageDocument.metadata.hasPendingWrites()
+                                                    } else {
+                                                        false
+                                                    }
+                                                )
+                                            }
+                                        val chat = FirebaseChat(
+                                            members = documentChange.document.data["members"] as List<String>,
+                                            unread = documentChange.document.data["unread"] as List<String>,
+                                            tab = documentChange.document.data["tab"] as String,
+                                            chatRoomID = documentChange.document.id,
+                                            messages = subCollectionData
+                                        )
+                                        // Step 5: Update the chatDataSet
+                                        val existingChat =
+                                            chatDataSet.find { it.chatRoomID == chat.chatRoomID }
+                                        if (existingChat != null) {
+                                            chatDataSet.remove(existingChat)
+                                        }
+                                        chatDataSet.add(chat)
+                                        _chatData.value = chatDataSet.toList()
+                                        isDataLoaded.value = true
+                                        sortDataChats()
+                                    }
+                                }
+                            snapshotListeners.add(subListener)
+                        } else {
+                            sortDataChats()
+                        }
                     }
                 }
-            }
+        snapshotListeners.add(chatsListener)
         return true
     }
 
@@ -557,7 +564,7 @@ class SharedViewModel : ViewModel() {
         if (auth.currentUser == null) {
             return
         }
-        getUserDocumentRef().document(auth.currentUser!!.uid)
+        val userListener = getUserDocumentRef().document(auth.currentUser!!.uid)
             .addSnapshotListener { documentSnapshot, error ->
                 if (error != null) {
                     return@addSnapshotListener
@@ -570,6 +577,7 @@ class SharedViewModel : ViewModel() {
                     sortDataChats()
                 }
             }
+        snapshotListeners.add(userListener)
     }
 
     fun updateOnlineStatus(status: Boolean) {

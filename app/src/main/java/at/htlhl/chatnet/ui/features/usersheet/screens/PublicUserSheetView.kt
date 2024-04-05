@@ -68,7 +68,9 @@ class PublicUserSheetView {
                     state = lazyColumnState,
                     content = {
                         item {
-                            UserSheetUserHeaderComponent(friend = publicUser,
+                            UserSheetUserHeaderComponent(
+                                userData= userData,
+                                friendData = publicUser,
                                 onNavigateToChatClicked = {
                                     navController.navigateUp()
                                 },

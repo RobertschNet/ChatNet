@@ -188,7 +188,7 @@ class LoginView {
                             loginRegisterViewModel.auth.signInWithEmailAndPassword(email, password)
                                 .addOnCompleteListener(activity) { task ->
                                     if (task.isSuccessful) {
-                                        if (!loginRegisterViewModel.isUserEmailVerified()) {
+                                     //   if (loginRegisterViewModel.isUserEmailVerified()) {
                                             sharedViewModel.updateOnlineStatus(status = true)
                                             sharedViewModel.getUserData {
                                                 loadImage(
@@ -212,11 +212,13 @@ class LoginView {
                                                 }
                                             }
 
-                                        } else {
+                                   /*     } else {
                                             isLoading = false
                                             emailIsNotVerifiedText = true
                                             loginRegisterViewModel.auth.signOut()
                                         }
+
+                                    */
                                     } else {
                                         isLoading = false
                                         val exception = task.exception
